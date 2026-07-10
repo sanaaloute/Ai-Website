@@ -906,8 +906,11 @@ export class E2BService {
    */
   private async resolvePocketbaseTemplateDir(category: string): Promise<string> {
     const normalizedCategory = category.replace(/[ -]/g, '_').toLowerCase();
-    const fromDist = path.resolve(process.cwd(), 'dist', 'templates', `pocketbase-${normalizedCategory}`, 'pocketbase');
-    const fromSource = path.resolve(process.cwd(), 'src', 'templates', `pocketbase-${normalizedCategory}`, 'pocketbase');
+    // Each category is now a self-contained full-stack template: storefront + admin
+    // dashboard live at the category root and the PocketBase backend (migrations/
+    // hooks) lives in the inner `<category>/pocketbase/` directory.
+    const fromDist = path.resolve(process.cwd(), 'dist', 'templates', normalizedCategory, 'pocketbase');
+    const fromSource = path.resolve(process.cwd(), 'src', 'templates', normalizedCategory, 'pocketbase');
     try {
       const stat = await fs.stat(fromDist);
       if (stat.isDirectory()) return fromDist;

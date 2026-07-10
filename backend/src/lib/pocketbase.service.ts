@@ -38,8 +38,10 @@ export class PocketbaseService {
    * or compiled JavaScript in dist/.
    */
   private async resolveTemplateDir(category = 'ecommerce'): Promise<string> {
-    const fromSource = path.resolve(process.cwd(), 'src', 'templates', `pocketbase-${category}`);
-    const fromDist = path.resolve(process.cwd(), 'dist', 'templates', `pocketbase-${category}`);
+    // Deployment assets (Dockerfile, docker-compose.yaml, nginx.conf, pocketbase/)
+    // now live inside each self-contained category template.
+    const fromSource = path.resolve(process.cwd(), 'src', 'templates', category);
+    const fromDist = path.resolve(process.cwd(), 'dist', 'templates', category);
     return (await this.directoryExists(fromDist)) ? fromDist : fromSource;
   }
 
@@ -54,12 +56,27 @@ export class PocketbaseService {
 
   /**
    * Return all template files (paths relative to the template root) and their contents.
+   *
+   * The deployment bundle is intentionally limited to the infra assets so the
+   * storefront source (src/, package.json, ...) that also lives in the category
+   * template is never shipped as part of a PocketBase deployment.
    */
   async getTemplateFiles(category = 'ecommerce'): Promise<PocketBaseTemplateFile[]> {
     const templateDir = await this.resolveTemplateDir(category);
     const files: PocketBaseTemplateFile[] = [];
     await this.collectFiles(templateDir, templateDir, files);
-    return files;
+    return files.filter((file) => this.isDeploymentFile(file.path));
+  }
+
+  private isDeploymentFile(relPath: string): boolean {
+    const normalized = relPath.replace(/\\/g, '/');
+    return (
+      normalized === 'Dockerfile' ||
+      normalized === 'docker-compose.yaml' ||
+      normalized === 'docker-compose.yml' ||
+      normalized === 'nginx.conf' ||
+      normalized.startsWith('pocketbase/')
+    );
   }
 
   /**

@@ -70,35 +70,6 @@ function injectDeploymentFilesSync(files: Record<string, string>, templateDir: s
   }
 }
 
-async function collectPocketbaseTemplateFiles(
-  category: string,
-  rootDir: string,
-  out: Record<string, string>,
-): Promise<void> {
-  const pocketbaseDir = path.resolve(rootDir, '..', `pocketbase-${category}`);
-  if (!existsSync(pocketbaseDir)) return;
-
-  const walk = async (dir: string): Promise<void> => {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        await walk(fullPath);
-      } else if (entry.isFile()) {
-        if (entry.name === 'manifest.json') continue;
-        const relPath = path.relative(pocketbaseDir, fullPath);
-        try {
-          out[relPath] = await fs.readFile(fullPath, 'utf-8');
-        } catch {
-          // ignore unreadable pocketbase files
-        }
-      }
-    }
-  };
-
-  await walk(pocketbaseDir);
-}
-
 function loadMinimalGenericTemplate(): Record<string, string> {
   const candidates = [
     MINIMAL_GENERIC_TEMPLATE_DIR,
@@ -159,7 +130,6 @@ export class TemplateService {
     try {
       const files: Record<string, string> = {};
       await this.collectFiles(templateDir, templateDir, files);
-      await this.collectPocketbaseFiles(category, files);
       return this.injectSharedFiles(files);
     } catch (err) {
       this.logger.warn(`Could not read template directory ${templateDir}: ${err instanceof Error ? err.message : String(err)}`);
@@ -197,7 +167,6 @@ export class TemplateService {
       await fs.access(genericDir);
       const files: Record<string, string> = {};
       await this.collectFiles(genericDir, genericDir, files);
-      await this.collectPocketbaseFiles('generic', files);
       if (Object.keys(files).length > 0) return this.injectSharedFiles(files);
     } catch {
       // fall through
@@ -208,14 +177,12 @@ export class TemplateService {
       await fs.access(minimalDir);
       const files: Record<string, string> = {};
       await this.collectFiles(minimalDir, minimalDir, files);
-      await this.collectPocketbaseFiles('generic', files);
       if (Object.keys(files).length > 0) return this.injectSharedFiles(files);
     } catch {
       // fall through
     }
 
     const minimal = { ...MINIMAL_GENERIC_TEMPLATE };
-    await collectPocketbaseTemplateFiles('generic', MINIMAL_GENERIC_TEMPLATE_DIR, minimal);
     return this.injectSharedFiles(minimal);
   }
 
@@ -240,21 +207,6 @@ export class TemplateService {
         } catch (err) {
           this.logger.warn(`Skipping unreadable template file ${relPath}`);
         }
-      }
-    }
-  }
-
-  private async collectPocketbaseFiles(category: string, out: Record<string, string>): Promise<void> {
-    const pocketbaseDir = path.resolve(this.templatesDir, `pocketbase-${category}`);
-    if (existsSync(pocketbaseDir)) {
-      await this.collectFiles(pocketbaseDir, pocketbaseDir, out);
-      return;
-    }
-
-    if (category !== 'generic') {
-      const genericPbDir = path.resolve(this.templatesDir, 'pocketbase-generic');
-      if (existsSync(genericPbDir)) {
-        await this.collectFiles(genericPbDir, genericPbDir, out);
       }
     }
   }
