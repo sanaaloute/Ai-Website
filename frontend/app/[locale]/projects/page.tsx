@@ -213,14 +213,14 @@ export default function ProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     const sorted = [...projects].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    if (activeTab === 'deployed') return sorted.filter((p) => p.openhostDomainUrl);
-    if (activeTab === 'undeployed') return sorted.filter((p) => !p.openhostDomainUrl);
+    if (activeTab === 'deployed') return sorted.filter((p) => p.vercelDomainUrl);
+    if (activeTab === 'undeployed') return sorted.filter((p) => !p.vercelDomainUrl);
     return sorted;
   }, [projects, activeTab]);
 
   const stats = useMemo(() => {
     const total = projects.length;
-    const deployed = projects.filter((p) => p.openhostDomainUrl).length;
+    const deployed = projects.filter((p) => p.vercelDomainUrl).length;
     return { total, deployed, undeployed: total - deployed };
   }, [projects]);
 
@@ -411,7 +411,7 @@ export default function ProjectsPage() {
                   </p>
                   <p className="mt-1 text-sm text-zinc-400">
                     {activeTab === 'deployed'
-                      ? 'Projects you deploy to OpenHost will show here.'
+                      ? 'Projects you deploy to Vercel will show here.'
                       : 'All your projects are currently deployed.'}
                   </p>
                 </div>
@@ -420,9 +420,9 @@ export default function ProjectsPage() {
                   {filteredProjects.map((project) => {
                     const isOpening = openingProjectId === project.projectId;
                     const isDeleting = deleteBusyId === project.projectId;
-                    const isDeployed = Boolean(project.openhostDomainUrl);
+                    const isDeployed = Boolean(project.vercelDomainUrl);
                     const screenshotUrl = isDeployed
-                      ? `https://v1.screenshot.11ty.dev/${encodeURIComponent(project.openhostDomainUrl!)}/opengraph/`
+                      ? `https://v1.screenshot.11ty.dev/${encodeURIComponent(project.vercelDomainUrl!)}/opengraph/`
                       : null;
 
                     return (
@@ -450,7 +450,7 @@ export default function ProjectsPage() {
                                 Live
                               </span>
                               <a
-                                href={project.openhostDomainUrl!}
+                                href={project.vercelDomainUrl!}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="absolute inset-0 m-3 flex items-center justify-center rounded-xl opacity-0 transition duration-500 group-hover:opacity-100 sm:m-4"
@@ -468,7 +468,7 @@ export default function ProjectsPage() {
                               <div>
                                 <p className="text-sm font-medium text-zinc-300">Not deployed yet</p>
                                 <p className="mt-1 text-xs text-zinc-500">
-                                  Open this project to deploy it to OpenHost
+                                  Open this project to deploy it to Vercel
                                 </p>
                               </div>
                             </div>
@@ -488,16 +488,16 @@ export default function ProjectsPage() {
                               <span className="h-1 w-1 rounded-full bg-zinc-500" />
                               {formatRelativeTime(project.updatedAt)}
                             </span>
-                            {isDeployed && project.openhostDomainUrl && (
+                            {isDeployed && project.vercelDomainUrl && (
                               <a
-                                href={project.openhostDomainUrl}
+                                href={project.vercelDomainUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 truncate text-glow-cyan/70 transition hover:text-glow-cyan hover:underline"
                               >
                                 <Globe size={10} aria-hidden />
                                 <span className="max-w-[8rem] truncate">
-                                  {new URL(project.openhostDomainUrl).hostname}
+                                  {new URL(project.vercelDomainUrl).hostname}
                                 </span>
                               </a>
                             )}
@@ -523,9 +523,9 @@ export default function ProjectsPage() {
                               )}
                             </button>
 
-                            {isDeployed && project.openhostDomainUrl && (
+                            {isDeployed && project.vercelDomainUrl && (
                               <a
-                                href={project.openhostDomainUrl}
+                                href={project.vercelDomainUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-gradient-to-r from-primary/20 via-primary-soft/20 to-primary-accent/20 px-3 py-2 text-xs font-medium text-white transition hover:border-glow-cyan/40 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"

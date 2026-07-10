@@ -33,7 +33,7 @@ export function ProjectNameDialog({
   onConfirm,
   confirming = false,
   title = "Name this project",
-  description = "Confirm a project name before first save. This name is reused for Supabase, GitHub repo default, and OpenHost project default.",
+  description = "Confirm a project name before first save. This name is reused for Supabase, GitHub repo default, and Vercel project default.",
   confirmButtonLabel = "Confirm name",
   confirmingButtonLabel = "Saving…"
 }: ProjectNameDialogProps) {

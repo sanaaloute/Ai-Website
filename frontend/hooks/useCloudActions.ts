@@ -112,7 +112,7 @@ export interface CloudActionsDeps {
 
   // Constants
   LAST_SAVED_PROJECT_KEY: string;
-  setLastGitccRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  setLastGithubRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export function useCloudActions(deps: CloudActionsDeps) {
@@ -181,7 +181,7 @@ export function useCloudActions(deps: CloudActionsDeps) {
     waitForPreviewHealthy,
     probePreviewHealth,
     LAST_SAVED_PROJECT_KEY,
-    setLastGitccRepoUrl,
+    setLastGithubRepoUrl,
   } = deps;
 
   const cloudProjectList = useCloudProjectList({
@@ -211,7 +211,7 @@ export function useCloudActions(deps: CloudActionsDeps) {
     preserveCloudProjectsUntilRef,
     lastSavedProjectIdRef,
     pendingAutoOpenProjectIdRef,
-    setLastGitccRepoUrl,
+    setLastGithubRepoUrl,
   });
 
   const projectName = useProjectName({
@@ -292,7 +292,7 @@ export function useCloudActions(deps: CloudActionsDeps) {
     setProjectOpeningStatus,
     preserveCloudProjectsUntilRef,
     persistSnapshotToCloud: cloudPersistence.persistSnapshotToCloud,
-    setLastGitccRepoUrl,
+    setLastGithubRepoUrl,
   });
 
   openCloudProjectRef.current = cloudProjectOpen.openCloudProject;

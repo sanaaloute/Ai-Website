@@ -10,12 +10,12 @@ import {
   DialogTitle
 } from "@/components/ui/shadcn/dialog";
 import { cn } from "@/utils/cn";
-import { getGitccGitlabStatus } from "@/lib/api/client";
+import { getGithubStatus } from "@/lib/api/client";
 import { backendApiUrl } from "@/lib/api/backendConfig";
 import { usePathname } from "@/i18n/navigation";
 import { panelClass, DialogSurfaceDecor } from "./DialogSurfaceDecor";
 
-export type GitccPushDialogProps = {
+export type GithubPushDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Default repository name (slug), e.g. from project title. */
@@ -33,7 +33,7 @@ export type GitccPushDialogProps = {
 /**
  * Push to GitHub: OAuth if needed, otherwise repo name + confirm.
  */
-export function GitccPushDialog({
+export function GithubPushDialog({
   open,
   onOpenChange,
   defaultRepoName,
@@ -41,7 +41,7 @@ export function GitccPushDialog({
   pushing = false,
   result,
   onClearResult,
-}: GitccPushDialogProps) {
+}: GithubPushDialogProps) {
   const [statusLoading, setStatusLoading] = useState(false);
   const [connected, setConnected] = useState<boolean | null>(null);
   const [repoName, setRepoName] = useState(defaultRepoName);
@@ -54,7 +54,7 @@ export function GitccPushDialog({
       setStatusLoading(true);
       setConnected(null);
     }, 0);
-    void getGitccGitlabStatus()
+    void getGithubStatus()
       .then((r) => {
         if (r.ok) {
           setConnected(Boolean(r.data.connected));
@@ -71,7 +71,7 @@ export function GitccPushDialog({
   useEffect(() => {
     if (!open || connected !== false) return;
     const interval = window.setInterval(() => {
-      void getGitccGitlabStatus()
+      void getGithubStatus()
         .then((r) => {
           if (r.ok && r.data.connected) {
             setConnected(true);
@@ -82,10 +82,10 @@ export function GitccPushDialog({
     return () => window.clearInterval(interval);
   }, [open, connected]);
 
-  const connectGitcc = () => {
+  const connectGithub = () => {
     const search = typeof window !== "undefined" ? window.location.search : "";
     const next = `${pathname}${search}`;
-    window.location.href = backendApiUrl(`/api/gitcc/gitlab/authorize?next=${encodeURIComponent(next)}`);
+    window.location.href = backendApiUrl(`/api/github/authorize?next=${encodeURIComponent(next)}`);
   };
 
   const handlePush = () => {
@@ -106,19 +106,19 @@ export function GitccPushDialog({
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className={cn(panelClass, "max-w-md gap-0 p-0")}>
-        <DialogSurfaceDecor variant="gitcc" />
+        <DialogSurfaceDecor variant="github" />
         <div className="relative z-[1] space-y-4 p-6">
           <DialogHeader className="space-y-2 text-left">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-500/25 to-fuchsia-600/10 font-mono text-sm font-bold text-violet-200">
-                GC
+                GH
               </span>
               <DialogTitle className="text-xl font-semibold tracking-tight text-zinc-50">
                 Push to GitHub
               </DialogTitle>
             </div>
             <DialogDescription className="text-zinc-400">
-              Export your sandbox to a GitLab repository on GitHub — same OAuth flow as GitLab. After connecting once,
+              Export your sandbox to a GitHub repository. After connecting once,
               you can create a repo and push from here anytime.
             </DialogDescription>
           </DialogHeader>
@@ -153,7 +153,7 @@ export function GitccPushDialog({
               </p>
               <button
                 type="button"
-                onClick={connectGitcc}
+                onClick={connectGithub}
                 className="w-full rounded-xl bg-gradient-to-r from-primary to-primary-soft px-4 py-3 text-sm font-semibold text-white shadow-soft-glow transition hover:opacity-95"
               >
                 Connect to GitHub
@@ -182,7 +182,7 @@ export function GitccPushDialog({
                 />
               </label>
               <p className="text-xs text-zinc-500">
-                New GitLab project under your account; use letters, numbers, hyphens. If the name exists, files are
+                New GitHub repository under your account; use letters, numbers, hyphens. If the name exists, files are
                 pushed to that repo.
               </p>
               <DialogFooter className="gap-2 sm:gap-2">

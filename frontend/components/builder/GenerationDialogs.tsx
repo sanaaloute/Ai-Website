@@ -3,6 +3,6 @@
 export { panelClass, DialogSurfaceDecor } from "./DialogSurfaceDecor";
 export type { DatabaseConnectionValue } from "./DatabaseConnectionDialog";
 export { DatabaseConnectionDialog } from "./DatabaseConnectionDialog";
-export type { GitccPushDialogProps } from "./GitccPushDialog";
-export { GitccPushDialog } from "./GitccPushDialog";
+export type { GithubPushDialogProps } from "./GithubPushDialog";
+export { GithubPushDialog } from "./GithubPushDialog";
 export { ProjectNameDialog } from "./ProjectNameDialog";

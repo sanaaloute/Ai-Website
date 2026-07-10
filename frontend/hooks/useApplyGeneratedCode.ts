@@ -40,8 +40,8 @@ export interface ApplyGeneratedCodeDeps {
   ensureProjectNameForAction: (
     action:
       | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-      | { kind: 'gitcc-open' }
-      | { kind: 'openhost-deploy' }
+      | { kind: 'github-open' }
+      | { kind: 'vercel-deploy' }
   ) => boolean;
   persistProjectDurably: (
     saveReason: 'manual' | 'auto-generation-success',

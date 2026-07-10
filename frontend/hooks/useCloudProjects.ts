@@ -5,9 +5,9 @@ export interface CloudProjectListItem {
   projectId: string;
   projectName: string;
   updatedAt: number;
-  openhostAppUuid?: string | null;
-  openhostDomainUrl?: string | null;
-  openhostDeployedAt?: string | null;
+  vercelProjectId?: string | null;
+  vercelDomainUrl?: string | null;
+  vercelDeployedAt?: string | null;
   pocketbaseUrl?: string | null;
   pocketbaseAdminUrl?: string | null;
 }

@@ -2,10 +2,10 @@ export interface CloudProjectListItem {
   projectId: string;
   projectName: string;
   updatedAt: number;
-  openhostAppUuid?: string | null;
-  openhostDomainUrl?: string | null;
-  openhostDeployedAt?: string | null;
-  gitccRepoUrl?: string | null;
+  vercelProjectId?: string | null;
+  vercelDomainUrl?: string | null;
+  vercelDeployedAt?: string | null;
+  githubRepoUrl?: string | null;
   pocketbaseUrl?: string | null;
   pocketbaseAdminUrl?: string | null;
 }

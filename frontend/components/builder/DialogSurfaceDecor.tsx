@@ -9,17 +9,17 @@ export const panelClass = cn(
   "backdrop-blur-xl sm:rounded-2xl",
 );
 
-export function DialogSurfaceDecor({ variant }: { variant: "gitcc" | "database" }) {
+export function DialogSurfaceDecor({ variant }: { variant: "github" | "database" }) {
   const topBar =
-    variant === "gitcc"
+    variant === "github"
       ? "from-violet-500 via-fuchsia-400 to-cyan-300/70"
       : "from-emerald-400 via-teal-500/60 to-cyan-400/50";
   const orbA =
-    variant === "gitcc"
+    variant === "github"
       ? "from-violet-500/35 to-transparent"
       : "from-emerald-500/25 to-transparent";
   const orbB =
-    variant === "gitcc"
+    variant === "github"
       ? "from-fuchsia-500/20 to-transparent"
       : "from-cyan-500/15 to-transparent";
   return (

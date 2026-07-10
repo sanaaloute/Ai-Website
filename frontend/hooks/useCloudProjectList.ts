@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { listProjects, deleteProject, renameProject } from '@/lib/api/client';
-import { normalizeGitccRepoUrl } from '@/lib/gitcc';
+import { normalizeGithubRepoUrl } from '@/lib/github';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
 import type { CloudProjectListItem } from '@/lib/generation/types';
 
@@ -31,7 +31,7 @@ export interface CloudProjectListDeps {
   preserveCloudProjectsUntilRef: React.MutableRefObject<number>;
   lastSavedProjectIdRef: React.MutableRefObject<string | null>;
   pendingAutoOpenProjectIdRef: React.MutableRefObject<string | null>;
-  setLastGitccRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  setLastGithubRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export function useCloudProjectList(deps: CloudProjectListDeps) {
@@ -62,7 +62,7 @@ export function useCloudProjectList(deps: CloudProjectListDeps) {
     preserveCloudProjectsUntilRef,
     lastSavedProjectIdRef,
     pendingAutoOpenProjectIdRef,
-    setLastGitccRepoUrl,
+    setLastGithubRepoUrl,
   } = deps;
 
   const loadCloudProjects = useCallback(
@@ -118,13 +118,13 @@ export function useCloudProjectList(deps: CloudProjectListDeps) {
           if (!stillExists && !shouldPreservePrevious && !shouldDeferSelectionClear) {
             setCurrentSessionProjectId(null);
             setSelectedCloudProjectId('');
-            setLastGitccRepoUrl(null);
+            setLastGithubRepoUrl(null);
           } else if (!selectedCloudProjectId) {
             setSelectedCloudProjectId(currentId);
           }
           const projectList = shouldPreservePrevious ? lastKnownCloudProjectsRef.current : sortedProjects;
           const currentProject = projectList.find((project) => project.projectId === currentId);
-          setLastGitccRepoUrl(normalizeGitccRepoUrl(currentProject?.gitccRepoUrl) || null);
+          setLastGithubRepoUrl(normalizeGithubRepoUrl(currentProject?.githubRepoUrl) || null);
         }
 
       } catch (error) {
@@ -148,7 +148,7 @@ export function useCloudProjectList(deps: CloudProjectListDeps) {
       preserveCloudProjectsUntilRef,
       lastSavedProjectIdRef,
       pendingAutoOpenProjectIdRef,
-      setLastGitccRepoUrl,
+      setLastGithubRepoUrl,
     ]
   );
 

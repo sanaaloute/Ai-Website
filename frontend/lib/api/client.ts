@@ -26,10 +26,10 @@ export interface ProjectListItem {
   projectName: string;
   updatedAt: number;
   preview: string | null;
-  openhostAppUuid?: string | null;
-  openhostDomainUrl?: string | null;
-  openhostDeployedAt?: string | null;
-  gitccRepoUrl?: string | null;
+  vercelProjectId?: string | null;
+  vercelDomainUrl?: string | null;
+  vercelDeployedAt?: string | null;
+  githubRepoUrl?: string | null;
   pocketbaseUrl?: string | null;
   pocketbaseAdminUrl?: string | null;
 }
@@ -703,43 +703,46 @@ export async function syncCheckoutSession(body: {
 
 // ─── Integration APIs ───────────────────────────────────────────────────
 
-export async function getOpenhostStatus(params: { deploymentUuid: string; appUuid: string }) {
+export async function getVercelStatus(params: { deploymentUuid: string; appUuid: string }) {
   return apiGet<{
     success: boolean;
     app?: { status?: string; domains?: string[] };
     latestDeployment?: { status?: string; commit_message?: string; finished_at?: string };
   }>(
-    `/openhost/status?deploymentUuid=${encodeURIComponent(params.deploymentUuid)}&appUuid=${encodeURIComponent(params.appUuid)}`,
-    'getOpenhostStatus'
+    `/vercel/status?deploymentUuid=${encodeURIComponent(params.deploymentUuid)}&appUuid=${encodeURIComponent(params.appUuid)}`,
+    'getVercelStatus'
   );
 }
 
-export async function checkOpenhostDomain(domain: string, projectId?: string) {
+export async function checkVercelDomain(domain: string, projectId?: string) {
   const qs = new URLSearchParams();
   qs.set('domain', domain);
   if (projectId) qs.set('projectId', projectId);
   return apiGet<{ success: boolean; available: boolean; message: string; conflictProjectName: string | null }>(
-    `/openhost/check-domain?${qs.toString()}`,
-    'checkOpenhostDomain'
+    `/vercel/check-domain?${qs.toString()}`,
+    'checkVercelDomain'
   );
 }
 
-export async function deployPocketbaseToOpenhost(body: {
+export async function deployToVercel(body: {
   repoUrl: string;
   projectName: string;
-  frontendDomain: string;
+  frontendDomain?: string;
   projectId?: string;
 }) {
+  const { frontendDomain, ...rest } = body;
   return apiPost<{
     ok: boolean;
     appUuid: string;
     deploymentUuid: string;
     domainUrl: string;
-    pocketbaseUrl: string;
-    adminUrl: string;
     isUpdate: boolean;
     requestId: string;
-  }>('/openhost/deploy-pocketbase', body, 'deployPocketbaseToOpenhost');
+  }>(
+    '/vercel/deploy',
+    { ...rest, customDomain: frontendDomain },
+    'deployToVercel'
+  );
 }
 
 export async function getPocketbaseTemplate() {
@@ -780,7 +783,7 @@ export async function getSandboxPocketbaseInfo(sandboxId: string) {
   }>(`/get-sandbox-pocketbase-info?sandboxId=${encodeURIComponent(sandboxId)}`, 'getSandboxPocketbaseInfo');
 }
 
-export async function pushToGitcc(
+export async function pushToGithub(
   body: {
     repoName: string;
     files: Array<{ path: string; content: string }>;
@@ -793,11 +796,11 @@ export async function pushToGitcc(
     repoUrl: string;
     uploaded: number;
     requestId: string;
-  }>('/gitcc/push', body, 'pushToGitcc', signal);
+  }>('/github/push', body, 'pushToGithub', signal);
 }
 
-export async function getGitccGitlabStatus() {
-  return apiGet<{ connected: boolean }>('/gitcc/gitlab/status', 'getGitccGitlabStatus');
+export async function getGithubStatus() {
+  return apiGet<{ connected: boolean }>('/github/status', 'getGithubStatus');
 }
 
 export async function cloneRepo(sandboxId: string, repoUrl: string) {

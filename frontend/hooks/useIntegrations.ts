@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { downloadZip as _downloadZip } from '@/lib/generation/downloadZip';
-import { deployPocketbaseToOpenhost, getOpenhostStatus, getSandboxFiles, preparePocketbaseDeploy, pushToGitcc, runCommand } from '@/lib/api/client';
+import { deployToVercel, getVercelStatus, getSandboxFiles, preparePocketbaseDeploy, pushToGithub, runCommand } from '@/lib/api/client';
 import { backendApiUrl } from '@/lib/api/backendConfig';
-import { normalizeGitccRepoUrl } from '@/lib/gitcc';
+import { normalizeGithubRepoUrl } from '@/lib/github';
 import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import { assertCurrentSandboxIdStrict } from '@/lib/sandbox/sandboxClientSession';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
@@ -24,7 +24,7 @@ export interface IntegrationsDeps {
   // UI setters
   setIsDownloadingZip: (v: boolean) => void;
   setZipNotice: (v: { status: string; message: string } | null) => void;
-  setOpenHostDeployCard: React.Dispatch<
+  setVercelDeployCard: React.Dispatch<
     React.SetStateAction<{
       status: 'deploying' | 'success' | 'failed';
       message: string;
@@ -35,29 +35,27 @@ export interface IntegrationsDeps {
       deploymentStatus?: string;
       commitMessage?: string;
       isPolling?: boolean;
-      pocketbaseUrl?: string;
-      pocketbaseAdminUrl?: string;
     } | null>
   >;
-  lastGitccRepoUrl: string | null;
-  setLastGitccRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  lastGithubRepoUrl: string | null;
+  setLastGithubRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
   setProjectNameSuggestion: (v: string) => void;
   setSiteTitleSuggestion: (v: string) => void;
   setPendingNamedAction: React.Dispatch<
     React.SetStateAction<
       | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-      | { kind: 'gitcc-open' }
-      | { kind: 'openhost-deploy' }
+      | { kind: 'github-open' }
+      | { kind: 'vercel-deploy' }
       | null
     >
   >;
   setProjectNameDialogOpen: (v: boolean) => void;
   setProjectNameConfirming: (v: boolean) => void;
-  setGitccPushDialogOpen: (v: boolean) => void;
-  setGitccPushResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
-  setOpenHostDeployDialogOpen: (v: boolean) => void;
-  setOpenHostDeployResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
-  setIntegrationBusy: (v: 'gitcc' | 'openhost' | null) => void;
+  setGithubPushDialogOpen: (v: boolean) => void;
+  setGithubPushResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
+  setVercelDeployDialogOpen: (v: boolean) => void;
+  setVercelDeployResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
+  setIntegrationBusy: (v: 'github' | 'vercel' | null) => void;
   setConversationContext: React.Dispatch<React.SetStateAction<ConversationContext>>;
   currentSessionProjectId: string | null;
 
@@ -97,8 +95,8 @@ export interface IntegrationsDeps {
   // Derived state used by callbacks
   pendingNamedAction:
     | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-    | { kind: 'gitcc-open' }
-    | { kind: 'openhost-deploy' }
+    | { kind: 'github-open' }
+    | { kind: 'vercel-deploy' }
     | null;
 }
 
@@ -108,18 +106,18 @@ export function useIntegrations(deps: IntegrationsDeps) {
     conversationContext,
     setIsDownloadingZip,
     setZipNotice,
-    setOpenHostDeployCard,
-    lastGitccRepoUrl,
-    setLastGitccRepoUrl,
+    setVercelDeployCard,
+    lastGithubRepoUrl,
+    setLastGithubRepoUrl,
     setProjectNameSuggestion,
     setSiteTitleSuggestion,
     setPendingNamedAction,
     setProjectNameDialogOpen,
     setProjectNameConfirming,
-    setGitccPushDialogOpen,
-    setGitccPushResult,
-    setOpenHostDeployDialogOpen,
-    setOpenHostDeployResult,
+    setGithubPushDialogOpen,
+    setGithubPushResult,
+    setVercelDeployDialogOpen,
+    setVercelDeployResult,
     setIntegrationBusy,
     setConversationContext,
     currentSessionProjectId,
@@ -137,8 +135,8 @@ export function useIntegrations(deps: IntegrationsDeps) {
     pendingNamedAction,
   } = deps;
 
-  // Ref to remember a pending OpenHost deploy domain when GitHub repo is missing
-  const pendingOpenHostDeployDomainRef = useRef<string | null>(null);
+  // Ref to remember a pending Vercel deploy domain when GitHub repo is missing
+  const pendingVercelDeployDomainRef = useRef<string | null>(null);
 
   const downloadZip = useCallback(async () => {
     await _downloadZip({
@@ -263,15 +261,15 @@ export function useIntegrations(deps: IntegrationsDeps) {
     return slug || fallback;
   }, []);
 
-  const defaultGitccRepoName = useMemo(
+  const defaultGithubRepoName = useMemo(
     () => slugifyExportName(conversationContext.currentProject || 'ai-website-export', 'ai-website-export'),
     [conversationContext.currentProject, slugifyExportName]
   );
 
   const explainIntegrationBlocked = useCallback(
-    (target: 'gitcc' | 'openhost') => {
+    (target: 'github' | 'vercel') => {
       const actionLabel =
-        target === 'gitcc' ? 'push to GitHub' : target === 'openhost' ? 'host on DPQQ' : 'host on DPQQ';
+        target === 'github' ? 'push to GitHub' : target === 'vercel' ? 'host on Vercel' : 'host on Vercel';
       const reason = integrationReadiness.primaryReason;
       if (reason) {
         addChatMessage(`Cannot ${actionLabel} yet: ${reason}`, 'system');
@@ -282,16 +280,16 @@ export function useIntegrations(deps: IntegrationsDeps) {
     [integrationReadiness.primaryReason, addChatMessage]
   );
 
-  const runOpenHostDeploy = useCallback(
+  const runVercelDeploy = useCallback(
     async (customDomain?: string, repoUrlOverride?: string) => {
       const projectName = conversationContext.currentProject || 'ai-website-app';
       const siteTitle = conversationContext.siteTitle || projectName;
 
-      const effectiveRepoUrl = normalizeGitccRepoUrl(repoUrlOverride || lastGitccRepoUrl);
+      const effectiveRepoUrl = normalizeGithubRepoUrl(repoUrlOverride || lastGithubRepoUrl);
       if (!effectiveRepoUrl) {
         // No GitHub repo yet — open push dialog so user can push first
-        pendingOpenHostDeployDomainRef.current = customDomain || null;
-        setOpenHostDeployCard({
+        pendingVercelDeployDomainRef.current = customDomain || null;
+        setVercelDeployCard({
           status: 'deploying',
           message: 'GitHub repository required. Opening push dialog...',
           projectName,
@@ -299,14 +297,14 @@ export function useIntegrations(deps: IntegrationsDeps) {
           domainUrl: customDomain,
           isPolling: false,
         });
-        setGitccPushDialogOpen(true);
+        setGithubPushDialogOpen(true);
         addChatMessage('Push your code to GitHub first, then deployment will continue automatically.', 'system');
         return;
       }
 
-      setOpenHostDeployCard({
+      setVercelDeployCard({
         status: 'deploying',
-        message: 'Triggering PocketBase deployment on OpenHost...',
+        message: 'Triggering PocketBase deployment on Vercel...',
         projectName,
         siteTitle,
         domainUrl: customDomain,
@@ -314,11 +312,9 @@ export function useIntegrations(deps: IntegrationsDeps) {
       });
       let appUuid: string | undefined;
       let isUpdate = false;
-      let pocketbaseUrl: string | undefined;
-      let pocketbaseAdminUrl: string | undefined;
       try {
         const frontendDomain = (customDomain || '').replace(/^https?:\/\//, '');
-        const result = await deployPocketbaseToOpenhost({
+        const result = await deployToVercel({
           repoUrl: effectiveRepoUrl,
           projectName,
           frontendDomain,
@@ -326,8 +322,8 @@ export function useIntegrations(deps: IntegrationsDeps) {
         });
         if (!result.ok) {
           const cleanError = result.error || `Deploy failed (${result.status})`;
-          setOpenHostDeployResult({ type: 'error', message: cleanError });
-          setOpenHostDeployCard({
+          setVercelDeployResult({ type: 'error', message: cleanError });
+          setVercelDeployCard({
             status: 'failed',
             message: cleanError,
             projectName,
@@ -342,27 +338,23 @@ export function useIntegrations(deps: IntegrationsDeps) {
         const deploymentUuid = body.deploymentUuid;
         isUpdate = !!body.isUpdate;
         const domainUrl = body.domainUrl;
-        pocketbaseUrl = body.pocketbaseUrl;
-        pocketbaseAdminUrl = body.adminUrl;
 
         // Initial success: the app was created/updated and deploy triggered
-        setOpenHostDeployResult({ type: 'success', message: isUpdate ? 'Redeploy triggered!' : 'Deploy triggered!' });
-        setOpenHostDeployCard({
+        setVercelDeployResult({ type: 'success', message: isUpdate ? 'Redeploy triggered!' : 'Deploy triggered!' });
+        setVercelDeployCard({
           status: 'deploying',
           message: isUpdate ? 'Redeploy triggered — monitoring build progress...' : 'Deploy triggered — monitoring build progress...',
           projectName,
           siteTitle,
           domainUrl,
           appUuid,
-          pocketbaseUrl,
-          pocketbaseAdminUrl,
           isPolling: true,
         });
 
         // Track the deployment UUID for status polling
         const effectiveDeploymentUuid = deploymentUuid;
 
-        // ── Poll OpenHost for real deployment status ──
+        // ── Poll Vercel for real deployment status ──
         if (appUuid) {
           const pollInterval = 5000; // 5 seconds
           const maxAttempts = 60; // ~5 minutes (builds can take a while)
@@ -380,7 +372,7 @@ export function useIntegrations(deps: IntegrationsDeps) {
 
             // Deployment-level terminal states
             if (d === 'failed') {
-              return { message: 'Deployment failed on OpenHost.', statusLabel: 'failed', isTerminal: true, isSuccess: false, isFailed: true };
+              return { message: 'Deployment failed on Vercel.', statusLabel: 'failed', isTerminal: true, isSuccess: false, isFailed: true };
             }
             if (d === 'cancelled' || d === 'cancelled-by-user') {
               return { message: 'Deployment was cancelled.', statusLabel: 'cancelled', isTerminal: true, isSuccess: false, isFailed: true };
@@ -407,10 +399,10 @@ export function useIntegrations(deps: IntegrationsDeps) {
 
             // Active deployment phases
             if (d === 'queued' || d === 'pending') {
-              return { message: 'Queued on OpenHost — waiting for build slot...', statusLabel: 'queued', isTerminal: false, isSuccess: false, isFailed: false };
+              return { message: 'Queued on Vercel — waiting for build slot...', statusLabel: 'queued', isTerminal: false, isSuccess: false, isFailed: false };
             }
             if (d === 'in_progress' || d === 'in-progress' || d === 'building' || d === 'deploying') {
-              return { message: 'Building and deploying on OpenHost...', statusLabel: 'building', isTerminal: false, isSuccess: false, isFailed: false };
+              return { message: 'Building and deploying on Vercel...', statusLabel: 'building', isTerminal: false, isSuccess: false, isFailed: false };
             }
             if (d === 'preparing') {
               return { message: 'Preparing build environment...', statusLabel: 'preparing', isTerminal: false, isSuccess: false, isFailed: false };
@@ -434,19 +426,19 @@ export function useIntegrations(deps: IntegrationsDeps) {
             }
 
             // Unknown/null state — show a more descriptive message instead of generic 'connecting'
-            return { message: 'Waiting for OpenHost status...', statusLabel: 'polling', isTerminal: false, isSuccess: false, isFailed: false };
+            return { message: 'Waiting for Vercel status...', statusLabel: 'polling', isTerminal: false, isSuccess: false, isFailed: false };
           };
 
           const poll = async () => {
             attempts++;
             try {
-              const statusResult = await getOpenhostStatus({
+              const statusResult = await getVercelStatus({
                 deploymentUuid: effectiveDeploymentUuid,
                 appUuid: appUuid!,
               });
               if (!statusResult.ok) {
                 if (attempts >= maxAttempts) {
-                  setOpenHostDeployCard((prev) =>
+                  setVercelDeployCard((prev) =>
                     prev
                       ? {
                           ...prev,
@@ -484,15 +476,13 @@ export function useIntegrations(deps: IntegrationsDeps) {
 
               // After 30 seconds in verifying, force success / deployed
               if (verifyingStartedAt && (Date.now() - verifyingStartedAt) >= 30000) {
-                setOpenHostDeployCard((prev) =>
+                setVercelDeployCard((prev) =>
                   prev
                     ? {
                         ...prev,
                         status: 'success',
                         message: isUpdate ? 'Redeploy completed successfully!' : 'Deployment completed successfully!',
                         deploymentStatus: 'deployed',
-                        pocketbaseUrl,
-                        pocketbaseAdminUrl,
                         isPolling: false,
                       }
                     : null
@@ -501,7 +491,7 @@ export function useIntegrations(deps: IntegrationsDeps) {
               }
 
               if (descriptor.isFailed) {
-                setOpenHostDeployCard((prev) =>
+                setVercelDeployCard((prev) =>
                   prev
                     ? {
                         ...prev,
@@ -517,7 +507,7 @@ export function useIntegrations(deps: IntegrationsDeps) {
               }
 
               if (descriptor.isSuccess) {
-                setOpenHostDeployCard((prev) =>
+                setVercelDeployCard((prev) =>
                   prev
                     ? {
                         ...prev,
@@ -525,8 +515,6 @@ export function useIntegrations(deps: IntegrationsDeps) {
                         message: descriptor.message,
                         deploymentStatus: descriptor.statusLabel,
                         commitMessage: deployMessage,
-                        pocketbaseUrl,
-                        pocketbaseAdminUrl,
                         isPolling: false,
                       }
                     : null
@@ -541,7 +529,7 @@ export function useIntegrations(deps: IntegrationsDeps) {
               }
 
               // Still in progress
-              setOpenHostDeployCard((prev) =>
+              setVercelDeployCard((prev) =>
                 prev
                   ? {
                       ...prev,
@@ -561,7 +549,7 @@ export function useIntegrations(deps: IntegrationsDeps) {
               if (shouldContinue && !descriptor.isTerminal) {
                 setTimeout(poll, pollInterval);
               } else if (attempts >= maxAttempts) {
-                setOpenHostDeployCard((prev) =>
+                setVercelDeployCard((prev) =>
                   prev
                     ? {
                         ...prev,
@@ -573,7 +561,7 @@ export function useIntegrations(deps: IntegrationsDeps) {
               }
             } catch {
               if (attempts >= maxAttempts) {
-                setOpenHostDeployCard((prev) =>
+                setVercelDeployCard((prev) =>
                   prev
                     ? {
                         ...prev,
@@ -588,13 +576,13 @@ export function useIntegrations(deps: IntegrationsDeps) {
             }
           };
 
-          // Start polling after a short delay to let OpenHost queue the deploy
+          // Start polling after a short delay to let Vercel queue the deploy
           setTimeout(poll, 3000);
         }
       } catch (e) {
-        const cleanError = e instanceof Error ? e.message : 'OpenHost deploy failed';
-        setOpenHostDeployResult({ type: 'error', message: cleanError });
-        setOpenHostDeployCard({
+        const cleanError = e instanceof Error ? e.message : 'Vercel deploy failed';
+        setVercelDeployResult({ type: 'error', message: cleanError });
+        setVercelDeployCard({
           status: 'failed',
           message: cleanError,
           projectName,
@@ -604,15 +592,15 @@ export function useIntegrations(deps: IntegrationsDeps) {
         });
       }
     },
-    [setOpenHostDeployCard, setOpenHostDeployResult, conversationContext.currentProject, conversationContext.siteTitle, lastGitccRepoUrl, currentSessionProjectId, setGitccPushDialogOpen, addChatMessage]
+    [setVercelDeployCard, setVercelDeployResult, conversationContext.currentProject, conversationContext.siteTitle, lastGithubRepoUrl, currentSessionProjectId, setGithubPushDialogOpen, addChatMessage]
   );
 
   const requestProjectNameForAction = useCallback(
     (
       action:
         | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-        | { kind: 'gitcc-open' }
-        | { kind: 'openhost-deploy' }
+        | { kind: 'github-open' }
+        | { kind: 'vercel-deploy' }
     ) => {
       const suggested = suggestProjectName();
       setProjectNameSuggestion(suggested);
@@ -627,8 +615,8 @@ export function useIntegrations(deps: IntegrationsDeps) {
     (
       action:
         | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-        | { kind: 'gitcc-open' }
-        | { kind: 'openhost-deploy' }
+        | { kind: 'github-open' }
+        | { kind: 'vercel-deploy' }
     ): boolean => {
       const existing = (conversationContext.currentProject || '').trim();
 
@@ -651,8 +639,8 @@ export function useIntegrations(deps: IntegrationsDeps) {
     async (
       action:
         | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-        | { kind: 'gitcc-open' }
-        | { kind: 'openhost-deploy' },
+        | { kind: 'github-open' }
+        | { kind: 'vercel-deploy' },
       confirmedProjectName: string,
       confirmedSiteTitle: string
     ) => {
@@ -665,14 +653,14 @@ export function useIntegrations(deps: IntegrationsDeps) {
         await persistProjectDurably(action.saveReason, name);
         return;
       }
-      if (action.kind === 'gitcc-open') {
+      if (action.kind === 'github-open') {
         // Open after the naming dialog closes to avoid modal overlap.
-        window.setTimeout(() => setGitccPushDialogOpen(true), 0);
+        window.setTimeout(() => setGithubPushDialogOpen(true), 0);
         return;
       }
-      await runOpenHostDeploy(name);
+      await runVercelDeploy(name);
     },
-    [setConversationContext, persistProjectDurably, setGitccPushDialogOpen, runOpenHostDeploy]
+    [setConversationContext, persistProjectDurably, setGithubPushDialogOpen, runVercelDeploy]
   );
 
   const confirmProjectNameAndContinue = useCallback(
@@ -695,52 +683,52 @@ export function useIntegrations(deps: IntegrationsDeps) {
     setPendingNamedAction(null);
   }, [setProjectNameDialogOpen, setPendingNamedAction]);
 
-  const hostOnOpenHost = useCallback(async () => {
+  const hostOnVercel = useCallback(async () => {
     if (!integrationReadiness.ready) {
-      explainIntegrationBlocked('openhost');
+      explainIntegrationBlocked('vercel');
       return;
     }
-    if (!ensureProjectNameForAction({ kind: 'openhost-deploy' })) {
+    if (!ensureProjectNameForAction({ kind: 'vercel-deploy' })) {
       return;
     }
-    setOpenHostDeployDialogOpen(true);
+    setVercelDeployDialogOpen(true);
   }, [
     integrationReadiness.ready,
     explainIntegrationBlocked,
     ensureProjectNameForAction,
-    setOpenHostDeployDialogOpen,
+    setVercelDeployDialogOpen,
   ]);
 
-  const executeOpenHostDeploy = useCallback(
+  const executeVercelDeploy = useCallback(
     async (customDomain: string) => {
-      setIntegrationBusy('openhost');
+      setIntegrationBusy('vercel');
       try {
-        await runOpenHostDeploy(customDomain);
+        await runVercelDeploy(customDomain);
       } finally {
         setIntegrationBusy(null);
       }
     },
-    [runOpenHostDeploy, setIntegrationBusy]
+    [runVercelDeploy, setIntegrationBusy]
   );
 
-  const openGitccPushDialog = useCallback(() => {
+  const openGithubPushDialog = useCallback(() => {
     if (!integrationReadiness.ready) {
-      explainIntegrationBlocked('gitcc');
+      explainIntegrationBlocked('github');
       return;
     }
-    if (!ensureProjectNameForAction({ kind: 'gitcc-open' })) {
+    if (!ensureProjectNameForAction({ kind: 'github-open' })) {
       return;
     }
-    setGitccPushDialogOpen(true);
-  }, [integrationReadiness.ready, explainIntegrationBlocked, ensureProjectNameForAction, setGitccPushDialogOpen]);
+    setGithubPushDialogOpen(true);
+  }, [integrationReadiness.ready, explainIntegrationBlocked, ensureProjectNameForAction, setGithubPushDialogOpen]);
 
-  const executeGitccPush = useCallback(
+  const executeGithubPush = useCallback(
     async (repoName: string) => {
       if (!integrationReadiness.ready) {
-        explainIntegrationBlocked('gitcc');
+        explainIntegrationBlocked('github');
         return;
       }
-      setIntegrationBusy('gitcc');
+      setIntegrationBusy('github');
 
       // Guard the entire push sequence against hanging forever.
       const pushController = new AbortController();
@@ -759,11 +747,11 @@ export function useIntegrations(deps: IntegrationsDeps) {
             if (npmBody.success) {
               addChatMessage('Dependencies synced. Collecting files for push...', 'system');
             } else {
-              console.warn('[executeGitccPush] npm install warning:', npmBody.error || npmBody.output);
+              console.warn('[executeGithubPush] npm install warning:', npmBody.error || npmBody.output);
               addChatMessage('Dependency sync had warnings, continuing with push...', 'system');
             }
           } catch (npmErr) {
-            console.warn('[executeGitccPush] npm install failed:', npmErr);
+            console.warn('[executeGithubPush] npm install failed:', npmErr);
             addChatMessage('Could not sync dependencies, pushing current files...', 'system');
           } finally {
             window.clearTimeout(npmTimeout);
@@ -772,14 +760,14 @@ export function useIntegrations(deps: IntegrationsDeps) {
 
         const files = await collectSandboxFilesForExport();
         if (files.length === 0) {
-          setGitccPushResult({ type: 'error', message: 'No files were read from the sandbox yet. Generate or apply code first.' });
+          setGithubPushResult({ type: 'error', message: 'No files were read from the sandbox yet. Generate or apply code first.' });
           return;
         }
         const finalName = slugifyExportName(
           conversationContext.currentProject || repoName,
           'ai-website-export'
         );
-        const result = await pushToGitcc(
+        const result = await pushToGithub(
           { repoName: finalName, files, aiWebsiteProjectId: currentSessionProjectId || undefined },
           pushController.signal
         );
@@ -787,38 +775,38 @@ export function useIntegrations(deps: IntegrationsDeps) {
           const cleanError = result.error || `Push failed (${result.status})`;
           if (/session expired|reconnect/i.test(cleanError)) {
             const next = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
-            window.location.href = backendApiUrl(`/api/gitcc/gitlab/authorize?next=${encodeURIComponent(next)}`);
-            setGitccPushResult({ type: 'error', message: 'GitHub session expired. Redirecting to reconnect… After authorizing, try pushing again.' });
+            window.location.href = backendApiUrl(`/api/github/authorize?next=${encodeURIComponent(next)}`);
+            setGithubPushResult({ type: 'error', message: 'GitHub session expired. Redirecting to reconnect… After authorizing, try pushing again.' });
             return;
           }
-          setGitccPushResult({ type: 'error', message: cleanError });
+          setGithubPushResult({ type: 'error', message: cleanError });
           return;
         }
         const body = result.data;
         if (body.uploaded === 0) {
-          setGitccPushResult({ type: 'error', message: 'Push succeeded but 0 files were uploaded. The repository may be empty.' });
+          setGithubPushResult({ type: 'error', message: 'Push succeeded but 0 files were uploaded. The repository may be empty.' });
           return;
         }
         const successMsg = `Pushed ${body.uploaded} file(s) to GitHub.`;
-        setGitccPushResult({ type: 'success', message: successMsg });
-        const normalizedRepoUrl = normalizeGitccRepoUrl(body.repoUrl);
+        setGithubPushResult({ type: 'success', message: successMsg });
+        const normalizedRepoUrl = normalizeGithubRepoUrl(body.repoUrl);
         if (normalizedRepoUrl) {
-          setLastGitccRepoUrl(normalizedRepoUrl);
-          // Auto-retry pending OpenHost deploy if there is one
-          if (pendingOpenHostDeployDomainRef.current !== null) {
-            const domain = pendingOpenHostDeployDomainRef.current;
-            pendingOpenHostDeployDomainRef.current = null;
+          setLastGithubRepoUrl(normalizedRepoUrl);
+          // Auto-retry pending Vercel deploy if there is one
+          if (pendingVercelDeployDomainRef.current !== null) {
+            const domain = pendingVercelDeployDomainRef.current;
+            pendingVercelDeployDomainRef.current = null;
             window.setTimeout(() => {
-              runOpenHostDeploy(domain || undefined, normalizedRepoUrl);
+              runVercelDeploy(domain || undefined, normalizedRepoUrl);
             }, 600);
           }
         }
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') {
-          setGitccPushResult({ type: 'error', message: 'Push timed out after 2 minutes. Please try again.' });
+          setGithubPushResult({ type: 'error', message: 'Push timed out after 2 minutes. Please try again.' });
         } else {
           const cleanError = e instanceof Error ? e.message : 'Push to GitHub failed';
-          setGitccPushResult({ type: 'error', message: cleanError });
+          setGithubPushResult({ type: 'error', message: cleanError });
         }
       } finally {
         window.clearTimeout(pushTimeout);
@@ -830,11 +818,11 @@ export function useIntegrations(deps: IntegrationsDeps) {
       explainIntegrationBlocked,
       setIntegrationBusy,
       collectSandboxFilesForExport,
-      setGitccPushResult,
+      setGithubPushResult,
       slugifyExportName,
       conversationContext.currentProject,
-      setLastGitccRepoUrl,
-      runOpenHostDeploy,
+      setLastGithubRepoUrl,
+      runVercelDeploy,
       currentSessionProjectId,
     ]
   );
@@ -861,18 +849,18 @@ export function useIntegrations(deps: IntegrationsDeps) {
     downloadZip,
     collectSandboxFilesForExport,
     slugifyExportName,
-    defaultGitccRepoName,
+    defaultGithubRepoName,
     explainIntegrationBlocked,
-    runOpenHostDeploy,
+    runVercelDeploy,
     requestProjectNameForAction,
     ensureProjectNameForAction,
     runNamedAction,
     confirmProjectNameAndContinue,
     cancelProjectNameAndPendingAction,
-    hostOnOpenHost,
-    executeOpenHostDeploy,
-    openGitccPushDialog,
-    executeGitccPush,
+    hostOnVercel,
+    executeVercelDeploy,
+    openGithubPushDialog,
+    executeGithubPush,
     saveDatabaseConnection,
   };
 }

@@ -31,8 +31,8 @@ export interface HeaderWorkspace {
   ensureProjectNameForAction: (
     action:
       | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-      | { kind: 'gitcc-open' }
-      | { kind: 'openhost-deploy' }
+      | { kind: 'github-open' }
+      | { kind: 'vercel-deploy' }
   ) => boolean;
   persistProjectDurably: (
     saveReason?: 'manual' | 'auto-generation-success',
@@ -41,14 +41,14 @@ export interface HeaderWorkspace {
   isSavingProject: boolean;
   downloadZip: () => Promise<void>;
   isDownloadingZip: boolean;
-  openGitccPushDialog: () => void;
+  openGithubPushDialog: () => void;
   integrationReadiness: {
     ready: boolean;
     reasons: string[];
     primaryReason: string | null;
   };
-  integrationBusy: 'gitcc' | 'openhost' | null;
-  hostOnOpenHost: () => Promise<void>;
+  integrationBusy: 'github' | 'vercel' | null;
+  hostOnVercel: () => Promise<void>;
 }
 
 export interface GenerationHeaderProps {
@@ -79,10 +79,10 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
     isSavingProject,
     downloadZip,
     isDownloadingZip,
-    openGitccPushDialog,
+    openGithubPushDialog,
     integrationReadiness,
     integrationBusy,
-    hostOnOpenHost,
+    hostOnVercel,
   } = workspace;
 
   const { info: pocketbaseInfo, loading: pocketbaseLoading } = useSandboxPocketbaseInfo(
@@ -224,7 +224,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
         </button>
         <button
           type="button"
-          onClick={() => openGitccPushDialog()}
+          onClick={() => openGithubPushDialog()}
           disabled={!integrationReadiness.ready || integrationBusy !== null}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-purple/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
           title={
@@ -234,16 +234,16 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           }
         >
           <GitBranch className="h-3.5 w-3.5 shrink-0 text-glow-purple/80" aria-hidden />
-          <span className="hidden sm:inline">{integrationBusy === 'gitcc' ? 'Push…' : 'Push'}</span>
+          <span className="hidden sm:inline">{integrationBusy === 'github' ? 'Push…' : 'Push'}</span>
         </button>
         <button
           type="button"
-          onClick={() => void hostOnOpenHost()}
+          onClick={() => void hostOnVercel()}
           disabled={integrationBusy !== null}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Cloud className="h-3.5 w-3.5 shrink-0 text-glow-cyan/80" aria-hidden />
-          <span className="hidden sm:inline">{integrationBusy === 'openhost' ? 'Deploy…' : 'Deploy'}</span>
+          <span className="hidden sm:inline">{integrationBusy === 'vercel' ? 'Deploy…' : 'Deploy'}</span>
         </button>
         {sandboxData && (
           <a

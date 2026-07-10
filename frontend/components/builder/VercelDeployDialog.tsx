@@ -10,10 +10,10 @@ import {
   DialogTitle
 } from "@/components/ui/shadcn/dialog";
 import { cn } from "@/utils/cn";
-import { checkOpenhostDomain } from "@/lib/api/client";
+import { checkVercelDomain } from "@/lib/api/client";
 import { panelClass, DialogSurfaceDecor } from "./DialogSurfaceDecor";
 
-export type OpenHostDeployDialogProps = {
+export type VercelDeployDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectName: string;
@@ -28,7 +28,7 @@ export type OpenHostDeployDialogProps = {
   onClearResult?: () => void;
 };
 
-export function OpenHostDeployDialog({
+export function VercelDeployDialog({
   open,
   onOpenChange,
   projectName,
@@ -39,9 +39,9 @@ export function OpenHostDeployDialog({
   deploying = false,
   result,
   onClearResult,
-}: OpenHostDeployDialogProps) {
+}: VercelDeployDialogProps) {
   const [domain, setDomain] = useState("");
-  const protocol = "http://" as const;
+  const protocol = "https://" as const;
   const [domainCheck, setDomainCheck] = useState<{
     available?: boolean;
     message?: string;
@@ -59,7 +59,7 @@ export function OpenHostDeployDialog({
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, "-")
         .replace(/^-+|-+$/g, "");
-      setDomain(`${dnsSafe}.dpqq.com`);
+      setDomain(`${dnsSafe}.vercel.app`);
     }
     setDomainCheck({});
   }, [open, projectName, existingDomainUrl]);
@@ -72,8 +72,8 @@ export function OpenHostDeployDialog({
     }
     setDomainCheck({ checking: true });
     try {
-      const fullDomain = `http://${trimmed}`;
-      const result = await checkOpenhostDomain(fullDomain, projectId);
+      const fullDomain = `https://${trimmed}`;
+      const result = await checkVercelDomain(fullDomain, projectId);
       if (!result.ok) {
         setDomainCheck({});
         return;
@@ -119,21 +119,21 @@ export function OpenHostDeployDialog({
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent className={cn(panelClass, "max-w-md gap-0 p-0")}>
-        <DialogSurfaceDecor variant="gitcc" />
+        <DialogSurfaceDecor variant="github" />
         <div className="relative z-[1] space-y-4 p-6">
           <DialogHeader className="space-y-2 text-left">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-500/30 bg-gradient-to-br from-cyan-500/25 to-teal-600/10 font-mono text-sm font-bold text-cyan-200">
-                OH
+                VC
               </span>
               <DialogTitle className="text-xl font-semibold tracking-tight text-zinc-50">
-                {isUpdate ? "Update OpenHost Deploy" : "Deploy to OpenHost"}
+                {isUpdate ? "Update Vercel Deploy" : "Deploy to Vercel"}
               </DialogTitle>
             </div>
             <DialogDescription className="text-zinc-400">
               {isUpdate
                 ? `This project is already deployed. Updating will redeploy the existing app with your latest code and domain settings.`
-                : `Choose a custom domain for your deployment. It will be served over HTTP.`}
+                : `Choose a custom domain for your deployment. It will be served over HTTPS.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -176,7 +176,7 @@ export function OpenHostDeployDialog({
                 <input
                   value={domain}
                   onChange={(e) => handleDomainChange(e.target.value)}
-                  placeholder="my-app.dpqq.com"
+                  placeholder="my-app.vercel.app"
                   className={`mt-1 w-full rounded-xl border bg-white/5 px-3 py-2 font-mono text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-glow-cyan/50 ${
                     !isUpdate && domainCheck.available === false
                       ? 'border-red-400/50'
@@ -201,14 +201,6 @@ export function OpenHostDeployDialog({
                 <p className="text-xs text-cyan-400">
                   Current domain: {existingDomainUrl}
                 </p>
-              )}
-              {!isUpdate && (
-                <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/5 px-3 py-2">
-                  <p className="text-xs font-medium text-cyan-300/80">PocketBase admin &amp; API domain</p>
-                  <p className="mt-0.5 font-mono text-sm text-cyan-200">
-                    pb.{domain.trim().toLowerCase().replace(/^https?:\/\//, "") || "—"}
-                  </p>
-                </div>
               )}
               <DialogFooter className="gap-2 sm:gap-2">
                 <button

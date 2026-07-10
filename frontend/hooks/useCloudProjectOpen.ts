@@ -6,7 +6,7 @@ import type { CloudProjectListItem } from '@/lib/generation/types';
 import type { StoredChatMessageV1 } from '@/lib/generation/storedChatTypes';
 import { mapSandboxFilesToGenerationFiles } from './useCloudPersistence';
 import { getSandboxStatus, killSandbox, openProject } from '@/lib/api/client';
-import { normalizeGitccRepoUrl } from '@/lib/gitcc';
+import { normalizeGithubRepoUrl } from '@/lib/github';
 import { replaceGenerationSearchParams } from '@/lib/generation/urlUtils';
 
 export interface CloudProjectOpenDeps {
@@ -65,7 +65,7 @@ export interface CloudProjectOpenDeps {
   setProjectOpeningStatus: (status: string) => void;
   preserveCloudProjectsUntilRef: React.MutableRefObject<number>;
   persistSnapshotToCloud: (sandboxIdOverride?: string) => Promise<boolean>;
-  setLastGitccRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  setLastGithubRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export function useCloudProjectOpen(deps: CloudProjectOpenDeps) {
@@ -105,7 +105,7 @@ export function useCloudProjectOpen(deps: CloudProjectOpenDeps) {
     setProjectOpeningStatus,
     preserveCloudProjectsUntilRef,
     persistSnapshotToCloud,
-    setLastGitccRepoUrl,
+    setLastGithubRepoUrl,
   } = deps;
 
   const openCloudProject = useCallback(
@@ -191,7 +191,7 @@ export function useCloudProjectOpen(deps: CloudProjectOpenDeps) {
           restoreSource?: string;
           sandboxData?: SandboxData;
           warnings?: string[];
-          gitccRepoUrl?: string;
+          githubRepoUrl?: string;
           snapshot?: {
             projectId?: string;
             projectName?: string;
@@ -205,9 +205,9 @@ export function useCloudProjectOpen(deps: CloudProjectOpenDeps) {
         if (!result.ok || !json.success || !json.snapshot) {
           throw new Error(json.error || 'Could not open project.');
         }
-        const normalizedRepoUrl = normalizeGitccRepoUrl(json.gitccRepoUrl);
+        const normalizedRepoUrl = normalizeGithubRepoUrl(json.githubRepoUrl);
         if (normalizedRepoUrl) {
-          setLastGitccRepoUrl(normalizedRepoUrl);
+          setLastGithubRepoUrl(normalizedRepoUrl);
         }
         if (Array.isArray(json.warnings) && json.warnings.length > 0) {
           addChatMessage(
@@ -414,7 +414,7 @@ export function useCloudProjectOpen(deps: CloudProjectOpenDeps) {
       setProjectOpeningStatus,
       preserveCloudProjectsUntilRef,
       persistSnapshotToCloud,
-      setLastGitccRepoUrl,
+      setLastGithubRepoUrl,
     ]
   );
 

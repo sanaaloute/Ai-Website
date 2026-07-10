@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     process.env.BACKEND_INTERNAL_URL?.replace(/\/$/u, "") ||
     process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/u, "") ||
     "http://localhost:4000";
-  const targetUrl = `${backendUrl}/api/gitcc/gitlab/callback?${request.nextUrl.searchParams.toString()}`;
+  const targetUrl = `${backendUrl}/api/github/callback?${request.nextUrl.searchParams.toString()}`;
 
   try {
     const upstream = await fetch(targetUrl, {

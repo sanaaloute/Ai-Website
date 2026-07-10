@@ -4,20 +4,20 @@ import React, { memo } from "react";
 import { Loader2, CheckCircle2, XCircle, ExternalLink, GripVertical } from "lucide-react";
 import {
   DatabaseConnectionDialog,
-  GitccPushDialog,
+  GithubPushDialog,
   ProjectNameDialog,
   DatabaseConnectionValue,
 } from "@/components/builder/GenerationDialogs";
-import { OpenHostDeployDialog } from "@/components/builder/OpenHostDeployDialog";
+import { VercelDeployDialog } from "@/components/builder/VercelDeployDialog";
 import { CloudProjectListItem } from "@/hooks/useCloudProjects";
 import { AI_WEBSITE_API_KEY_SITE_URL } from "@/lib/ai/aiWebsiteApiKey";
 
 const AI_WEBSITE_KEY_SITE = AI_WEBSITE_API_KEY_SITE_URL;
 
-/* ── Draggable OpenHost deploy status card ─────────────────────────────── */
+/* ── Draggable Vercel deploy status card ─────────────────────────────── */
 
 type DeployCardProps = {
-  card: NonNullable<DialogOverlaysWorkspace['openHostDeployCard']>;
+  card: NonNullable<DialogOverlaysWorkspace['vercelDeployCard']>;
   onClose: () => void;
 };
 
@@ -148,18 +148,6 @@ function DraggableDeployCard({ card, onClose }: DeployCardProps) {
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               </a>
             )}
-            {card.pocketbaseAdminUrl && (
-              <a
-                href={card.pocketbaseAdminUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-purple-300/35 bg-purple-400/10 px-2.5 py-1 text-xs font-semibold text-purple-200 transition hover:bg-purple-400/20"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Open Admin Panel
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-              </a>
-            )}
           </div>
         </div>
 
@@ -169,7 +157,7 @@ function DraggableDeployCard({ card, onClose }: DeployCardProps) {
             type="button"
             onClick={onClose}
             className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-medium opacity-90 transition hover:bg-white/10 hover:opacity-100"
-            aria-label="Close OpenHost deployment status"
+            aria-label="Close Vercel deployment status"
           >
             Close
           </button>
@@ -193,8 +181,8 @@ export interface DialogOverlaysWorkspace {
   zipNotice: { status: "preparing" | "ready" | "error"; message: string } | null;
   databaseDialogOpen: boolean;
   setDatabaseDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  gitccPushDialogOpen: boolean;
-  setGitccPushDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  githubPushDialogOpen: boolean;
+  setGithubPushDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   projectNameDialogOpen: boolean;
   setProjectNameDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   projectNameSuggestion: string | null;
@@ -211,17 +199,17 @@ export interface DialogOverlaysWorkspace {
   suggestProjectName: () => string;
   submitProjectRename: (name: string) => Promise<void>;
   saveDatabaseConnection: (v: DatabaseConnectionValue) => void;
-  executeGitccPush: (repoName: string) => Promise<void>;
-  executeOpenHostDeploy: (customDomain: string) => Promise<void>;
-  defaultGitccRepoName: string;
-  integrationBusy: 'gitcc' | 'openhost' | null;
-  openHostDeployDialogOpen: boolean;
-  setOpenHostDeployDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  gitccPushResult: { type: 'success' | 'error'; message: string } | null;
-  setGitccPushResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
-  openHostDeployResult: { type: 'success' | 'error'; message: string } | null;
-  setOpenHostDeployResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
-  openHostDeployCard: {
+  executeGithubPush: (repoName: string) => Promise<void>;
+  executeVercelDeploy: (customDomain: string) => Promise<void>;
+  defaultGithubRepoName: string;
+  integrationBusy: 'github' | 'vercel' | null;
+  vercelDeployDialogOpen: boolean;
+  setVercelDeployDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  githubPushResult: { type: 'success' | 'error'; message: string } | null;
+  setGithubPushResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
+  vercelDeployResult: { type: 'success' | 'error'; message: string } | null;
+  setVercelDeployResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
+  vercelDeployCard: {
     status: "deploying" | "success" | "failed";
     message: string;
     domainUrl?: string;
@@ -231,10 +219,8 @@ export interface DialogOverlaysWorkspace {
     deploymentStatus?: string;
     commitMessage?: string;
     isPolling?: boolean;
-    pocketbaseUrl?: string;
-    pocketbaseAdminUrl?: string;
   } | null;
-  setOpenHostDeployCard: React.Dispatch<
+  setVercelDeployCard: React.Dispatch<
     React.SetStateAction<{
       status: "deploying" | "success" | "failed";
       message: string;
@@ -245,15 +231,12 @@ export interface DialogOverlaysWorkspace {
       deploymentStatus?: string;
       commitMessage?: string;
       isPolling?: boolean;
-      pocketbaseUrl?: string;
-      pocketbaseAdminUrl?: string;
     } | null>
   >;
   currentSessionProjectId: string | null;
-  currentProjectOpenHostInfo: {
+  currentProjectVercelInfo: {
     appUuid?: string | null;
     domainUrl?: string | null;
-    pocketbaseAdminUrl?: string | null;
   } | null;
   conversationContext: {
     databaseConnection?: DatabaseConnectionValue | null;
@@ -366,10 +349,10 @@ function GenerationDialogOverlays({
         </div>
       )}
 
-      {workspace.openHostDeployCard && (
+      {workspace.vercelDeployCard && (
         <DraggableDeployCard
-          card={workspace.openHostDeployCard}
-          onClose={() => workspace.setOpenHostDeployCard(null)}
+          card={workspace.vercelDeployCard}
+          onClose={() => workspace.setVercelDeployCard(null)}
         />
       )}
 
@@ -404,26 +387,26 @@ function GenerationDialogOverlays({
         value={workspace.conversationContext.databaseConnection ?? null}
         onSave={workspace.saveDatabaseConnection}
       />
-      <GitccPushDialog
-        open={workspace.gitccPushDialogOpen}
-        onOpenChange={workspace.setGitccPushDialogOpen}
-        defaultRepoName={workspace.defaultGitccRepoName}
-        onConfirmPush={workspace.executeGitccPush}
-        pushing={workspace.integrationBusy === "gitcc"}
-        result={workspace.gitccPushResult}
-        onClearResult={() => workspace.setGitccPushResult(null)}
+      <GithubPushDialog
+        open={workspace.githubPushDialogOpen}
+        onOpenChange={workspace.setGithubPushDialogOpen}
+        defaultRepoName={workspace.defaultGithubRepoName}
+        onConfirmPush={workspace.executeGithubPush}
+        pushing={workspace.integrationBusy === "github"}
+        result={workspace.githubPushResult}
+        onClearResult={() => workspace.setGithubPushResult(null)}
       />
-      <OpenHostDeployDialog
-        open={workspace.openHostDeployDialogOpen}
-        onOpenChange={(open) => workspace.setOpenHostDeployDialogOpen(open)}
+      <VercelDeployDialog
+        open={workspace.vercelDeployDialogOpen}
+        onOpenChange={(open) => workspace.setVercelDeployDialogOpen(open)}
         projectName={workspace.conversationContext.currentProject || 'ai-website-app'}
-        existingDomainUrl={workspace.currentProjectOpenHostInfo?.domainUrl}
-        existingAppUuid={workspace.currentProjectOpenHostInfo?.appUuid}
+        existingDomainUrl={workspace.currentProjectVercelInfo?.domainUrl}
+        existingAppUuid={workspace.currentProjectVercelInfo?.appUuid}
         projectId={workspace.currentSessionProjectId}
-        onConfirmDeploy={(domain) => workspace.executeOpenHostDeploy(domain)}
-        deploying={workspace.integrationBusy === 'openhost'}
-        result={workspace.openHostDeployResult}
-        onClearResult={() => workspace.setOpenHostDeployResult(null)}
+        onConfirmDeploy={(domain) => workspace.executeVercelDeploy(domain)}
+        deploying={workspace.integrationBusy === 'vercel'}
+        result={workspace.vercelDeployResult}
+        onClearResult={() => workspace.setVercelDeployResult(null)}
       />
       <ProjectNameDialog
         open={workspace.projectNameDialogOpen}
@@ -438,7 +421,7 @@ function GenerationDialogOverlays({
         description={
           workspace.currentSessionProjectId
             ? 'Confirm the project name to update ai-website.json before saving.'
-            : 'Confirm a project name before first save. This name is reused for Supabase, GitHub repo default, and OpenHost project default.'
+            : 'Confirm a project name before first save. This name is reused for Supabase, GitHub repo default, and Vercel project default.'
         }
         confirmButtonLabel={workspace.currentSessionProjectId ? 'Update & save' : 'Confirm name'}
         suggestedName={

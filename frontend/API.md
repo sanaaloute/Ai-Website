@@ -1291,10 +1291,10 @@ List saved projects for the authenticated user.
       "projectName": "My App",
       "updatedAt": 1704067200000,
       "preview": null,
-      "openhostAppUuid": null,
-      "openhostDomainUrl": null,
-      "openhostDeployedAt": null,
-      "gitccRepoUrl": null
+      "vercelProjectId": null,
+      "vercelDomainUrl": null,
+      "vercelDeployedAt": null,
+      "githubRepoUrl": null
     }
   ]
 }
@@ -1605,9 +1605,9 @@ Stripe webhook handler. Called by Stripe, not the frontend (documented for compl
 
 ## Integrations
 
-### `GET /api/gitcc/gitlab/authorize`
+### `GET /api/github/authorize`
 
-Redirects to GitLab OAuth for GitCC.
+Redirects to GitHub OAuth.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1618,11 +1618,11 @@ Redirects to GitLab OAuth for GitCC.
 
 **Response `307 Temporary Redirect`**
 - Redirects to GitLab OAuth URL.
-- Sets `gitcc_oauth_state` cookie.
+- Sets `github_oauth_state` cookie.
 
 ---
 
-### `GET /api/gitcc/gitlab/callback`
+### `GET /api/github/callback`
 
 OAuth callback. Exchanges code for token and sets cookie.
 
@@ -1635,14 +1635,14 @@ OAuth callback. Exchanges code for token and sets cookie.
 - `state` (required)
 
 **Response `307 Temporary Redirect`**
-- Sets `gitcc_gitlab_access` cookie.
+- Sets `github_access` cookie.
 - Redirects to `next` or `/`.
 
 ---
 
-### `GET /api/gitcc/gitlab/status`
+### `GET /api/github/status`
 
-Check whether GitCC is connected.
+Check whether GitHub is connected.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1657,14 +1657,14 @@ Check whether GitCC is connected.
 
 ---
 
-### `POST /api/gitcc/push`
+### `POST /api/github/push`
 
-Push files to GitCC/GitLab.
+Push files to GitHub.
 
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **Extra Auth** | `gitcc_gitlab_access` cookie required |
+| **Extra Auth** | `github_access` cookie required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -1682,7 +1682,7 @@ Push files to GitCC/GitLab.
 ```json
 {
   "ok": true,
-  "repoUrl": "https://gitcc.com/user/my-repo",
+  "repoUrl": "https://github.com/user/my-repo",
   "uploaded": 12,
   "requestId": "uuid"
 }
@@ -1690,7 +1690,7 @@ Push files to GitCC/GitLab.
 
 ---
 
-### `GET /api/openhost/check-domain`
+### `GET /api/vercel/check-domain`
 
 Check whether a custom domain is already in use.
 
@@ -1714,9 +1714,9 @@ Check whether a custom domain is already in use.
 
 ---
 
-### `POST /api/openhost/deploy`
+### `POST /api/vercel/deploy`
 
-Deploy a GitCC repo to OpenHost/Coolify.
+Deploy a GitHub repo to Vercel.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1726,7 +1726,7 @@ Deploy a GitCC repo to OpenHost/Coolify.
 **Request Body**
 ```json
 {
-  "repoUrl": "https://gitcc.com/user/repo.git",
+  "repoUrl": "https://github.com/user/repo.git",
   "projectName": "My App",
   "customDomain": "myapp.com",
   "projectId": "uuid"
@@ -1748,9 +1748,9 @@ Deploy a GitCC repo to OpenHost/Coolify.
 
 ---
 
-### `GET /api/openhost/status`
+### `GET /api/vercel/status`
 
-Poll OpenHost app + latest deployment status.
+Poll Vercel app + latest deployment status.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1969,4 +1969,4 @@ Readiness probe. Checks Redis connectivity.
 
 3. **Cookie Auth**: The backend sets `lc_access_token` and `lc_refresh_token` as `httpOnly` cookies. All frontend requests should use `credentials: 'include'` so the browser sends them automatically. The legacy `Authorization: Bearer <token>` header is still accepted as a fallback.
 
-4. **File Uploads**: There is no multipart file upload endpoint. Files are sent as JSON strings in the `content` field (e.g., `/api/gitcc/push`, `/api/projects/save`).
+4. **File Uploads**: There is no multipart file upload endpoint. Files are sent as JSON strings in the `content` field (e.g., `/api/github/push`, `/api/projects/save`).

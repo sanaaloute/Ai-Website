@@ -6,8 +6,8 @@ Chat with AI to build React apps instantly.
 - **AI generation** (streamed) via `/api/generate-ai-code-stream`
 - **Live sandbox preview** created via `/api/create-ai-sandbox-v2`
 - **Builder integrations**
-  - **GitHub (GitLab)** export: `/api/gitcc/push`
-  - **OpenHost deploy**: `/api/openhost/deploy`
+  - **GitHub (GitLab)** export: `/api/github/push`
+  - **Vercel deploy**: `/api/vercel/deploy`
   - **Database context** (Supabase/MongoDB) stored for future generations
 
 ## Setup
@@ -43,7 +43,7 @@ Open:
 ## Usage
 - Go to the **Generation** UI and chat to generate code into the sandbox.
 - Use **Push to GitHub** to export generated code to GitHub.
-- Use **Host on OpenHost** to deploy generated code.
+- Use **Host on Vercel** to deploy generated code.
 
 ## Sandbox API routes
 - **Commands / npm installs**: `/api/run-command-v2`, `/api/install-packages-v2` (streaming SSE).

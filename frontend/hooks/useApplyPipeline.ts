@@ -28,7 +28,7 @@ export interface ApplyPipelineDeps {
   fetchSandboxFiles: () => Promise<void>;
   waitForPreviewHealthy: (timeoutMs?: number) => Promise<boolean>;
   probePreviewHealth: (reason: 'restore' | 'apply' | 'reload', timeoutMs?: number) => Promise<{ reachable: boolean; active: boolean; diagnostics?: string; statusCode?: number }>;
-  ensureProjectNameForAction: (action: { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' } | { kind: 'gitcc-open' } | { kind: 'openhost-deploy' }) => boolean;
+  ensureProjectNameForAction: (action: { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' } | { kind: 'github-open' } | { kind: 'vercel-deploy' }) => boolean;
   persistProjectDurably: (saveReason: 'manual' | 'auto-generation-success', projectNameOverride?: string) => Promise<boolean>;
   attachE2bSandbox: (targetSandboxId: string, options?: { forceReconnect?: boolean }) => Promise<void>;
   submitPreviewErrorForFixRef: React.MutableRefObject<(rawError: string) => void>;

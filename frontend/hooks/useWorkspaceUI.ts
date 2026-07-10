@@ -18,10 +18,10 @@ export interface WorkspaceUIState {
   setProjectMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isReloadingWorkspace: boolean;
   setIsReloadingWorkspace: React.Dispatch<React.SetStateAction<boolean>>;
-  // GitHub / OpenHost integration
-  lastGitccRepoUrl: string | null;
-  setLastGitccRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
-  openHostDeployCard: {
+  // GitHub / Vercel integration
+  lastGithubRepoUrl: string | null;
+  setLastGithubRepoUrl: React.Dispatch<React.SetStateAction<string | null>>;
+  vercelDeployCard: {
     status: "deploying" | "success" | "failed";
     message: string;
     domainUrl?: string;
@@ -31,10 +31,8 @@ export interface WorkspaceUIState {
     deploymentStatus?: string;
     commitMessage?: string;
     isPolling?: boolean;
-    pocketbaseUrl?: string;
-    pocketbaseAdminUrl?: string;
   } | null;
-  setOpenHostDeployCard: React.Dispatch<
+  setVercelDeployCard: React.Dispatch<
     React.SetStateAction<{
       status: "deploying" | "success" | "failed";
       message: string;
@@ -45,8 +43,6 @@ export interface WorkspaceUIState {
       deploymentStatus?: string;
       commitMessage?: string;
       isPolling?: boolean;
-      pocketbaseUrl?: string;
-      pocketbaseAdminUrl?: string;
     } | null>
   >;
 
@@ -85,14 +81,14 @@ export interface WorkspaceUIState {
   // Integration dialogs
   databaseDialogOpen: boolean;
   setDatabaseDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  gitccPushDialogOpen: boolean;
-  setGitccPushDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  gitccPushResult: { type: 'success' | 'error'; message: string } | null;
-  setGitccPushResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
-  openHostDeployDialogOpen: boolean;
-  setOpenHostDeployDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  openHostDeployResult: { type: 'success' | 'error'; message: string } | null;
-  setOpenHostDeployResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
+  githubPushDialogOpen: boolean;
+  setGithubPushDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  githubPushResult: { type: 'success' | 'error'; message: string } | null;
+  setGithubPushResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
+  vercelDeployDialogOpen: boolean;
+  setVercelDeployDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  vercelDeployResult: { type: 'success' | 'error'; message: string } | null;
+  setVercelDeployResult: React.Dispatch<React.SetStateAction<{ type: 'success' | 'error'; message: string } | null>>;
   projectNameDialogOpen: boolean;
   setProjectNameDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   projectNameSuggestion: string;
@@ -103,19 +99,19 @@ export interface WorkspaceUIState {
   setProjectNameConfirming: React.Dispatch<React.SetStateAction<boolean>>;
   pendingNamedAction:
     | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-    | { kind: 'gitcc-open' }
-    | { kind: 'openhost-deploy' }
+    | { kind: 'github-open' }
+    | { kind: 'vercel-deploy' }
     | null;
   setPendingNamedAction: React.Dispatch<
     React.SetStateAction<
       | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-      | { kind: 'gitcc-open' }
-      | { kind: 'openhost-deploy' }
+      | { kind: 'github-open' }
+      | { kind: 'vercel-deploy' }
       | null
     >
   >;
-  integrationBusy: 'gitcc' | 'openhost' | null;
-  setIntegrationBusy: React.Dispatch<React.SetStateAction<'gitcc' | 'openhost' | null>>;
+  integrationBusy: 'github' | 'vercel' | null;
+  setIntegrationBusy: React.Dispatch<React.SetStateAction<'github' | 'vercel' | null>>;
 
   // Download / Save
   isDownloadingZip: boolean;
@@ -155,8 +151,8 @@ export function useWorkspaceUI(options?: UseWorkspaceUIOptions): WorkspaceUIStat
   const [projectOpeningStatus, setProjectOpeningStatus] = useState('');
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [isReloadingWorkspace, setIsReloadingWorkspace] = useState(false);
-  const [lastGitccRepoUrl, setLastGitccRepoUrl] = useState<string | null>(null);
-  const [openHostDeployCard, setOpenHostDeployCard] = useState<{
+  const [lastGithubRepoUrl, setLastGithubRepoUrl] = useState<string | null>(null);
+  const [vercelDeployCard, setVercelDeployCard] = useState<{
     status: "deploying" | "success" | "failed";
     message: string;
     domainUrl?: string;
@@ -166,8 +162,6 @@ export function useWorkspaceUI(options?: UseWorkspaceUIOptions): WorkspaceUIStat
     deploymentStatus?: string;
     commitMessage?: string;
     isPolling?: boolean;
-    pocketbaseUrl?: string;
-    pocketbaseAdminUrl?: string;
   } | null>(null);
 
   const [renameProjectDialogOpen, setRenameProjectDialogOpen] = useState(false);
@@ -212,21 +206,21 @@ export function useWorkspaceUI(options?: UseWorkspaceUIOptions): WorkspaceUIStat
   const [quotaErrorText, setQuotaErrorText] = useState<string | null>(null);
 
   const [databaseDialogOpen, setDatabaseDialogOpen] = useState(false);
-  const [gitccPushDialogOpen, setGitccPushDialogOpen] = useState(false);
-  const [gitccPushResult, setGitccPushResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [openHostDeployDialogOpen, setOpenHostDeployDialogOpen] = useState(false);
-  const [openHostDeployResult, setOpenHostDeployResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [githubPushDialogOpen, setGithubPushDialogOpen] = useState(false);
+  const [githubPushResult, setGithubPushResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [vercelDeployDialogOpen, setVercelDeployDialogOpen] = useState(false);
+  const [vercelDeployResult, setVercelDeployResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [projectNameDialogOpen, setProjectNameDialogOpen] = useState(false);
   const [projectNameSuggestion, setProjectNameSuggestion] = useState('');
   const [siteTitleSuggestion, setSiteTitleSuggestion] = useState('');
   const [projectNameConfirming, setProjectNameConfirming] = useState(false);
   const [pendingNamedAction, setPendingNamedAction] = useState<
     | { kind: 'save'; saveReason: 'manual' | 'auto-generation-success' }
-    | { kind: 'gitcc-open' }
-    | { kind: 'openhost-deploy' }
+    | { kind: 'github-open' }
+    | { kind: 'vercel-deploy' }
     | null
   >(null);
-  const [integrationBusy, setIntegrationBusy] = useState<'gitcc' | 'openhost' | null>(null);
+  const [integrationBusy, setIntegrationBusy] = useState<'github' | 'vercel' | null>(null);
 
   const [isDownloadingZip, setIsDownloadingZip] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
@@ -250,8 +244,8 @@ export function useWorkspaceUI(options?: UseWorkspaceUIOptions): WorkspaceUIStat
     projectOpeningStatus, setProjectOpeningStatus,
     projectMenuOpen, setProjectMenuOpen,
     isReloadingWorkspace, setIsReloadingWorkspace,
-    lastGitccRepoUrl, setLastGitccRepoUrl,
-    openHostDeployCard, setOpenHostDeployCard,
+    lastGithubRepoUrl, setLastGithubRepoUrl,
+    vercelDeployCard, setVercelDeployCard,
     renameProjectDialogOpen, setRenameProjectDialogOpen,
     renameProjectTarget, setRenameProjectTarget,
     selectedCloudProjectId, setSelectedCloudProjectId,
@@ -265,10 +259,10 @@ export function useWorkspaceUI(options?: UseWorkspaceUIOptions): WorkspaceUIStat
     showQuotaDialog, setShowQuotaDialog,
     quotaErrorText, setQuotaErrorText,
     databaseDialogOpen, setDatabaseDialogOpen,
-    gitccPushDialogOpen, setGitccPushDialogOpen,
-    gitccPushResult, setGitccPushResult,
-    openHostDeployDialogOpen, setOpenHostDeployDialogOpen,
-    openHostDeployResult, setOpenHostDeployResult,
+    githubPushDialogOpen, setGithubPushDialogOpen,
+    githubPushResult, setGithubPushResult,
+    vercelDeployDialogOpen, setVercelDeployDialogOpen,
+    vercelDeployResult, setVercelDeployResult,
     projectNameDialogOpen, setProjectNameDialogOpen,
     projectNameSuggestion, setProjectNameSuggestion,
     siteTitleSuggestion, setSiteTitleSuggestion,
