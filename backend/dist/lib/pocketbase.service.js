@@ -45,7 +45,7 @@ exports.generateSandboxPocketbaseCredentials = generateSandboxPocketbaseCredenti
 const common_1 = require("@nestjs/common");
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
-exports.DEFAULT_POCKETBASE_ADMIN_EMAIL = 'admin@lovecode.com';
+exports.DEFAULT_POCKETBASE_ADMIN_EMAIL = 'admin@ai-web-builder.com';
 exports.DEFAULT_POCKETBASE_ADMIN_PASSWORD = 'admin@lovecode';
 let PocketbaseService = PocketbaseService_1 = class PocketbaseService {
     constructor() {

@@ -10,7 +10,7 @@ export interface PocketBaseDeploymentFiles {
     pocketbaseUrl: string;
     adminUrl: string;
 }
-export declare const DEFAULT_POCKETBASE_ADMIN_EMAIL = "admin@lovecode.com";
+export declare const DEFAULT_POCKETBASE_ADMIN_EMAIL = "admin@ai-web-builder.com";
 export declare const DEFAULT_POCKETBASE_ADMIN_PASSWORD = "admin@lovecode";
 export interface RenderDeploymentOptions {
     projectName: string;
