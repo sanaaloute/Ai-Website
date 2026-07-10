@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: lovecode-backend
+    image: ai-web-builder-backend
     container_name: backend
     build:
       context: ./backend
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: lovecode-frontend
+    image: ai-web-builder-frontend
     container_name: frontend
     build:
       context: ./frontend
@@ -68,7 +68,7 @@ services:
     restart: unless-stopped
 
   admin:
-    image: lovecode-admin
+    image: ai-web-builder-admin
     container_name: admin
     build:
       context: ./admin

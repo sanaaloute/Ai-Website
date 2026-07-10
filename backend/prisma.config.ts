@@ -12,12 +12,17 @@ config({ path: resolve(__dirname, "..", ".env") });
 // DATABASE_URL from the container environment.
 const databaseUrl = process.env["DATABASE_URL"] ?? "postgresql://localhost:5432/postgres";
 
+// Prisma CLI commands (migrate deploy) must use the session-mode pooler because
+// the transaction-mode pooler (pgbouncer) cannot run migrations reliably. The
+// Nest runtime uses DATABASE_URL (transaction pooler) via the pg adapter.
+const migrationUrl = process.env["DIRECT_URL"] ?? databaseUrl;
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: databaseUrl,
+    url: migrationUrl,
   },
 });
