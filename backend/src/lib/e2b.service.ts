@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Sandbox } from 'e2b';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { randomBytes } from 'node:crypto';
 import { env } from '@/config/env';
 import { SandboxData } from '@/types';
 import { generateSandboxPocketbaseCredentials } from './pocketbase.service';
@@ -10,6 +11,9 @@ import { SandboxStateService, type PocketbaseInfo } from './sandbox-state.servic
 
 export const WORKDIR = '/home/user/app';
 const PORT = 5173;
+const NEXT_PORT = 3000;
+const VITE_LOG = '/tmp/vite.log';
+const NEXT_LOG = '/tmp/next.log';
 const POCKETBASE_PORT = 8090;
 const POCKETBASE_DIR = '/home/user/pb';
 // The bundled JS migrations/hooks use the legacy Dao / onModelBeforeCreate API,
@@ -59,6 +63,15 @@ export const FORBIDDEN_FILE_NAMES = new Set([
   'bun.lockb',
 ]);
 
+export type SandboxFramework = 'next' | 'vite';
+
+function portFor(framework: SandboxFramework): number {
+  return framework === 'next' ? NEXT_PORT : PORT;
+}
+function logFor(framework: SandboxFramework): string {
+  return framework === 'next' ? NEXT_LOG : VITE_LOG;
+}
+
 export function isForbiddenPath(relativePath: string): boolean {
   const normalized = path.posix.normalize(relativePath).replace(/^\.\//, '').replace(/^\//, '');
   if (FORBIDDEN_PATH_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
@@ -107,6 +120,8 @@ export class E2BService {
    * stored in SandboxStateService so the backend remains stateless.
    */
   private readonly sandboxes = new Map<string, Sandbox>();
+  /** In-memory cache of per-sandbox framework (next | vite). */
+  private readonly frameworks = new Map<string, SandboxFramework>();
 
   constructor(private readonly state: SandboxStateService) {}
 
@@ -133,6 +148,7 @@ export class E2BService {
     }
 
     this.sandboxes.set(sandbox.sandboxId, sandbox);
+    this.frameworks.set(sandbox.sandboxId, 'vite');
 
     const createdAt = new Date().toISOString();
     const endAt = new Date(Date.now() + SANDBOX_LIFETIME_MS).toISOString();
@@ -785,21 +801,32 @@ export class E2BService {
       throw new E2BNotConfiguredError();
     }
 
+    const framework = await this.detectFramework(sandboxId);
+    const log = logFor(framework);
+    const killPattern = framework === 'next' ? 'pkill -f "[n]ext" || true' : 'pkill -f "[v]ite" || true';
+
     // Stop any existing dev server first. Use a pattern that won't match this
     // command itself. Run it as its own command so backgrounding the new server
     // doesn't get killed with the foreground shell.
-    await this.runCommand(sandboxId, 'pkill -f "[v]ite" || true', WORKDIR);
+    await this.runCommand(sandboxId, killPattern, WORKDIR);
 
     const sandbox = await this.getSandbox(sandboxId);
     if (!sandbox) {
       throw new SandboxNotFoundError();
     }
 
+    // Templates ship package.json but not node_modules. Install on first run;
+    // for Next.js also generate the Prisma client.
+    await this.runCommand(sandboxId, 'test -d node_modules || npm install', WORKDIR, { timeoutMs: 300_000 });
+    if (framework === 'next') {
+      await this.runCommand(sandboxId, 'test -d node_modules/@prisma/client || npx prisma generate', WORKDIR, { timeoutMs: 180_000 });
+    }
+
     // Use setsid + redirected stdin so the dev server survives after the
     // E2B command shell exits.
     const res = await this.runCommand(
       sandboxId,
-      'setsid nohup npm run dev > /tmp/vite.log 2>&1 < /dev/null &',
+      `setsid nohup npm run dev > ${log} 2>&1 < /dev/null &`,
       WORKDIR,
     );
     if (res.exitCode !== 0) {
@@ -807,8 +834,8 @@ export class E2BService {
     }
 
     // Wait for the dev server to be reachable before reporting success.
-    const url = this.previewUrl(sandbox);
-    const deadline = Date.now() + 60_000;
+    const url = this.previewUrl(sandbox, framework);
+    const deadline = Date.now() + (framework === 'next' ? 90_000 : 60_000);
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const health = await this.previewHealth(url);
@@ -817,13 +844,13 @@ export class E2BService {
       }
     }
 
-    // Health check timed out — collect Vite logs for diagnosis.
-    const logResult = await this.runCommand(sandboxId, 'tail -n 50 /tmp/vite.log 2>/dev/null || echo "(no vite log)"', WORKDIR);
+    // Health check timed out — collect dev-server logs for diagnosis.
+    const logResult = await this.runCommand(sandboxId, `tail -n 60 ${log} 2>/dev/null || echo "(no dev log)"`, WORKDIR);
     const lastHealth = await this.previewHealth(url);
     this.logger.warn(
-      `Vite dev server for sandbox ${sandboxId} did not become reachable within 60s. ` +
+      `${framework === 'next' ? 'Next.js' : 'Vite'} dev server for sandbox ${sandboxId} did not become reachable within ${framework === 'next' ? 90 : 60}s. ` +
       `Status code: ${lastHealth.statusCode ?? 'none'}. ` +
-      `Recent vite log:\n${logResult.output || logResult.error || '(empty)'}`,
+      `Recent log:\n${logResult.output || logResult.error || '(empty)'}`,
     );
     return false;
   }
@@ -1124,6 +1151,66 @@ export class E2BService {
   }
 
   /**
+   * Prepare a sandbox for a Next.js + Prisma template (no PocketBase).
+   * Writes the .env (SQLite DATABASE_URL, JWT secret, app URL), installs deps,
+   * generates the Prisma client, applies the schema and runs the idempotent
+   * seed (creates the default admin user).
+   */
+  async prepareNextSandbox(
+    sandboxId: string,
+    _category: string,
+  ): Promise<{ ok: boolean; url: string }> {
+    if (!this.configured) {
+      throw new E2BNotConfiguredError();
+    }
+    const sandbox = await this.getSandbox(sandboxId);
+    if (!sandbox) {
+      throw new SandboxNotFoundError();
+    }
+    this.frameworks.set(sandboxId, 'next');
+
+    const appUrl = `https://${sandbox.getHost(NEXT_PORT)}`;
+    const jwtSecret = randomBytes(32).toString('hex');
+    const envContents = [
+      'DATABASE_URL=file:./dev.db',
+      `JWT_SECRET=${jwtSecret}`,
+      `NEXT_PUBLIC_APP_URL=${appUrl}`,
+      'NEXT_PUBLIC_SITE_NAME=My App',
+    ].join('\n') + '\n';
+    try {
+      await sandbox.files.write(`${WORKDIR}/.env`, envContents);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Could not write Next.js .env for sandbox ${sandboxId}: ${message}`);
+    }
+
+    // createSandbox() may have started PocketBase for the legacy flow; a Next.js
+    // site does not use it, so free the port/process.
+    await this.runCommand(sandboxId, 'pkill -f "[p]ocketbase serve" || true', WORKDIR);
+
+    await this.runCommand(sandboxId, 'test -d node_modules || npm install', WORKDIR, { timeoutMs: 300_000 });
+    await this.runCommand(sandboxId, 'npx prisma generate', WORKDIR, { timeoutMs: 180_000 });
+
+    const push = await this.runCommand(
+      sandboxId,
+      'npx prisma db push --accept-data-loss --skip-generate',
+      WORKDIR,
+      { timeoutMs: 180_000 },
+    );
+    if (push.exitCode !== 0) {
+      this.logger.warn(`prisma db push failed for sandbox ${sandboxId}: ${push.error || push.output}`);
+      return { ok: false, url: appUrl };
+    }
+
+    const seed = await this.runCommand(sandboxId, 'npx prisma db seed', WORKDIR, { timeoutMs: 120_000 });
+    if (seed.exitCode !== 0) {
+      this.logger.warn(`prisma db seed failed for sandbox ${sandboxId}: ${seed.error || seed.output}`);
+    }
+
+    return { ok: true, url: appUrl };
+  }
+
+  /**
    * Ensure the generated storefront has an admin user matching the PocketBase
    * superuser credentials. The admin dashboard signs in through the `users`
    * collection, not the PocketBase admin API, so a users record with role=admin
@@ -1233,13 +1320,37 @@ export class E2BService {
     return { ok: true, output: '', error: '', exitCode: 0 };
   }
 
-  private previewUrl(sandbox: Sandbox): string {
-    return `https://${sandbox.getHost(PORT)}`;
+  private previewUrl(sandbox: Sandbox, framework: SandboxFramework = 'vite'): string {
+    return `https://${sandbox.getHost(portFor(framework))}`;
   }
 
   /**
-   * Public helper to resolve the Vite preview URL for a sandbox.
-   * This uses the E2B port-specific host so the dev server is reachable.
+   * Detect the framework running inside a sandbox by inspecting its files.
+   * Next.js templates carry a next.config.* (and an src/app router); Vite SPAs
+   * carry a vite.config.* / index.html. Result is cached in memory.
+   */
+  async detectFramework(sandboxId: string): Promise<SandboxFramework> {
+    const cached = this.frameworks.get(sandboxId);
+    if (cached) return cached;
+
+    let framework: SandboxFramework = 'vite';
+    try {
+      const probe = await this.runCommand(
+        sandboxId,
+        `if ls ${WORKDIR}/next.config.* >/dev/null 2>&1; then echo next; elif [ -d ${WORKDIR}/src/app ] && [ ! -f ${WORKDIR}/vite.config.ts ]; then echo next; else echo vite; fi`,
+        WORKDIR,
+      );
+      if (probe.output.trim() === 'next') framework = 'next';
+    } catch {
+      framework = 'vite';
+    }
+    this.frameworks.set(sandboxId, framework);
+    return framework;
+  }
+
+  /**
+   * Public helper to resolve the preview URL for a sandbox (framework-aware).
+   * Uses the E2B port-specific host so the dev server is reachable.
    */
   async getPreviewUrl(sandboxId: string): Promise<string> {
     if (!this.configured) {
@@ -1249,7 +1360,8 @@ export class E2BService {
     if (!sandbox) {
       throw new SandboxNotFoundError();
     }
-    return this.previewUrl(sandbox);
+    const framework = await this.detectFramework(sandboxId);
+    return this.previewUrl(sandbox, framework);
   }
 
   /**

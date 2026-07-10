@@ -44,6 +44,13 @@ RUN npx playwright install chromium
 # Ensure the default agent store directory is writable by the non-root user.
 RUN mkdir -p /app/.agent_store && chown -R nestjs:nodejs /app/.agent_store
 
+# Self-hosted deploys: the backend builds/runs user-site containers on the host
+# (Docker-out-of-Docker via the mounted socket) and clones repos with git.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends docker.io git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /var/lib/lovecode/sites && chown -R nestjs:nodejs /var/lib/lovecode
+
 USER nestjs
 
 EXPOSE 4000

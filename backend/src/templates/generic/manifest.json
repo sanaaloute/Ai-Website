@@ -3,9 +3,12 @@
   "category": "generic",
   "description": "Generic multi-purpose landing page scaffold",
   "recommended_packages": [
-    "lucide-react",
-    "pocketbase",
+    "next",
     "react",
-    "react-dom"
-  ]
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
 }

@@ -125,6 +125,30 @@ export class TemplateService {
     return { ...TEMPLATE_CATEGORIES };
   }
 
+  /**
+   * Detect the framework of a template. Next.js templates carry a `next.config.*`
+   * (and an `src/app/` router); everything else is treated as a Vite SPA.
+   * A manifest `framework` field, when present, wins over auto-detection.
+   */
+  async getTemplateKind(category: string): Promise<'next' | 'vite'> {
+    const dir = this.resolveCategoryDir(category);
+    try {
+      const manifest = await this.getTemplateManifest(category);
+      const fw = (manifest as { framework?: unknown }).framework;
+      if (fw === 'next' || fw === 'vite') return fw;
+    } catch {
+      // fall through to detection
+    }
+    const nextConfigs = ['next.config.ts', 'next.config.js', 'next.config.mjs', 'next.config.cjs'];
+    for (const name of nextConfigs) {
+      if (existsSync(path.join(dir, name))) return 'next';
+    }
+    if (existsSync(path.join(dir, 'src', 'app')) && !existsSync(path.join(dir, 'vite.config.ts'))) {
+      return 'next';
+    }
+    return 'vite';
+  }
+
   async getTemplateFiles(category: string): Promise<Record<string, string>> {
     const templateDir = this.resolveCategoryDir(category);
     try {
@@ -146,7 +170,8 @@ export class TemplateService {
       return {
         name: category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
         category,
-        recommended_packages: ['react', 'react-dom', 'lucide-react', 'pocketbase'],
+        framework: 'next',
+        recommended_packages: ['next', 'react', 'react-dom', '@prisma/client', 'prisma', 'lucide-react'],
       };
     }
   }

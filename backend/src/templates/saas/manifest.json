@@ -3,9 +3,12 @@
   "category": "saas",
   "description": "Minimal scaffold for Saas projects",
   "recommended_packages": [
-    "lucide-react",
-    "pocketbase",
+    "next",
     "react",
-    "react-dom"
-  ]
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
 }

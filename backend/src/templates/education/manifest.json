@@ -3,9 +3,12 @@
   "category": "education",
   "description": "Minimal scaffold for Education projects",
   "recommended_packages": [
-    "lucide-react",
-    "pocketbase",
+    "next",
     "react",
-    "react-dom"
-  ]
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
 }

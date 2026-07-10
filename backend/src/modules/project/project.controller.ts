@@ -42,7 +42,7 @@ export class ProjectController {
   async listProjects(@CurrentUser() user: User) {
     const { data, error } = await this.supabase.admin
       .from('projects')
-      .select('id, name, updated_at, openhost_app_uuid, openhost_domain_url, openhost_deployed_at, gitcc_repo_url')
+      .select('id, name, updated_at, vercel_project_id, vercel_domain_url, vercel_deployed_at, github_repo_url')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false });
 
@@ -53,10 +53,10 @@ export class ProjectController {
       projectName: p.name,
       updatedAt: new Date(p.updated_at).getTime(),
       preview: null,
-      openhostAppUuid: p.openhost_app_uuid,
-      openhostDomainUrl: p.openhost_domain_url,
-      openhostDeployedAt: p.openhost_deployed_at,
-      gitccRepoUrl: p.gitcc_repo_url,
+      vercelProjectId: p.vercel_project_id,
+      vercelDomainUrl: p.vercel_domain_url,
+      vercelDeployedAt: p.vercel_deployed_at,
+      githubRepoUrl: p.github_repo_url,
     }));
 
     return { success: true, projects };

@@ -77,8 +77,8 @@ function routeAfterAnalyzer(state: AgentState): string {
   if (state.workflow === 'chat') return 'answer_generator';
   if (state.workflow === 'new_app') return 'designer';
   if (state.workflow === 'debug') return 'debugger';
-  // For pocketbase-aware edits, verify/collections before editing.
-  if (state.needsIntegration === 'pocketbase') return 'database_initializer';
+  // For DB-backed edits (PocketBase or Prisma), verify collections/tables first.
+  if (state.needsIntegration) return 'database_initializer';
   // Surgical edit path: skip template selection, full planner, and pre-flight
   // validator. The analyzer already produced scope + relevantFiles.
   return 'executor';

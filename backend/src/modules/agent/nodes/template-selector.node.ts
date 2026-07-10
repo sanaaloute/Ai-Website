@@ -67,6 +67,10 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
       category = 'generic';
     }
 
+    // Detect the template framework (next | vite) so downstream setup branches
+    // to the right runtime (Next.js + Prisma vs Vite + PocketBase).
+    const framework = await deps.templateService.getTemplateKind(category);
+
     // Copy the template into the sandbox. We intentionally do NOT add these
     // baseline files to filesWritten: they are scaffold, not agent-generated
     // changes, and including them causes the reviewer to waste context reading
@@ -106,13 +110,21 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
       }
     }
 
-    // Reconfigure the sandbox PocketBase instance to match the selected category.
-    // The sandbox was created with a default schema; now that we know the real
-    // category, we install the correct migrations and restart PocketBase.
-    await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring PocketBase for ${category}...` } });
-    const pbInfo = await deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category);
-    if (!pbInfo) {
-      deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
+    // Configure the sandbox backend to match the selected category/framework.
+    await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring ${framework === 'next' ? 'database (Prisma)' : 'PocketBase'} for ${category}...` } });
+    let backendReady = false;
+    if (framework === 'next') {
+      const next = await deps.e2b.prepareNextSandbox(state.sandboxId, category);
+      backendReady = next.ok;
+      if (!next.ok) {
+        deps.logger.warn(`Prisma setup failed for category ${category}; continuing without a migrated database`);
+      }
+    } else {
+      const pbInfo = await deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category);
+      backendReady = !!pbInfo;
+      if (!pbInfo) {
+        deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
+      }
     }
 
     const currentSandboxId = await tools.ensureAlive(state.userId);
@@ -120,13 +132,14 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
     return {
       sandboxId: currentSandboxId,
       templateId: category,
+      framework,
       templateLoaded: true,
       packagesToInstall: [],
       packagesInstalled: [],
       dbSchemaTemplate: dbSchema,
       // Do not return template files as filesWritten — they are not agent changes.
       filesWritten: [],
-      messages: [{ role: 'assistant', content: `Loaded '${category}' template with ${loadedCount} files${failedCount ? ` (${failedCount} failed)` : ''}${pbInfo ? ' and configured PocketBase' : ''}` }],
+      messages: [{ role: 'assistant', content: `Loaded '${category}' (${framework}) template with ${loadedCount} files${failedCount ? ` (${failedCount} failed)` : ''}${backendReady ? (framework === 'next' ? ' and migrated the Prisma database' : ' and configured PocketBase') : ''}` }],
     };
   } catch (e) {
     deps.logger.error(`Template selector failed: ${e instanceof Error ? e.message : String(e)}`);

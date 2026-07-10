@@ -13,11 +13,10 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthGuard } from '@/common/guards/auth.guard';
-import { OptionalAuthGuard } from '@/common/guards/optional-auth.guard';
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { User } from '@/types';
-import { GitccService } from '@/lib/gitcc.service';
-import { OpenhostService } from '@/lib/openhost.service';
+import { GithubService } from '@/lib/github.service';
+import { DeployService } from '@/lib/deploy/deploy.service';
 import { IntegrationTokenService } from '@/lib/integration-token.service';
 
 import { E2BService } from '@/lib/e2b.service';
@@ -26,18 +25,20 @@ import { SupabaseService } from '@/lib/supabase.service';
 import { ProjectService } from '@/modules/project/project.service';
 import { env } from '@/config/env';
 
-const OAUTH_STATE_COOKIE = 'gitcc_gitlab_oauth_state';
-const OAUTH_NEXT_COOKIE = 'gitcc_gitlab_oauth_next';
-const GITCC_ACCESS_COOKIE = 'gitcc_gitlab_access';
-const GITCC_REFRESH_COOKIE = 'gitcc_gitlab_refresh';
+const OAUTH_STATE_COOKIE = 'github_oauth_state';
+const OAUTH_NEXT_COOKIE = 'github_oauth_next';
+const GITHUB_ACCESS_COOKIE = 'github_access';
+const GITHUB_REFRESH_COOKIE = 'github_refresh';
+
+const GITHUB_PROVIDER = 'github';
 
 @Controller('api')
 export class IntegrationController {
   private readonly logger = new Logger(IntegrationController.name);
 
   constructor(
-    private readonly gitcc: GitccService,
-    private readonly openhost: OpenhostService,
+    private readonly github: GithubService,
+    private readonly deploy: DeployService,
     private readonly tokens: IntegrationTokenService,
 
     private readonly e2b: E2BService,
@@ -54,33 +55,21 @@ export class IntegrationController {
     return opts;
   }
 
-  private async resolveExistingOpenhostAppUuid(userId: string, projectId?: string): Promise<string | undefined> {
-    if (!projectId) return undefined;
+  // ---------------------------------------------------------------------------
+  // GitHub OAuth + push
+  // ---------------------------------------------------------------------------
 
-    const lovecode = await this.projectService.readLovecodeJson(userId, projectId);
-    const fromLovecode = lovecode?.deployment?.openhostAppUuid;
-    if (fromLovecode) return fromLovecode;
-
-    const { data } = await this.supabase.admin
-      .from('projects')
-      .select('openhost_app_uuid')
-      .eq('id', projectId)
-      .eq('user_id', userId)
-      .single();
-    return data?.openhost_app_uuid || undefined;
-  }
-
-  @Get('gitcc/gitlab/authorize')
+  @Get('github/authorize')
   authorize(@Query('next') next: string, @Res() res: Response) {
     const state = crypto.randomUUID();
     const e = env();
-    const opts = this.cookieOptions(e.gitccGitlabCookieDomain);
+    const opts = this.cookieOptions(e.githubCookieDomain);
     res.cookie(OAUTH_STATE_COOKIE, state, opts);
     res.cookie(OAUTH_NEXT_COOKIE, next ?? '/', opts);
-    res.redirect(this.gitcc.authorizeUrl(state, next));
+    res.redirect(this.github.authorizeUrl(state, next));
   }
 
-  @Get('gitcc/gitlab/callback')
+  @Get('github/callback')
   async callback(@Query('code') code: string, @Query('state') state: string, @Req() req: Request, @Res() res: Response) {
     try {
       const cookies = req.headers.cookie ?? '';
@@ -92,20 +81,20 @@ export class IntegrationController {
         return res.status(HttpStatus.BAD_REQUEST).json({ success: false, error: 'Invalid OAuth state' });
       }
 
-      const token = await this.gitcc.exchangeCode(code);
+      const token = await this.github.exchangeCode(code);
       if (!token) {
         return res.status(HttpStatus.BAD_REQUEST).json({ success: false, error: 'OAuth exchange failed' });
       }
 
-      const opts = this.cookieOptions(e.gitccGitlabCookieDomain);
+      const opts = this.cookieOptions(e.githubCookieDomain);
       res.clearCookie(OAUTH_STATE_COOKIE, opts);
       res.clearCookie(OAUTH_NEXT_COOKIE, opts);
-      res.cookie(GITCC_ACCESS_COOKIE, token.access_token, {
+      res.cookie(GITHUB_ACCESS_COOKIE, token.access_token, {
         ...opts,
         maxAge: 1000 * 60 * 60 * 24 * 30,
       });
       if (token.refresh_token) {
-        res.cookie(GITCC_REFRESH_COOKIE, token.refresh_token, {
+        res.cookie(GITHUB_REFRESH_COOKIE, token.refresh_token, {
           ...opts,
           maxAge: 1000 * 60 * 60 * 24 * 30,
         });
@@ -117,11 +106,11 @@ export class IntegrationController {
         try {
           const { data: userData } = await this.supabase.admin.auth.getUser(lovecodeAccessCookie);
           if (userData.user) {
-            await this.tokens.upsert(userData.user.id, 'gitcc', token.access_token, token.refresh_token);
+            await this.tokens.upsert(userData.user.id, GITHUB_PROVIDER, token.access_token, token.refresh_token);
           }
         } catch (storeErr) {
           this.logger.warn(
-            `Could not store GitCC tokens in DB: ${storeErr instanceof Error ? storeErr.message : String(storeErr)}`,
+            `Could not store GitHub tokens in DB: ${storeErr instanceof Error ? storeErr.message : String(storeErr)}`,
           );
         }
       }
@@ -129,15 +118,15 @@ export class IntegrationController {
       return res.redirect(next);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`GitCC OAuth callback error: ${message}`);
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, error: `GitCC callback failed: ${message}` });
+      this.logger.error(`GitHub OAuth callback error: ${message}`);
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, error: `GitHub callback failed: ${message}` });
     }
   }
 
-  @Get('gitcc/gitlab/status')
+  @Get('github/status')
   @UseGuards(AuthGuard)
-  async gitccStatus(@CurrentUser() user: User, @Req() req: Request, @Res() res: Response) {
-    const { accessToken, refreshToken, loadedFromDb } = await this.resolveGitccTokens(
+  async githubStatus(@CurrentUser() user: User, @Req() req: Request, @Res() res: Response) {
+    const { accessToken, refreshToken, loadedFromDb } = await this.resolveGithubTokens(
       user.id,
       req.headers.cookie ?? '',
     );
@@ -146,16 +135,16 @@ export class IntegrationController {
       return res.json({ connected: false });
     }
 
-    const auth = await this.gitcc.ensureValidToken(accessToken, refreshToken);
+    const auth = await this.github.ensureValidToken(accessToken, refreshToken);
 
     if (auth) {
-      const opts = this.cookieOptions(env().gitccGitlabCookieDomain);
-      res.cookie(GITCC_ACCESS_COOKIE, auth.accessToken, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
+      const opts = this.cookieOptions(env().githubCookieDomain);
+      res.cookie(GITHUB_ACCESS_COOKIE, auth.accessToken, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
       if (auth.refreshToken) {
-        res.cookie(GITCC_REFRESH_COOKIE, auth.refreshToken, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
+        res.cookie(GITHUB_REFRESH_COOKIE, auth.refreshToken, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
       }
       if (loadedFromDb || auth.accessToken !== accessToken || auth.refreshToken !== refreshToken) {
-        await this.tokens.upsert(user.id, 'gitcc', auth.accessToken, auth.refreshToken);
+        await this.tokens.upsert(user.id, GITHUB_PROVIDER, auth.accessToken, auth.refreshToken);
       }
       return res.json({ connected: true });
     }
@@ -163,94 +152,87 @@ export class IntegrationController {
     return res.json({ connected: false });
   }
 
-  @Post('gitcc/push')
+  @Post('github/push')
   @UseGuards(AuthGuard)
-  async gitccPush(@CurrentUser() user: User, @Body() body: { repoName?: string; files?: Array<{ path: string; content: string }>; lovecodeProjectId?: string }, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async githubPush(
+    @CurrentUser() user: User,
+    @Body() body: { repoName?: string; files?: Array<{ path: string; content: string }>; lovecodeProjectId?: string; aiWebsiteProjectId?: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (!body.repoName || !body.files) throw new HttpException({ success: false, error: 'repoName and files required' }, HttpStatus.BAD_REQUEST);
 
-    const { accessToken, refreshToken, loadedFromDb } = await this.resolveGitccTokens(
+    const projectId = body.lovecodeProjectId || body.aiWebsiteProjectId;
+
+    const { accessToken, refreshToken, loadedFromDb } = await this.resolveGithubTokens(
       user.id,
       req.headers.cookie ?? '',
     );
 
     if (!accessToken) {
-      throw new HttpException({ success: false, error: 'GitCC not connected' }, HttpStatus.UNAUTHORIZED);
+      throw new HttpException({ success: false, error: 'GitHub not connected' }, HttpStatus.UNAUTHORIZED);
     }
 
-    const existingDeployKeyUuid = body.lovecodeProjectId
-      ? await this.loadProjectDeployKeyUuid(body.lovecodeProjectId)
-      : undefined;
-
-    const result = await this.gitcc.push(
-      accessToken,
-      body.repoName,
-      body.files,
-      refreshToken,
-      body.lovecodeProjectId,
-      existingDeployKeyUuid ?? undefined,
-    );
-
-    if (result.ok && result.privateKeyUuid && body.lovecodeProjectId && result.privateKeyUuid !== existingDeployKeyUuid) {
-      await this.saveProjectDeployKeyUuid(user.id, body.lovecodeProjectId, result.privateKeyUuid);
-    }
+    const result = await this.github.push(accessToken, body.repoName, body.files, refreshToken);
 
     if (!result.ok) {
       const isSessionExpired = /session expired|reconnect/i.test(result.error || '');
       throw new HttpException(
-        { success: false, error: result.error || 'GitCC push failed', reconnect: isSessionExpired },
+        { success: false, error: result.error || 'GitHub push failed', reconnect: isSessionExpired },
         isSessionExpired ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_GATEWAY,
       );
     }
 
-    const opts = this.cookieOptions(env().gitccGitlabCookieDomain);
+    const opts = this.cookieOptions(env().githubCookieDomain);
     const finalAccess = result.accessToken || accessToken;
     const finalRefresh = result.refreshToken || refreshToken;
-    res.cookie(GITCC_ACCESS_COOKIE, finalAccess, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
+    res.cookie(GITHUB_ACCESS_COOKIE, finalAccess, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
     if (finalRefresh) {
-      res.cookie(GITCC_REFRESH_COOKIE, finalRefresh, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
+      res.cookie(GITHUB_REFRESH_COOKIE, finalRefresh, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
     }
 
     if (loadedFromDb || result.accessToken || result.refreshToken) {
-      await this.tokens.upsert(user.id, 'gitcc', finalAccess, finalRefresh);
+      await this.tokens.upsert(user.id, GITHUB_PROVIDER, finalAccess, finalRefresh);
     }
 
-    if (body.lovecodeProjectId && result.repoUrl) {
+    if (projectId && result.repoUrl) {
       await this.supabase.admin
         .from('projects')
-        .update({ gitcc_repo_url: result.repoUrl })
-        .eq('id', body.lovecodeProjectId)
+        .update({ github_repo_url: result.repoUrl })
+        .eq('id', projectId)
         .eq('user_id', user.id);
 
-      await this.projectService.upsertLovecodeJson(user.id, body.lovecodeProjectId, {
-        deployment: {
-          gitccRepoUrl: result.repoUrl,
-          ...(result.publicKey ? { gitccDeployKeyPublic: result.publicKey } : {}),
-        },
+      await this.projectService.upsertLovecodeJson(user.id, projectId, {
+        deployment: { githubRepoUrl: result.repoUrl },
       });
     }
 
     return result;
   }
 
-  @Post('gitcc/disconnect')
+  @Post('github/disconnect')
   @UseGuards(AuthGuard)
-  async gitccDisconnect(@CurrentUser() user: User, @Res({ passthrough: true }) res: Response) {
-    await this.tokens.delete(user.id, 'gitcc');
-    const opts = this.cookieOptions(env().gitccGitlabCookieDomain);
-    res.clearCookie(GITCC_ACCESS_COOKIE, opts);
-    res.clearCookie(GITCC_REFRESH_COOKIE, opts);
+  async githubDisconnect(@CurrentUser() user: User, @Res({ passthrough: true }) res: Response) {
+    await this.tokens.delete(user.id, GITHUB_PROVIDER);
+    const opts = this.cookieOptions(env().githubCookieDomain);
+    res.clearCookie(GITHUB_ACCESS_COOKIE, opts);
+    res.clearCookie(GITHUB_REFRESH_COOKIE, opts);
     return { success: true, disconnected: true };
   }
 
-  @Get('openhost/check-domain')
+  // ---------------------------------------------------------------------------
+  // Vercel deploy
+  // ---------------------------------------------------------------------------
+
+  @Get('vercel/check-domain')
   @UseGuards(AuthGuard)
   async checkDomain(@Query('domain') domain: string) {
     if (!domain) throw new HttpException({ success: false, error: 'domain required' }, HttpStatus.BAD_REQUEST);
-    const result = await this.openhost.checkDomain(domain);
+    const result = await this.deploy.checkDomain(domain);
     return { success: true, ...result };
   }
 
-  @Post('openhost/deploy')
+  @Post('vercel/deploy')
   @UseGuards(AuthGuard)
   async deploy(
     @CurrentUser() user: User,
@@ -264,102 +246,72 @@ export class IntegrationController {
     const repoUrl = body.repoUrl;
     const projectName = body.projectName;
 
-    const { accessToken: gitccToken, refreshToken: gitccRefreshToken, loadedFromDb } = await this.resolveGitccTokens(
+    const { accessToken: githubToken, refreshToken: githubRefreshToken, loadedFromDb } = await this.resolveGithubTokens(
       user.id,
       req.headers.cookie ?? '',
     );
 
-    if (!gitccToken) {
-      throw new HttpException({ success: false, error: 'GitCC access token required' }, HttpStatus.UNAUTHORIZED);
+    if (!githubToken) {
+      throw new HttpException({ success: false, error: 'GitHub access token required' }, HttpStatus.UNAUTHORIZED);
     }
 
-    const projectInfo = await this.gitcc.getProject(gitccToken, repoUrl, gitccRefreshToken);
+    // Verify the repo exists and is reachable before asking Vercel to import it.
+    const projectInfo = await this.github.getProject(githubToken, repoUrl, githubRefreshToken);
     if (!projectInfo.ok) {
       throw new HttpException(
-        { success: false, error: projectInfo.error || 'Could not resolve GitCC project' },
+        { success: false, error: projectInfo.error || 'Could not resolve GitHub repository' },
         HttpStatus.BAD_GATEWAY,
       );
     }
-    // GitCC is a self-hosted GitLab instance. OpenHost/Coolify's public application
-    // endpoint is designed for GitHub-style public repos and strips the host from
-    // self-hosted URLs, so we always use the private-deploy-key endpoint with SSH.
-    const existingDeployKeyUuid = body.projectId
-      ? await this.loadProjectDeployKeyUuid(body.projectId)
-      : undefined;
-    const existingLovecode = body.projectId
-      ? await this.projectService.readLovecodeJson(user.id, body.projectId)
-      : null;
-    const existingPublicKey = existingLovecode?.deployment?.gitccDeployKeyPublic || undefined;
+
+    // Refresh the GitHub cookie/DB token if ensureValidToken rotated it.
+    if (projectInfo.accessToken) {
+      const opts = this.cookieOptions(env().githubCookieDomain);
+      const finalAccess = projectInfo.accessToken || githubToken;
+      const finalRefresh = projectInfo.refreshToken || githubRefreshToken;
+      res.cookie(GITHUB_ACCESS_COOKIE, finalAccess, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
+      if (finalRefresh) {
+        res.cookie(GITHUB_REFRESH_COOKIE, finalRefresh, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
+      }
+      if (loadedFromDb || projectInfo.accessToken || projectInfo.refreshToken) {
+        await this.tokens.upsert(user.id, GITHUB_PROVIDER, finalAccess, finalRefresh);
+      }
+    }
 
     const idempotencyKey = typeof body.idempotencyKey === 'string' ? body.idempotencyKey : '';
     return this.idempotency.process(
       idempotencyKey,
       async () => {
-        const deployKeyResult = await this.gitcc.ensureDeployKey(gitccToken!, repoUrl, gitccRefreshToken, {
-          existingPrivateKeyUuid: existingDeployKeyUuid ?? undefined,
-          existingPublicKey,
-        });
-        if (!deployKeyResult.ok) {
-          const isSessionExpired = /session expired|reconnect/i.test(deployKeyResult.error || '');
-          throw new HttpException(
-            { success: false, error: deployKeyResult.error || 'GitCC deploy-key setup failed', reconnect: isSessionExpired },
-            isSessionExpired ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_GATEWAY,
-          );
-        }
+        const baseDomain =
+          this.deploy.activeProvider === 'vercel'
+            ? env().vercelDefaultDomain || 'vercel.app'
+            : env().deployBaseDomain;
+        const domainUrl = body.customDomain ? `https://${body.customDomain}` : `https://${projectName}.${baseDomain}`;
 
-        const opts = this.cookieOptions(env().gitccGitlabCookieDomain);
-        const finalAccess = deployKeyResult.accessToken || gitccToken!;
-        const finalRefresh = deployKeyResult.refreshToken || gitccRefreshToken;
-        res.cookie(GITCC_ACCESS_COOKIE, finalAccess, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
-        if (finalRefresh) {
-          res.cookie(GITCC_REFRESH_COOKIE, finalRefresh, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
-        }
-        if (loadedFromDb || deployKeyResult.accessToken || deployKeyResult.refreshToken) {
-          await this.tokens.upsert(user.id, 'gitcc', finalAccess, finalRefresh);
-        }
-        if (deployKeyResult.privateKeyUuid && body.projectId && deployKeyResult.privateKeyUuid !== existingDeployKeyUuid) {
-          await this.saveProjectDeployKeyUuid(user.id, body.projectId, deployKeyResult.privateKeyUuid);
-        }
-
-        // TEMPORARY: treat every deploy as a fresh deployment for testing.
-        // Uncomment the line below to restore redeployment behavior.
-        // let existingAppUuid = await this.resolveExistingOpenhostAppUuid(user.id, body.projectId);
-        let existingAppUuid: string | undefined = undefined;
-        const domainUrl = body.customDomain
-          ? `https://${body.customDomain}`
-          : `https://${projectName}.${this.openhost.baseDomain()}`;
-
-        // existing deployment check is disabled for now; always perform a fresh deploy.
-        // if (existingAppUuid && repoIsPublic) {
-        //   this.logger.log(`Deleting existing OpenHost application ${existingAppUuid} to recreate as public HTTPS app`);
-        //   try {
-        //     await this.openhost.deleteApplication(existingAppUuid);
-        //     existingAppUuid = undefined;
-        //   } catch (deleteErr) {
-        //     const deleteMessage = deleteErr instanceof Error ? deleteErr.message : String(deleteErr);
-        //     this.logger.warn(`Could not delete existing OpenHost application ${existingAppUuid}: ${deleteMessage}`);
-        //   }
-        // }
-
-        let result: Record<string, unknown>;
-        result = await this.openhost.deploy({
+        const result = await this.deploy.deploy({
           repoUrl,
-          sshUrl: deployKeyResult!.sshUrl,
           projectName,
           customDomain: body.customDomain,
           projectId: body.projectId,
-          privateKeyUuid: deployKeyResult!.privateKeyUuid,
         });
+
+        if (!result.ok) {
+          throw new HttpException(
+            { success: false, error: result.error || 'Vercel deploy failed' },
+            HttpStatus.BAD_GATEWAY,
+          );
+        }
 
         if (body.projectId && result.appUuid) {
           const appUuid = String(result.appUuid);
           const finalDomainUrl = String(result.domainUrl || domainUrl);
+          const deployedAt = new Date().toISOString();
           await this.supabase.admin
             .from('projects')
             .update({
-              openhost_app_uuid: appUuid,
-              openhost_domain_url: finalDomainUrl,
-              openhost_deployed_at: new Date().toISOString(),
+              vercel_project_id: appUuid,
+              vercel_domain_url: finalDomainUrl,
+              vercel_deployed_at: deployedAt,
             })
             .eq('id', body.projectId)
             .eq('user_id', user.id);
@@ -367,10 +319,11 @@ export class IntegrationController {
           await this.projectService.upsertLovecodeJson(user.id, body.projectId, {
             project: { name: projectName },
             deployment: {
-              ...(deployKeyResult?.publicKey ? { gitccDeployKeyPublic: deployKeyResult.publicKey } : {}),
-              openhostAppUuid: appUuid,
-              openhostDomainUrl: finalDomainUrl,
-              openhostDeployedAt: new Date().toISOString(),
+              platform: this.deploy.activeProvider,
+              githubRepoUrl: repoUrl,
+              vercelProjectId: appUuid,
+              vercelDomainUrl: finalDomainUrl,
+              vercelDeployedAt: deployedAt,
             },
           });
         }
@@ -380,149 +333,18 @@ export class IntegrationController {
     );
   }
 
-  @Post('openhost/deploy-pocketbase')
+  @Get('vercel/status')
   @UseGuards(AuthGuard)
-  async deployPocketBase(
-    @CurrentUser() user: User,
-    @Body() body: { repoUrl?: string; projectName?: string; frontendDomain?: string; projectId?: string },
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    if (!body.repoUrl || !body.projectName || !body.frontendDomain) {
-      throw new HttpException(
-        { success: false, error: 'repoUrl, projectName, and frontendDomain required' },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const { accessToken: gitccToken, refreshToken: gitccRefreshToken, loadedFromDb } = await this.resolveGitccTokens(
-      user.id,
-      req.headers.cookie ?? '',
-    );
-
-    if (!gitccToken) {
-      throw new HttpException({ success: false, error: 'GitCC access token required' }, HttpStatus.UNAUTHORIZED);
-    }
-
-    const projectInfo = await this.gitcc.getProject(gitccToken, body.repoUrl, gitccRefreshToken);
-    if (!projectInfo.ok) {
-      throw new HttpException(
-        { success: false, error: projectInfo.error || 'Could not resolve GitCC project' },
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
-    // GitCC is a self-hosted GitLab instance. OpenHost/Coolify's public application
-    // endpoint is designed for GitHub-style public repos and strips the host from
-    // self-hosted URLs, so we always use the private-deploy-key endpoint with SSH.
-    const existingDeployKeyUuid = body.projectId
-      ? await this.loadProjectDeployKeyUuid(body.projectId)
-      : undefined;
-    const existingLovecode = body.projectId
-      ? await this.projectService.readLovecodeJson(user.id, body.projectId)
-      : null;
-    const existingPublicKey = existingLovecode?.deployment?.gitccDeployKeyPublic || undefined;
-
-    const deployKeyResult = await this.gitcc.ensureDeployKey(gitccToken, body.repoUrl, gitccRefreshToken, {
-      existingPrivateKeyUuid: existingDeployKeyUuid ?? undefined,
-      existingPublicKey,
-    });
-    if (!deployKeyResult.ok) {
-      const isSessionExpired = /session expired|reconnect/i.test(deployKeyResult.error || '');
-      throw new HttpException(
-        { success: false, error: deployKeyResult.error || 'GitCC deploy-key setup failed', reconnect: isSessionExpired },
-        isSessionExpired ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_GATEWAY,
-      );
-    }
-
-    const opts = this.cookieOptions(env().gitccGitlabCookieDomain);
-    const finalAccess = deployKeyResult.accessToken || gitccToken;
-    const finalRefresh = deployKeyResult.refreshToken || gitccRefreshToken;
-    res.cookie(GITCC_ACCESS_COOKIE, finalAccess, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
-    if (finalRefresh) {
-      res.cookie(GITCC_REFRESH_COOKIE, finalRefresh, { ...opts, maxAge: 1000 * 60 * 60 * 24 * 30 });
-    }
-    if (loadedFromDb || deployKeyResult.accessToken || deployKeyResult.refreshToken) {
-      await this.tokens.upsert(user.id, 'gitcc', finalAccess, finalRefresh);
-    }
-    if (deployKeyResult.privateKeyUuid && body.projectId && deployKeyResult.privateKeyUuid !== existingDeployKeyUuid) {
-      await this.saveProjectDeployKeyUuid(user.id, body.projectId, deployKeyResult.privateKeyUuid);
-    }
-
-    // TEMPORARY: treat every deploy as a fresh deployment for testing.
-    // Uncomment the line below to restore redeployment behavior.
-    // let existingAppUuid = await this.resolveExistingOpenhostAppUuid(user.id, body.projectId);
-    let existingAppUuid: string | undefined = undefined;
-    const domainUrl = `https://${body.frontendDomain}`;
-
-    // existing deployment check is disabled for now; always perform a fresh deploy.
-    // if (existingAppUuid && repoIsPublic) {
-    //   this.logger.log(`Deleting existing OpenHost application ${existingAppUuid} to recreate as public HTTPS app`);
-    //   try {
-    //     await this.openhost.deleteApplication(existingAppUuid);
-    //     existingAppUuid = undefined;
-    //   } catch (deleteErr) {
-    //     const deleteMessage = deleteErr instanceof Error ? deleteErr.message : String(deleteErr);
-    //     this.logger.warn(`Could not delete existing OpenHost application ${existingAppUuid}: ${deleteMessage}`);
-    //   }
-    // }
-
-    let result: Record<string, unknown>;
-    result = await this.openhost.deployPocketBaseProject({
-      repoUrl: body.repoUrl,
-      sshUrl: deployKeyResult!.sshUrl,
-      projectName: body.projectName,
-      frontendDomain: body.frontendDomain,
-      projectId: body.projectId,
-      privateKeyUuid: deployKeyResult!.privateKeyUuid,
-    });
-
-    const response = {
-      ...result,
-      pocketbaseUrl: result.pocketbaseUrl || `${result.domainUrl || domainUrl}/api`,
-    };
-
-    if (body.projectId && result.appUuid) {
-      const deployedAt = new Date().toISOString();
-      const appUuid = String(result.appUuid);
-      const finalDomainUrl = String(result.domainUrl || domainUrl);
-      const adminUrl = String(result.adminUrl || `${finalDomainUrl}/admin`);
-      const pocketbaseUrl = String(result.pocketbaseUrl || `${finalDomainUrl}/api`);
-      await this.supabase.admin
-        .from('projects')
-        .update({
-          openhost_app_uuid: appUuid,
-          openhost_domain_url: finalDomainUrl,
-          pocketbase_url: pocketbaseUrl,
-          pocketbase_admin_url: adminUrl,
-          openhost_deployed_at: deployedAt,
-        })
-        .eq('id', body.projectId)
-        .eq('user_id', user.id);
-
-      await this.projectService.upsertLovecodeJson(user.id, body.projectId, {
-        project: { name: body.projectName },
-        deployment: {
-          ...(deployKeyResult?.publicKey ? { gitccDeployKeyPublic: deployKeyResult.publicKey } : {}),
-          openhostAppUuid: appUuid,
-          openhostDomainUrl: finalDomainUrl,
-          openhostDeployedAt: deployedAt,
-          pocketbaseUrl,
-          pocketbaseAdminUrl: adminUrl,
-        },
-      });
-    }
-
-    return response;
-  }
-
-  @Get('openhost/status')
-  @UseGuards(AuthGuard)
-  async openhostStatus(@Query('deploymentUuid') deploymentUuid: string, @Query('appUuid') appUuid: string) {
+  async vercelStatus(@Query('deploymentUuid') deploymentUuid: string, @Query('appUuid') appUuid: string) {
     if (!deploymentUuid || !appUuid) {
       throw new HttpException({ success: false, error: 'deploymentUuid and appUuid required' }, HttpStatus.BAD_REQUEST);
     }
-    return this.openhost.status(deploymentUuid, appUuid);
+    return this.deploy.status(deploymentUuid, appUuid);
   }
+
+  // ---------------------------------------------------------------------------
+  // User-supplied Supabase (sandbox) — unrelated to GitHub/Vercel
+  // ---------------------------------------------------------------------------
 
   @Post('integrations/user-supabase/connect')
   @UseGuards(AuthGuard)
@@ -553,23 +375,27 @@ export class IntegrationController {
     return { success: true, message: 'Disconnected' };
   }
 
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
   private parseCookie(cookieHeader: string, name: string): string | undefined {
     const match = cookieHeader.match(new RegExp(`(?:^|;)\\s*${name}=([^;]+)`));
     return match ? decodeURIComponent(match[1]) : undefined;
   }
 
-  private async resolveGitccTokens(
+  private async resolveGithubTokens(
     userId: string,
     cookieHeader: string,
   ): Promise<{ accessToken?: string; refreshToken?: string; loadedFromDb: boolean }> {
-    const accessCookie = this.parseCookie(cookieHeader, GITCC_ACCESS_COOKIE);
-    const refreshCookie = this.parseCookie(cookieHeader, GITCC_REFRESH_COOKIE);
+    const accessCookie = this.parseCookie(cookieHeader, GITHUB_ACCESS_COOKIE);
+    const refreshCookie = this.parseCookie(cookieHeader, GITHUB_REFRESH_COOKIE);
 
     if (accessCookie && refreshCookie) {
       return { accessToken: accessCookie, refreshToken: refreshCookie, loadedFromDb: false };
     }
 
-    const stored = await this.tokens.get(userId, 'gitcc');
+    const stored = await this.tokens.get(userId, GITHUB_PROVIDER);
 
     if (!accessCookie) {
       if (stored) {
@@ -584,31 +410,5 @@ export class IntegrationController {
       refreshToken: refreshCookie ?? stored?.refreshToken,
       loadedFromDb: false,
     };
-  }
-
-  private async loadProjectDeployKeyUuid(projectId: string): Promise<string | null> {
-    try {
-      const { data } = await this.supabase.admin
-        .from('projects')
-        .select('gitcc_deploy_key_uuid')
-        .eq('id', projectId)
-        .single();
-      return (data?.gitcc_deploy_key_uuid as string) || null;
-    } catch (err) {
-      this.logger.warn(`Could not load deploy key uuid for project ${projectId}: ${err instanceof Error ? err.message : String(err)}`);
-      return null;
-    }
-  }
-
-  private async saveProjectDeployKeyUuid(userId: string, projectId: string, uuid: string): Promise<void> {
-    try {
-      await this.supabase.admin
-        .from('projects')
-        .update({ gitcc_deploy_key_uuid: uuid })
-        .eq('id', projectId)
-        .eq('user_id', userId);
-    } catch (err) {
-      this.logger.warn(`Could not save deploy key uuid for project ${projectId}: ${err instanceof Error ? err.message : String(err)}`);
-    }
   }
 }

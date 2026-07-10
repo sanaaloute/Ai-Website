@@ -3,11 +3,10 @@ import { StorageService } from '@/lib/storage.service';
 
 export interface LovecodeDeploymentMetadata {
   platform?: string;
-  gitccRepoUrl?: string;
-  gitccDeployKeyPublic?: string;
-  openhostAppUuid?: string;
-  openhostDomainUrl?: string;
-  openhostDeployedAt?: string;
+  githubRepoUrl?: string;
+  vercelProjectId?: string;
+  vercelDomainUrl?: string;
+  vercelDeployedAt?: string;
   pocketbaseUrl?: string;
   pocketbaseAdminUrl?: string;
 }
@@ -33,11 +32,10 @@ interface LovecodeJson {
   deployment: {
     platform: string;
     note?: string;
-    gitccRepoUrl?: string;
-    gitccDeployKeyPublic?: string;
-    openhostAppUuid?: string;
-    openhostDomainUrl?: string;
-    openhostDeployedAt?: string;
+    githubRepoUrl?: string;
+    vercelProjectId?: string;
+    vercelDomainUrl?: string;
+    vercelDeployedAt?: string;
     pocketbaseUrl?: string;
     pocketbaseAdminUrl?: string;
   };
@@ -91,7 +89,7 @@ export class ProjectService {
       projectName;
 
     const mergedDeployment: LovecodeJson['deployment'] = {
-      platform: 'openhost',
+      platform: 'vercel',
       note: 'Deployment info is stored in LoveCode cloud after first deploy',
       ...existing?.deployment,
       ...options?.deployment,

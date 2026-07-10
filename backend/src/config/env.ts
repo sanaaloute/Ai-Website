@@ -47,22 +47,26 @@ export interface Env {
   stripeWebhookSecret: string;
   stripePrices: Record<string, string | undefined>;
 
-  gitccGitlabBaseUrl: string;
-  gitccGitlabClientId: string;
-  gitccGitlabClientSecret: string;
-  gitccGitlabRedirectUri: string;
-  gitccGitlabCookieDomain: string;
+  githubClientId: string;
+  githubClientSecret: string;
+  githubRedirectUri: string;
+  githubCookieDomain: string;
 
-  openhostBaseUrl: string;
-  openhostApiToken: string;
-  openhostServerUuid: string;
-  openhostProjectUuid: string;
-  openhostPrivateKeyUuid: string;
-  openhostEnvironmentName: string;
-  openhostGitBranch: string;
-  openhostPortsExposes: string;
-  openhostBaseDomain: string;
-  openhostPbSubdomainPrefix: string;
+  vercelToken: string;
+  vercelTeamId: string;
+  vercelDefaultDomain: string;
+
+  // Deployment target: 'vercel' (managed) or self-hosted ('docker' | 'coolify')
+  deployProvider: 'vercel' | 'docker' | 'coolify';
+  deployBaseDomain: string;
+  deployWorkspaceDir: string;
+  siteNetwork: string;
+  siteCpuLimit: string;
+  siteMemoryLimit: string;
+  siteBuildTimeoutSeconds: number;
+  dockerSocket: string;
+  coolifyUrl: string;
+  coolifyToken: string;
 
   morphApiKey: string;
 
@@ -97,16 +101,18 @@ export function buildEnv(): Env {
 
   const redisUrl = requireEnv('REDIS_URL');
 
-  const openhostApiToken = getEnv('OPENHOST_API_TOKEN');
-  const openhostServerUuid = getEnv('OPENHOST_SERVER_UUID');
-  const openhostProjectUuid = getEnv('OPENHOST_PROJECT_UUID');
-  const openhostBaseUrl = getEnv('OPENHOST_BASE_URL') ?? 'https://www.dpqq.com/api/v1';
+  const vercelToken = getEnv('VERCEL_TOKEN');
+  const vercelTeamId = getEnv('VERCEL_TEAM_ID') ?? '';
 
-  const deployEnabled = !!(openhostApiToken && openhostServerUuid && openhostProjectUuid);
-  if (deployEnabled) {
-    logger.log('OpenHost deploy integration enabled');
-  } else {
-    logger.warn('OpenHost deploy integration disabled: missing OPENHOST_API_TOKEN, OPENHOST_SERVER_UUID, or OPENHOST_PROJECT_UUID');
+  const deployProvider = (getEnv('DEPLOY_PROVIDER') ?? 'vercel') as Env['deployProvider'];
+  if (deployProvider === 'vercel') {
+    if (vercelToken) logger.log('Deploy provider: vercel (enabled)');
+    else logger.warn('Deploy provider: vercel (disabled: missing VERCEL_TOKEN)');
+  } else if (deployProvider === 'docker') {
+    logger.log(`Deploy provider: docker (self-hosted, base domain ${getEnv('DEPLOY_BASE_DOMAIN') ?? 'localhost'})`);
+  } else if (deployProvider === 'coolify') {
+    const ok = getEnv('COOLIFY_URL') && getEnv('COOLIFY_TOKEN');
+    logger.log(`Deploy provider: coolify (${ok ? 'enabled' : 'disabled: missing COOLIFY_URL/COOLIFY_TOKEN'})`);
   }
 
   const priceKeys = [
@@ -146,22 +152,25 @@ export function buildEnv(): Env {
     stripeWebhookSecret,
     stripePrices,
 
-    gitccGitlabBaseUrl: getEnv('GITCC_GITLAB_BASE_URL') ?? 'https://www.gitcc.com',
-    gitccGitlabClientId: getEnv('GITCC_GITLAB_CLIENT_ID', ['NEXT_PUBLIC_GITCC_APP_ID']) ?? '',
-    gitccGitlabClientSecret: getEnv('GITCC_GITLAB_CLIENT_SECRET', ['NEXT_PUBLIC_GITCC_APP_SECRET']) ?? '',
-    gitccGitlabRedirectUri: getEnv('GITCC_GITLAB_REDIRECT_URI') ?? 'http://localhost:3000/api/gitcc/gitlab/callback',
-    gitccGitlabCookieDomain: getEnv('GITCC_GITLAB_COOKIE_DOMAIN') ?? 'localhost',
+    githubClientId: getEnv('GITHUB_CLIENT_ID', ['NEXT_PUBLIC_GITHUB_APP_ID']) ?? '',
+    githubClientSecret: getEnv('GITHUB_CLIENT_SECRET', ['NEXT_PUBLIC_GITHUB_APP_SECRET']) ?? '',
+    githubRedirectUri: getEnv('GITHUB_REDIRECT_URI') ?? 'http://localhost:3000/api/github/callback',
+    githubCookieDomain: getEnv('GITHUB_COOKIE_DOMAIN') ?? 'localhost',
 
-    openhostBaseUrl,
-    openhostApiToken: openhostApiToken ?? '',
-    openhostServerUuid: openhostServerUuid ?? '',
-    openhostProjectUuid: openhostProjectUuid ?? '',
-    openhostPrivateKeyUuid: getEnv('OPENHOST_PRIVATE_KEY_UUID') ?? '',
-    openhostEnvironmentName: getEnv('OPENHOST_ENVIRONMENT_NAME') ?? 'production',
-    openhostGitBranch: getEnv('OPENHOST_GIT_BRANCH') ?? 'main',
-    openhostPortsExposes: getEnv('OPENHOST_PORTS_EXPOSES') ?? '3000',
-    openhostBaseDomain: getEnv('OPENHOST_BASE_DOMAIN') ?? '',
-    openhostPbSubdomainPrefix: getEnv('OPENHOST_PB_SUBDOMAIN_PREFIX') ?? 'pb',
+    vercelToken: vercelToken ?? '',
+    vercelTeamId,
+    vercelDefaultDomain: getEnv('VERCEL_DEFAULT_DOMAIN') ?? 'vercel.app',
+
+    deployProvider,
+    deployBaseDomain: getEnv('DEPLOY_BASE_DOMAIN') ?? 'localhost',
+    deployWorkspaceDir: getEnv('DEPLOY_WORKSPACE_DIR') ?? '/var/lib/lovecode/sites',
+    siteNetwork: getEnv('SITE_NETWORK') ?? 'lovecode_web',
+    siteCpuLimit: getEnv('SITE_CPU_LIMIT') ?? '1.0',
+    siteMemoryLimit: getEnv('SITE_MEMORY_LIMIT') ?? '512m',
+    siteBuildTimeoutSeconds: parseInt(getEnv('SITE_BUILD_TIMEOUT_SECONDS') ?? '600', 10),
+    dockerSocket: getEnv('DOCKER_SOCKET') ?? '/var/run/docker.sock',
+    coolifyUrl: getEnv('COOLIFY_URL') ?? '',
+    coolifyToken: getEnv('COOLIFY_TOKEN') ?? '',
 
     morphApiKey: getEnv('MORPH_API_KEY') ?? '',
 

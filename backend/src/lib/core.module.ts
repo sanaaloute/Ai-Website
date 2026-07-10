@@ -6,8 +6,11 @@ import { AiGatewayService } from './ai-gateway.service';
 import { StorageService } from './storage.service';
 import { EncryptionService } from './encryption.service';
 import { IntegrationTokenService } from './integration-token.service';
-import { GitccService } from './gitcc.service';
-import { OpenhostService } from './openhost.service';
+import { GithubService } from './github.service';
+import { VercelService } from './vercel.service';
+import { DeployService } from './deploy/deploy.service';
+import { DockerDeployRunner } from './deploy/docker.runner';
+import { CoolifyDeployRunner } from './deploy/coolify.runner';
 
 import { RedisService } from './redis.service';
 import { SandboxStateService } from './sandbox-state.service';
@@ -17,7 +20,7 @@ import { PrismaService } from './prisma.service';
 
 @Global()
 @Module({
-  providers: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GitccService, OpenhostService, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService],
-  exports: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GitccService, OpenhostService, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService],
+  providers: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService],
+  exports: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService],
 })
 export class CoreModule {}

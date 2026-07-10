@@ -31,10 +31,10 @@ export interface ProjectSummary {
   projectName: string;
   updatedAt: number;
   preview?: string | null;
-  openhostAppUuid?: string | null;
-  openhostDomainUrl?: string | null;
-  openhostDeployedAt?: string | null;
-  gitccRepoUrl?: string | null;
+  vercelProjectId?: string | null;
+  vercelDomainUrl?: string | null;
+  vercelDeployedAt?: string | null;
+  githubRepoUrl?: string | null;
 }
 
 export interface SavedFile {

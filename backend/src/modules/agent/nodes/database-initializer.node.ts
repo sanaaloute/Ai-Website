@@ -5,9 +5,9 @@ export async function databaseInitializerNode(state: AgentState, deps: GraphDepe
   const category = state.websiteCategory || 'generic';
   const workflow = state.workflow || 'new_app';
 
-  // Only verify/seeds for flows that are backed by PocketBase.
+  // Only verify/seeds for flows that are backed by a database (PocketBase or Prisma).
   const shouldInitialize =
-    state.needsIntegration === 'pocketbase' ||
+    !!state.needsIntegration ||
     workflow === 'new_app' ||
     (state.dbSchemaTemplate && Object.keys(state.dbSchemaTemplate).length > 0);
 
@@ -28,7 +28,7 @@ export async function databaseInitializerNode(state: AgentState, deps: GraphDepe
   try {
     await deps.emit({
       type: 'status',
-      data: { status: 'analyzing', message: `Verifying PocketBase collections for ${category}...` },
+      data: { status: 'analyzing', message: `Verifying ${state.framework === 'next' ? 'Prisma tables' : 'PocketBase collections'} for ${category}...` },
     });
 
     const status = await deps.databaseSeeder.verifyAndSeed(

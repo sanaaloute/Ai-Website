@@ -7,6 +7,7 @@ jest.mock('@/lib/e2b.service', () => ({
 }));
 
 const mockE2BService = {
+  detectFramework: jest.fn(),
   getPocketbaseInfo: jest.fn(),
   reconfigurePocketbaseForCategory: jest.fn(),
 };
@@ -25,6 +26,8 @@ describe('DatabaseSeederService', () => {
 
     service = module.get(DatabaseSeederService);
 
+    mockE2BService.detectFramework.mockReset();
+    mockE2BService.detectFramework.mockResolvedValue('vite');
     mockE2BService.getPocketbaseInfo.mockReset();
     mockE2BService.reconfigurePocketbaseForCategory.mockReset();
 

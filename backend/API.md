@@ -1332,7 +1332,7 @@ Render the PocketBase deployment template for a specific domain.
 ```json
 {
   "projectName": "my-store",
-  "domain": "my-store.dpqq.com",
+  "domain": "my-store.example.com",
   "pbSubdomainPrefix": "pb"
 }
 ```
@@ -1341,10 +1341,10 @@ Render the PocketBase deployment template for a specific domain.
 ```json
 {
   "success": true,
-  "frontendUrl": "https://my-store.dpqq.com",
-  "pocketbaseUrl": "https://my-store.dpqq.com/api",
-  "adminUrl": "https://my-store.dpqq.com/admin",
-  "adminEmail": "admin@my-store.dpqq.com",
+  "frontendUrl": "https://my-store.example.com",
+  "pocketbaseUrl": "https://my-store.example.com/api",
+  "adminUrl": "https://my-store.example.com/admin",
+  "adminEmail": "admin@my-store.example.com",
   "adminPassword": "...",
   "files": [ ... ],
   "fileCount": 7
@@ -1397,10 +1397,10 @@ List saved projects for the authenticated user.
       "projectName": "My App",
       "updatedAt": 1704067200000,
       "preview": null,
-      "openhostAppUuid": null,
-      "openhostDomainUrl": null,
-      "openhostDeployedAt": null,
-      "gitccRepoUrl": null
+      "vercelProjectId": null,
+      "vercelDomainUrl": null,
+      "vercelDeployedAt": null,
+      "githubRepoUrl": null
     }
   ]
 }
@@ -1711,9 +1711,9 @@ Stripe webhook handler. Called by Stripe, not the frontend (documented for compl
 
 ## Integrations
 
-### `GET /api/gitcc/gitlab/authorize`
+### `GET /api/github/authorize`
 
-Redirects to GitLab OAuth for GitCC.
+Redirects to GitHub OAuth.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1723,12 +1723,12 @@ Redirects to GitLab OAuth for GitCC.
 - `next` (optional): redirect path after callback
 
 **Response `307 Temporary Redirect`**
-- Redirects to GitLab OAuth URL.
-- Sets `gitcc_oauth_state` cookie.
+- Redirects to GitHub OAuth URL.
+- Sets `github_oauth_state` cookie.
 
 ---
 
-### `GET /api/gitcc/gitlab/callback`
+### `GET /api/github/callback`
 
 OAuth callback. Exchanges code for token and sets cookie.
 
@@ -1741,14 +1741,14 @@ OAuth callback. Exchanges code for token and sets cookie.
 - `state` (required)
 
 **Response `307 Temporary Redirect`**
-- Sets `gitcc_gitlab_access` cookie.
+- Sets `github_access` cookie.
 - Redirects to `next` or `/`.
 
 ---
 
-### `GET /api/gitcc/gitlab/status`
+### `GET /api/github/status`
 
-Check whether GitCC is connected.
+Check whether GitHub is connected.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1763,14 +1763,14 @@ Check whether GitCC is connected.
 
 ---
 
-### `POST /api/gitcc/push`
+### `POST /api/github/push`
 
-Push files to GitCC/GitLab.
+Push files to GitHub.
 
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **Extra Auth** | `gitcc_gitlab_access` cookie required |
+| **Extra Auth** | `github_access` cookie required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -1788,7 +1788,7 @@ Push files to GitCC/GitLab.
 ```json
 {
   "ok": true,
-  "repoUrl": "https://gitcc.com/user/my-repo",
+  "repoUrl": "https://github.com/user/my-repo",
   "uploaded": 12,
   "requestId": "uuid"
 }
@@ -1796,7 +1796,7 @@ Push files to GitCC/GitLab.
 
 ---
 
-### `GET /api/openhost/check-domain`
+### `GET /api/vercel/check-domain`
 
 Check whether a custom domain is already in use.
 
@@ -1820,9 +1820,9 @@ Check whether a custom domain is already in use.
 
 ---
 
-### `POST /api/openhost/deploy`
+### `POST /api/vercel/deploy`
 
-Deploy a GitCC repo to OpenHost/Coolify.
+Deploy a GitHub repo to Vercel.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1832,7 +1832,7 @@ Deploy a GitCC repo to OpenHost/Coolify.
 **Request Body**
 ```json
 {
-  "repoUrl": "https://gitcc.com/user/repo.git",
+  "repoUrl": "https://github.com/user/repo.git",
   "projectName": "My App",
   "customDomain": "myapp.com",
   "projectId": "uuid"
@@ -1854,9 +1854,9 @@ Deploy a GitCC repo to OpenHost/Coolify.
 
 ---
 
-### `POST /api/openhost/deploy-pocketbase`
+### `POST /api/vercel/deploy`
 
-Deploy a PocketBase-backed e-commerce project to OpenHost/Coolify using Docker Compose. The repository must contain a `docker-compose.yaml` with `frontend` (port 3000) and `pocketbase` (port 8090) services.
+Create (or reuse) a Vercel project linked to the GitHub repository and trigger a production deployment from its `main` branch.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1866,9 +1866,9 @@ Deploy a PocketBase-backed e-commerce project to OpenHost/Coolify using Docker C
 **Request Body**
 ```json
 {
-  "repoUrl": "https://gitcc.com/user/repo.git",
+  "repoUrl": "https://github.com/user/repo.git",
   "projectName": "my-store",
-  "frontendDomain": "my-store.dpqq.com",
+  "customDomain": "my-store.vercel.app",
   "projectId": "uuid"
 }
 ```
@@ -1877,11 +1877,10 @@ Deploy a PocketBase-backed e-commerce project to OpenHost/Coolify using Docker C
 ```json
 {
   "ok": true,
-  "appUuid": "app-xxx",
-  "deploymentUuid": "dep-xxx",
-  "domainUrl": "https://my-store.dpqq.com",
-  "pocketbaseUrl": "https://my-store.dpqq.com/api",
-  "adminUrl": "https://my-store.dpqq.com/admin",
+  "appUuid": "prj_xxx",
+  "deploymentUuid": "dpl_xxx",
+  "domainUrl": "https://my-store.vercel.app",
+  "projectUrl": "https://my-store.vercel.app",
   "isUpdate": false,
   "requestId": "uuid"
 }
@@ -1889,9 +1888,9 @@ Deploy a PocketBase-backed e-commerce project to OpenHost/Coolify using Docker C
 
 ---
 
-### `GET /api/openhost/status`
+### `GET /api/vercel/status`
 
-Poll OpenHost app + latest deployment status.
+Poll Vercel app + latest deployment status.
 
 | Attribute | Value |
 |-----------|-------|
@@ -2110,4 +2109,4 @@ Readiness probe. Checks Redis connectivity.
 
 3. **Cookie Auth**: The backend sets `lc_access_token` and `lc_refresh_token` as `httpOnly` cookies. All frontend requests should use `credentials: 'include'` so the browser sends them automatically. The legacy `Authorization: Bearer <token>` header is still accepted as a fallback.
 
-4. **File Uploads**: There is no multipart file upload endpoint. Files are sent as JSON strings in the `content` field (e.g., `/api/gitcc/push`, `/api/projects/save`).
+4. **File Uploads**: There is no multipart file upload endpoint. Files are sent as JSON strings in the `content` field (e.g., `/api/github/push`, `/api/projects/save`).

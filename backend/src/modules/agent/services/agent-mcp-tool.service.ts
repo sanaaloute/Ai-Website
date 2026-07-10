@@ -50,7 +50,7 @@ export class AgentMcpToolService {
       new DynamicStructuredTool({
         name: 'docs_framework',
         description:
-          'Fetch up-to-date documentation for a supported framework (react, vite, node, pocketbase, playwright). Use this when you need framework-specific API details.',
+          'Fetch up-to-date documentation for a supported framework (react, vite, next, prisma, node, pocketbase, playwright). Use this when you need framework-specific API details.',
         schema: frameworkDocsSchema,
         func: async (args) => {
           const result = await this.docs.frameworkDocs(args);

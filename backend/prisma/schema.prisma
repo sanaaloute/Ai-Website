@@ -215,11 +215,10 @@ model projects {
   framework            String?               @db.VarChar
   created_at           DateTime              @default(now()) @db.Timestamp(6)
   updated_at           DateTime              @default(now()) @updatedAt @db.Timestamp(6)
-  openhost_app_uuid      String?               @db.VarChar
-  openhost_domain_url    String?               @db.VarChar
-  openhost_deployed_at   DateTime?             @db.Timestamp(6)
-  gitcc_repo_url         String?               @db.VarChar
-  gitcc_deploy_key_uuid  String?               @db.VarChar
+  github_repo_url        String?               @db.VarChar
+  vercel_project_id      String?               @db.VarChar
+  vercel_domain_url      String?               @db.VarChar
+  vercel_deployed_at     DateTime?             @db.Timestamp(6)
   pocketbase_url         String?               @db.VarChar
   pocketbase_admin_url   String?               @db.VarChar
   agent_memories         agent_memories[]

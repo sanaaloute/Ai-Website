@@ -58,11 +58,11 @@ export class ReadLogsTool extends AgentTool {
 
       let logs: string[] = [];
 
-      // Try to read Vite dev server logs
+      // Try to read dev server logs (Next.js or Vite)
       if (logType === "all" || logType === "server") {
         try {
           const result = await this.agentContext.sandboxProvider.runCommand(
-            "cat /tmp/vite.log 2>/dev/null || echo ''"
+            "cat /tmp/next.log /tmp/vite.log 2>/dev/null || echo ''"
           );
           if (result.stdout) {
             const lines = result.stdout.split("\n").filter((l) => l.trim());

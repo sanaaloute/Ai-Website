@@ -3,9 +3,12 @@
   "category": "real_estate",
   "description": "Minimal scaffold for Real Estate projects",
   "recommended_packages": [
-    "lucide-react",
-    "pocketbase",
+    "next",
     "react",
-    "react-dom"
-  ]
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
 }
