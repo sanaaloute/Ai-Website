@@ -84,6 +84,44 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx
+    ports:
+      # Public entry point (AWS security group already allows 80/443).
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+      admin:
+        condition: service_started
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "wget -qO- http://localhost/nginx-health >/dev/null 2>&1 || exit 1"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # Used on demand to obtain/renew Let's Encrypt certificates (see nginx/README.md).
+  # Not started by `docker compose up` thanks to the `tools` profile.
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    profiles:
+      - tools
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
 volumes:
   redis_data:
   agent_store_data:
