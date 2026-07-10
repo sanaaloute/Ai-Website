@@ -1,0 +1,14 @@
+{
+  "name": "Job Portal",
+  "category": "job_portal",
+  "description": "Minimal scaffold for Job Portal projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

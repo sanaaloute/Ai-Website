@@ -40,7 +40,7 @@ export declare class IntegrationController {
         conflictProjectName: string | null;
         success: boolean;
     }>;
-    deploy(user: User, body: {
+    deploySite(user: User, body: {
         repoUrl?: string;
         projectName?: string;
         customDomain?: string;

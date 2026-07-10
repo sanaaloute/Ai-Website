@@ -152,7 +152,8 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
                 clone = await run('git', ['clone', '--depth', '1', params.repoUrl, workspace], { timeoutMs: 180_000 });
             }
             if (clone.code !== 0) {
-                throw new Error(`git clone failed: ${(clone.stderr || clone.stdout).trim()}`);
+                throw new Error(`git clone failed: ${(clone.stderr || clone.stdout).trim()} ` +
+                    `(deploy only supports PUBLIC repositories; make sure the repo is public)`);
             }
             const framework = params.framework ?? this.detectFramework(workspace);
             if (framework !== 'next') {

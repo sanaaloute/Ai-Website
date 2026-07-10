@@ -1,0 +1,393 @@
+{
+  "collections": [
+    {
+      "id": "users",
+      "name": "users",
+      "type": "auth",
+      "system": true,
+      "schema": [
+        {
+          "system": false,
+          "id": "users_name",
+          "name": "name",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "users_role",
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "maxSelect": 1,
+            "values": [
+              "customer",
+              "admin"
+            ]
+          }
+        },
+        {
+          "system": false,
+          "id": "users_phone",
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "users_address",
+          "name": "address",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "categories",
+      "name": "categories",
+      "type": "base",
+      "system": false,
+      "schema": [
+        {
+          "system": false,
+          "id": "categories_name",
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "presentable": true,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "categories_slug",
+          "name": "slug",
+          "type": "text",
+          "required": true,
+          "presentable": false,
+          "unique": true,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        }
+      ],
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.role = \"admin\"",
+      "updateRule": "@request.auth.role = \"admin\"",
+      "deleteRule": "@request.auth.role = \"admin\""
+    },
+    {
+      "id": "jobs",
+      "name": "jobs",
+      "type": "base",
+      "system": false,
+      "schema": [
+        {
+          "system": false,
+          "id": "jobs_title",
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "presentable": true,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "jobs_slug",
+          "name": "slug",
+          "type": "text",
+          "required": true,
+          "presentable": true,
+          "unique": true,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "jobs_company",
+          "name": "company",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "jobs_location",
+          "name": "location",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "jobs_salary",
+          "name": "salary",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "jobs_description",
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "jobs_status",
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "maxSelect": 1,
+            "values": [
+              "active",
+              "draft",
+              "archived"
+            ]
+          }
+        },
+        {
+          "system": false,
+          "id": "jobs_category",
+          "name": "category",
+          "type": "relation",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "collectionId": "categories",
+            "cascadeDelete": false,
+            "minSelect": null,
+            "maxSelect": 1,
+            "displayFields": [
+              "name"
+            ]
+          }
+        }
+      ],
+      "listRule": "status = \"active\"",
+      "viewRule": "status = \"active\"",
+      "createRule": "@request.auth.role = \"admin\"",
+      "updateRule": "@request.auth.role = \"admin\"",
+      "deleteRule": "@request.auth.role = \"admin\""
+    },
+    {
+      "id": "applications",
+      "name": "applications",
+      "type": "base",
+      "system": false,
+      "schema": [
+        {
+          "system": false,
+          "id": "applications_user",
+          "name": "user",
+          "type": "relation",
+          "required": true,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "collectionId": "users",
+            "cascadeDelete": false,
+            "minSelect": null,
+            "maxSelect": 1,
+            "displayFields": [
+              "email"
+            ]
+          }
+        },
+        {
+          "system": false,
+          "id": "applications_job",
+          "name": "job",
+          "type": "relation",
+          "required": true,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "collectionId": "jobs",
+            "cascadeDelete": false,
+            "minSelect": null,
+            "maxSelect": 1,
+            "displayFields": [
+              "name"
+            ]
+          }
+        },
+        {
+          "system": false,
+          "id": "applications_status",
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "maxSelect": 1,
+            "values": [
+              "pending",
+              "reviewed",
+              "accepted",
+              "rejected"
+            ]
+          }
+        },
+        {
+          "system": false,
+          "id": "applications_coverLetter",
+          "name": "coverLetter",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        }
+      ],
+      "listRule": "user = @request.auth.id",
+      "viewRule": "user = @request.auth.id",
+      "createRule": "@request.auth.id != \"\"",
+      "updateRule": "@request.auth.role = \"admin\"",
+      "deleteRule": "@request.auth.role = \"admin\""
+    },
+    {
+      "id": "settings",
+      "name": "settings",
+      "type": "base",
+      "system": false,
+      "schema": [
+        {
+          "system": false,
+          "id": "sett_name",
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "presentable": true,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "sett_tagline",
+          "name": "tagline",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "sett_support_email",
+          "name": "supportEmail",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        },
+        {
+          "system": false,
+          "id": "sett_footer_text",
+          "name": "footerText",
+          "type": "text",
+          "required": false,
+          "presentable": false,
+          "unique": false,
+          "options": {
+            "min": null,
+            "max": null,
+            "pattern": ""
+          }
+        }
+      ],
+      "listRule": "",
+      "viewRule": "",
+      "createRule": "@request.auth.role = \"admin\"",
+      "updateRule": "@request.auth.role = \"admin\"",
+      "deleteRule": "@request.auth.role = \"admin\""
+    }
+  ]
+}

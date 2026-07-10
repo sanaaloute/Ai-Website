@@ -234,7 +234,7 @@ export class IntegrationController {
 
   @Post('vercel/deploy')
   @UseGuards(AuthGuard)
-  async deploy(
+  async deploySite(
     @CurrentUser() user: User,
     @Body() body: { repoUrl?: string; projectName?: string; customDomain?: string; projectId?: string; idempotencyKey?: string },
     @Req() req: Request,

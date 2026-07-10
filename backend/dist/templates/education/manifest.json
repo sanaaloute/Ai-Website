@@ -1,0 +1,14 @@
+{
+  "name": "Education",
+  "category": "education",
+  "description": "Minimal scaffold for Education projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Health",
+  "category": "health",
+  "description": "Minimal scaffold for Health projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

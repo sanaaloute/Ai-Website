@@ -1,0 +1,14 @@
+{
+  "name": "Ecommerce",
+  "category": "ecommerce",
+  "description": "Minimal scaffold for Ecommerce projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

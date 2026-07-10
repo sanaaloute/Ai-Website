@@ -1,0 +1,14 @@
+{
+  "name": "Travel",
+  "category": "travel",
+  "description": "Minimal scaffold for Travel projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

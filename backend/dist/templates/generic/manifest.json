@@ -1,0 +1,14 @@
+{
+  "name": "Generic",
+  "category": "generic",
+  "description": "Generic multi-purpose landing page scaffold",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

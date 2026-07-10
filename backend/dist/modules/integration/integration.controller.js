@@ -169,7 +169,7 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
         const result = await this.deploy.checkDomain(domain);
         return { success: true, ...result };
     }
-    async deploy(user, body, req, res) {
+    async deploySite(user, body, req, res) {
         if (!body.repoUrl || !body.projectName) {
             throw new common_1.HttpException({ success: false, error: 'repoUrl and projectName required' }, common_1.HttpStatus.BAD_REQUEST);
         }
@@ -356,7 +356,7 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object, Object, Object]),
     __metadata("design:returntype", Promise)
-], IntegrationController.prototype, "deploy", null);
+], IntegrationController.prototype, "deploySite", null);
 __decorate([
     (0, common_1.Get)('vercel/status'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),

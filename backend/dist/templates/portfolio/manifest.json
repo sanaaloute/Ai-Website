@@ -1,0 +1,14 @@
+{
+  "name": "Portfolio",
+  "category": "portfolio",
+  "description": "Minimal scaffold for Portfolio projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

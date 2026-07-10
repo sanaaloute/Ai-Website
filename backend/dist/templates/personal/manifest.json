@@ -1,0 +1,14 @@
+{
+  "name": "Personal",
+  "category": "personal",
+  "description": "Minimal scaffold for Personal projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

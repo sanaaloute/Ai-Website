@@ -1,0 +1,14 @@
+{
+  "name": "Fashion",
+  "category": "fashion",
+  "description": "Minimal scaffold for Fashion projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}

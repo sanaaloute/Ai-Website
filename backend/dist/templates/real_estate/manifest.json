@@ -1,0 +1,14 @@
+{
+  "name": "Real Estate",
+  "category": "real_estate",
+  "description": "Minimal scaffold for Real Estate projects",
+  "recommended_packages": [
+    "next",
+    "react",
+    "react-dom",
+    "@prisma/client",
+    "prisma",
+    "lucide-react"
+  ],
+  "framework": "next"
+}
