@@ -1,0 +1,203 @@
+import { AgentState } from '../state';
+import { GraphDependencies } from '../graph';
+import { promptToString, buildPromptContent } from '@/types';
+import { E2BService } from '@/lib/e2b.service';
+
+const VALID_CATEGORIES = new Set([
+  'ecommerce', 'education', 'saas', 'portfolio', 'blog', 'restaurant',
+  'real_estate', 'health', 'travel', 'job_portal', 'fashion', 'automobile',
+  'personal', 'generic',
+]);
+
+async function workspaceHasSourceFiles(e2b: E2BService, sandboxId: string): Promise<boolean> {
+  try {
+    const result = await e2b.runCommand(
+      sandboxId,
+      'find /home/user/app/src -type f -not -path "*/node_modules/*" 2>/dev/null | head -1',
+      '/home/user/app',
+    );
+    return result.exitCode === 0 && result.output.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function extractJson(text: string): Record<string, unknown> | null {
+  if (!text) return null;
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // fall through
+  }
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export async function analyzerNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
+  // When the user is continuing after the human-in-the-loop review limit, the
+  // workflow is already locked to review_fix. Skip re-analysis to save tokens
+  // and avoid replacing the review context.
+  if (state.workflow === 'review_fix') {
+    return {
+      workflow: 'review_fix',
+      intent: state.intent || 'review_fix',
+    };
+  }
+
+  const prompt = state.prompt;
+  const promptString = promptToString(prompt);
+  const history = state.chatHistory ?? [];
+  const userApiKey = state.userApiKey;
+
+  const systemPrompt = await deps.promptLoader.load('analyze');
+
+  let memoryContext = '';
+  try {
+    const memories = await deps.persistence.getMemories({
+      userId: state.userId,
+      projectId: state.projectId,
+      memoryType: 'generation_summary',
+    });
+    if (memories.length) {
+      memoryContext =
+        '\n\nRelevant context from previous work on this project:\n' +
+        memories.slice(0, 5).map((m) => `- ${m.memoryType}: ${m.content}`).join('\n');
+    }
+  } catch (e) {
+    deps.logger.warn(`Could not load agent memories: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  let promptWithMemory: typeof prompt;
+  if (typeof prompt === 'string') {
+    promptWithMemory = prompt + memoryContext;
+  } else {
+    promptWithMemory = [...prompt];
+    if (memoryContext) {
+      promptWithMemory.push({ type: 'text' as const, text: memoryContext });
+    }
+  }
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history.slice(-6).map((h) => ({ role: h.role, content: h.content })),
+    { role: 'user', content: buildPromptContent('Analyze this request: ', promptWithMemory) },
+  ];
+
+  let result: Record<string, unknown> = {};
+  let parseError: Error | null = null;
+  let resultText = '';
+
+  try {
+    resultText = await deps.aiGateway.chatCompletionsStream(
+      messages,
+      deps.modelResolver.resolveSequence('analyzer'),
+      userApiKey,
+      async (token) => {
+        await deps.emit({ type: 'token', data: { content: token } });
+      },
+    );
+    const parsed = extractJson(resultText);
+    if (parsed) {
+      result = parsed;
+    } else {
+      throw new Error(`Could not parse analyzer response as JSON: ${resultText.slice(0, 200)}`);
+    }
+  } catch (e) {
+    deps.logger.warn(`Analyzer JSON parse failed: ${e instanceof Error ? e.message : String(e)}`);
+    parseError = e instanceof Error ? e : new Error(String(e));
+  }
+
+  const explicitIntent = state.intent;
+  let intent = (result?.intent as string) || '';
+
+  if (['new_app', 'edit', 'debug', 'question'].includes(explicitIntent || '')) {
+    intent = explicitIntent as string;
+  } else if (!['new_app', 'edit', 'debug', 'question'].includes(intent)) {
+    if (!history.length && /\b(create|build|make|generate|new app|new website)\b/i.test(promptString)) {
+      intent = 'new_app';
+    } else {
+      intent = 'edit';
+    }
+  }
+
+  const workflowMap: Record<string, AgentState['workflow']> = {
+    new_app: 'new_app',
+    edit: 'edit',
+    debug: 'debug',
+    question: 'chat',
+  };
+  let workflow = workflowMap[intent] || 'edit';
+
+  // If the workspace has no source files yet, an edit/debug request cannot succeed.
+  // Force the workflow to new_app so the template is copied and the agent builds from scratch.
+  if ((workflow === 'edit' || workflow === 'debug') && state.sandboxId) {
+    const hasSourceFiles = await workspaceHasSourceFiles(deps.e2b, state.sandboxId);
+    if (!hasSourceFiles) {
+      deps.logger.warn(`Sandbox ${state.sandboxId} has no source files; forcing workflow from ${workflow} to new_app`);
+      intent = 'new_app';
+      workflow = 'new_app';
+    }
+  }
+
+  let scope = (result?.scope as string) || '';
+  if (!scope) scope = promptString;
+
+  let relevantFiles = Array.isArray(result?.relevantFiles) ? (result.relevantFiles as string[]) : [];
+  if (!relevantFiles.length && intent === 'new_app') {
+    relevantFiles = ['src/App.tsx', 'src/main.tsx'];
+  }
+
+  let category = String(result?.websiteCategory || 'generic').toLowerCase().replace(/[ -]/g, '_');
+  if (!VALID_CATEGORIES.has(category)) category = 'generic';
+
+  const websiteType = (result?.websiteType as string) || 'landing_page';
+
+  let needsClarification = false;
+  let clarificationQuestions: string[] = [];
+  if (typeof result?.needsClarification === 'boolean') {
+    needsClarification = result.needsClarification as boolean;
+  }
+  if (Array.isArray(result?.clarificationQuestions)) {
+    clarificationQuestions = result.clarificationQuestions as string[];
+  }
+
+  if (parseError && !explicitIntent && !needsClarification) {
+    if (!/\b(create|build|make|generate|fix|add|update|change)\b/i.test(promptString)) {
+      needsClarification = true;
+      clarificationQuestions = ['I had trouble understanding your request. Could you rephrase or provide more details?'];
+    }
+  }
+
+  return {
+    workflow,
+    intent,
+    scope,
+    relevantFiles,
+    needsClarification,
+    clarificationQuestions,
+    websiteCategory: category,
+    websiteType,
+    // Every new_app gets PocketBase wired automatically. Edit/debug/question only
+    // get it when the user explicitly asks for database/auth features.
+    needsIntegration: intent === 'new_app' ? 'pocketbase' : ((result?.needsIntegration as string | null) ?? null),
+    messages: [{ role: 'assistant', content: `Intent: ${intent} | Category: ${category} | Scope: ${scope}` }],
+    error: parseError ? parseError.message : undefined,
+    // For surgical edit/debug paths that skip the planner, seed a single todo
+    // so the executor has a task list to report progress against.
+    todos:
+      workflow === 'edit' || workflow === 'debug'
+        ? [{ id: '1', content: scope, status: 'pending' }]
+        : undefined,
+  };
+}

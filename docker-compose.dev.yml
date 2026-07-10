@@ -1,0 +1,124 @@
+# Self-contained local development stack.
+# Usage:
+#   docker compose -f docker-compose.dev.yml down
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Notes:
+# - Uses the SAME Supabase project as production (loaded from the root .env file).
+# - Redis runs locally; data is persisted in a named volume.
+# - Backend is built from the existing Dockerfile using the "deps" stage (all
+#   dependencies including @nestjs/cli), then source files are mounted for
+#   hot-reload.
+# - Frontend and Admin are built as production images but wired to talk to the
+#   local backend. For hot-reload frontend development, run `npm run dev` in
+#   ./frontend directly instead.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  backend:
+    container_name: backend
+    build:
+      context: ./backend-nestjs
+      dockerfile: Dockerfile
+      # Use the "deps" stage so devDependencies are present for `nest start --watch`.
+      target: deps
+    ports:
+      - "127.0.0.1:4000:4000"
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - APP_HOST=0.0.0.0
+      - LOG_LEVEL=DEBUG
+      - REDIS_URL=redis://redis:6379/0
+      # Share cookies across localhost ports (3000/3001/4000) during dev.
+      - COOKIE_DOMAIN=localhost
+    volumes:
+      # Mount source for hot reload.
+      - ./backend-nestjs:/app
+      # Keep image-installed node_modules (dev deps) instead of overlaying local files.
+      - /app/node_modules
+      # Keep build output inside the container so stale host dist/ doesn't break tsc.
+      - /app/dist
+    command:
+      - sh
+      - -c
+      - "npm run prisma:generate && npx nest start --watch --builder webpack"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Client-side calls go from the browser (host) to the mapped backend port.
+        NEXT_PUBLIC_BACKEND_URL: http://localhost:4000
+        NEXT_PUBLIC_LOVECODE_API_KEY_SITE_URL: ${NEXT_PUBLIC_LOVECODE_API_KEY_SITE_URL:-https://api.gitcc.com/dashboard/overview}
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Server-side proxy routes use the internal Docker hostname.
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:4000
+      - BACKEND_INTERNAL_URL=http://backend:4000
+      - LOVECODE_API_KEY_SITE_URL=${LOVECODE_API_KEY_SITE_URL:-https://api.gitcc.com/dashboard/overview}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  admin:
+    container_name: admin
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+      args:
+        BACKEND_API_URL: http://backend:4000
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      - NODE_ENV=development
+      - BACKEND_API_URL=http://backend:4000
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  redis_data:

@@ -1,0 +1,89 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  backend:
+    image: lovecode-backend
+    container_name: backend
+    build:
+      context: ./backend-nestjs
+      dockerfile: Dockerfile
+    ports:
+      # Bind to loopback only — host nginx is the single entry point.
+      - "127.0.0.1:4000:4000"
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - APP_HOST=0.0.0.0
+      - REDIS_URL=redis://redis:6379/0
+      - AGENT_STORE_DIR=/app/.agent_store
+    volumes:
+      - agent_store_data:/app/.agent_store
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "require('http').get('http://localhost:4000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    image: lovecode-frontend
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Public build-time variables are baked into the Next.js bundle.
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-}
+        NEXT_PUBLIC_LOVECODE_API_KEY_SITE_URL: ${NEXT_PUBLIC_LOVECODE_API_KEY_SITE_URL:-}
+    ports:
+      # Bind to loopback only — host nginx proxies public traffic here.
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Runtime-only variables (server components)
+      LOVECODE_API_KEY_SITE_URL: ${LOVECODE_API_KEY_SITE_URL:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  admin:
+    image: lovecode-admin
+    container_name: admin
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+      args:
+        # Internal Docker routing keeps admin→backend traffic inside the network
+        BACKEND_API_URL: ${BACKEND_API_URL:-http://backend:4000}
+    ports:
+      # Bind to loopback only — host nginx serves admin on its own subdomain.
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  agent_store_data:

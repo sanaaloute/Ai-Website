@@ -1,0 +1,11 @@
+{
+  "name": "Portfolio",
+  "category": "portfolio",
+  "description": "Minimal scaffold for Portfolio projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

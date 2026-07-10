@@ -1,0 +1,11 @@
+{
+  "name": "Generic",
+  "category": "generic",
+  "description": "Generic multi-purpose landing page scaffold",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

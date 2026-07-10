@@ -1,0 +1,356 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic:
+      - img
+    - generic:
+      - img
+  - main [ref=e4]:
+    - navigation [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e10]: LC
+        - generic [ref=e11]:
+          - generic [ref=e12]: Lovecode
+          - paragraph [ref=e13]: Build what you love
+      - button "Toggle navigation" [ref=e14] [cursor=pointer]:
+        - img [ref=e15]
+    - generic [ref=e17]:
+      - region "Start building" [ref=e18]:
+        - generic [ref=e19]:
+          - heading "Build what you love." [level=1] [ref=e20]
+          - heading "From prompt t" [level=2] [ref=e513]:
+            - paragraph [ref=e23]:
+              - text: From prompt t
+              - generic [ref=e24]: "|"
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - generic [ref=e29]:
+              - textbox "e.g. \"Build a SaaS dashboard for tracking MRR, churn, and growth.\"" [ref=e30]
+              - button "Generate" [disabled]:
+                - img
+            - generic [ref=e32]:
+              - 'button "Use suggestion: Residential solar quote wizard. Fills the prompt with a detailed description." [ref=e514] [cursor=pointer]':
+                - generic [ref=e515]: Residential solar quote wizard
+              - 'button "Use suggestion: Creator NFT portfolio gallery. Fills the prompt with a detailed description." [ref=e516] [cursor=pointer]':
+                - generic [ref=e517]: Creator NFT portfolio gallery
+              - 'button "Use suggestion: Small firm client intake. Fills the prompt with a detailed description." [ref=e518] [cursor=pointer]':
+                - generic [ref=e519]: Small firm client intake
+              - button "Generate more ideas" [ref=e39] [cursor=pointer]:
+                - img [ref=e40]
+                - generic [ref=e46]: Generate more ideas
+          - generic [ref=e47]:
+            - paragraph [ref=e48]: Start from a real website
+            - generic [ref=e49]:
+              - generic [ref=e50]:
+                - link "Shop Now shop-now.dpqq.com" [ref=e51] [cursor=pointer]:
+                  - /url: https://shop-now.dpqq.com/#why-us
+                  - img "Shop Now" [ref=e52]
+                  - generic [ref=e54]:
+                    - img [ref=e55]
+                    - text: shop-now.dpqq.com
+                  - img [ref=e61]
+                - generic [ref=e65]:
+                  - generic [ref=e66]:
+                    - heading "Shop Now" [level=3] [ref=e67]
+                    - paragraph [ref=e68]: A modern shoe shopping website with product catalog, cart, and checkout experience.
+                  - generic [ref=e69]:
+                    - button "Download" [ref=e70] [cursor=pointer]:
+                      - img [ref=e71]
+                      - text: Download
+                    - button "Edit with AI" [ref=e74] [cursor=pointer]:
+                      - img [ref=e75]
+                      - text: Edit with AI
+              - generic [ref=e78]:
+                - link "Home Control home-control.dpqq.com" [ref=e79] [cursor=pointer]:
+                  - /url: https://home-control.dpqq.com/
+                  - img "Home Control" [ref=e80]
+                  - generic [ref=e82]:
+                    - img [ref=e83]
+                    - text: home-control.dpqq.com
+                  - img [ref=e89]
+                - generic [ref=e93]:
+                  - generic [ref=e94]:
+                    - heading "Home Control" [level=3] [ref=e95]
+                    - paragraph [ref=e96]: A smart home dashboard to monitor and control devices, energy usage, and room status.
+                  - generic [ref=e97]:
+                    - button "Download" [ref=e98] [cursor=pointer]:
+                      - img [ref=e99]
+                      - text: Download
+                    - button "Edit with AI" [ref=e102] [cursor=pointer]:
+                      - img [ref=e103]
+                      - text: Edit with AI
+      - generic [ref=e107]:
+        - generic [ref=e109]:
+          - paragraph [ref=e110]: Pricing
+          - paragraph [ref=e111]: Start free, upgrade when you are ready to ship. No hidden fees, cancel anytime.
+        - generic [ref=e112]:
+          - generic [ref=e114]:
+            - generic [ref=e115]:
+              - img [ref=e117]
+              - generic [ref=e119]:
+                - heading "Starter" [level=3] [ref=e120]
+                - paragraph [ref=e121]: Perfect for hobbyists and side projects.
+            - generic [ref=e122]:
+              - generic [ref=e123]: $0
+              - generic [ref=e124]: forever
+            - link "Get Started" [ref=e125] [cursor=pointer]:
+              - /url: /projects
+            - list [ref=e127]:
+              - listitem [ref=e128]:
+                - img [ref=e129]
+                - generic [ref=e131]: 3 projects
+              - listitem [ref=e132]:
+                - img [ref=e133]
+                - generic [ref=e135]: Local development
+              - listitem [ref=e136]:
+                - img [ref=e137]
+                - generic [ref=e139]: Community templates
+              - listitem [ref=e140]:
+                - img [ref=e141]
+                - generic [ref=e143]: Standard AI models
+              - listitem [ref=e144]:
+                - img [ref=e145]
+                - generic [ref=e147]: GitHub integration
+          - generic [ref=e148]:
+            - generic [ref=e150]: Most Popular
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - img [ref=e154]
+                - generic [ref=e156]:
+                  - heading "Pro" [level=3] [ref=e157]
+                  - paragraph [ref=e158]: For builders shipping production apps.
+              - generic [ref=e159]:
+                - generic [ref=e160]: $19
+                - generic [ref=e161]: /month
+              - link "Upgrade to Pro" [ref=e162] [cursor=pointer]:
+                - /url: "#download"
+              - list [ref=e164]:
+                - listitem [ref=e165]:
+                  - img [ref=e166]
+                  - generic [ref=e168]: Unlimited projects
+                - listitem [ref=e169]:
+                  - img [ref=e170]
+                  - generic [ref=e172]: Local + Cloud development
+                - listitem [ref=e173]:
+                  - img [ref=e174]
+                  - generic [ref=e176]: Priority AI routing
+                - listitem [ref=e177]:
+                  - img [ref=e178]
+                  - generic [ref=e180]: Advanced model access
+                - listitem [ref=e181]:
+                  - img [ref=e182]
+                  - generic [ref=e184]: One-click deployments
+                - listitem [ref=e185]:
+                  - img [ref=e186]
+                  - generic [ref=e188]: Custom domains
+                - listitem [ref=e189]:
+                  - img [ref=e190]
+                  - generic [ref=e192]: Email support
+          - generic [ref=e194]:
+            - generic [ref=e195]:
+              - img [ref=e197]
+              - generic [ref=e202]:
+                - heading "Team" [level=3] [ref=e203]
+                - paragraph [ref=e204]: Collaborate and scale with your team.
+            - generic [ref=e205]:
+              - generic [ref=e206]: $49
+              - generic [ref=e207]: /seat /month
+            - link "Contact Sales" [ref=e208] [cursor=pointer]:
+              - /url: mailto:sales@lovecode.ai
+            - list [ref=e210]:
+              - listitem [ref=e211]:
+                - img [ref=e212]
+                - generic [ref=e214]: Everything in Pro
+              - listitem [ref=e215]:
+                - img [ref=e216]
+                - generic [ref=e218]: Shared team workspaces
+              - listitem [ref=e219]:
+                - img [ref=e220]
+                - generic [ref=e222]: Role-based access
+              - listitem [ref=e223]:
+                - img [ref=e224]
+                - generic [ref=e226]: SSO & SAML
+              - listitem [ref=e227]:
+                - img [ref=e228]
+                - generic [ref=e230]: Audit logs
+              - listitem [ref=e231]:
+                - img [ref=e232]
+                - generic [ref=e234]: Dedicated support
+              - listitem [ref=e235]:
+                - img [ref=e236]
+                - generic [ref=e238]: Custom SLA
+        - generic [ref=e239]:
+          - generic [ref=e240]:
+            - img [ref=e241]
+            - text: No credit card required for Starter
+          - generic [ref=e244]:
+            - img [ref=e245]
+            - text: Cancel anytime
+          - generic [ref=e248]:
+            - img [ref=e249]
+            - text: 14-day refund guarantee
+      - generic [ref=e252]:
+        - generic [ref=e253]:
+          - generic [ref=e254]:
+            - img [ref=e256]
+            - generic [ref=e258]: Open source
+            - generic [ref=e260]: Generate complete web apps from one prompt.
+          - heading "Build Apps with AI." [level=2] [ref=e261]:
+            - text: Build Apps
+            - generic [ref=e263]: with AI.
+          - paragraph [ref=e264]: Describe your idea in plain language. Lovecode generates the codebase, wires the UI, and gives you a live preview — no setup required.
+          - link "Start building" [ref=e266] [cursor=pointer]:
+            - /url: "#prompt"
+            - generic [ref=e268]: Start building
+            - img [ref=e269]
+          - generic [ref=e271]:
+            - generic [ref=e276]: Online · Generating apps in real-time
+            - generic [ref=e278]: Linux, macOS & Windows
+        - generic [ref=e281]:
+          - generic [ref=e282]:
+            - generic [ref=e285]: Lovecode · Generation Workspace
+            - generic [ref=e286]: Live preview
+          - generic [ref=e287]:
+            - generic [ref=e288]:
+              - paragraph [ref=e289]: AI Chat
+              - generic [ref=e290]:
+                - generic [ref=e291]:
+                  - paragraph [ref=e292]: You
+                  - paragraph [ref=e293]: Build a SaaS dashboard with MRR tracking and dark mode
+                - generic [ref=e294]:
+                  - paragraph [ref=e295]: Lovecode
+                  - paragraph [ref=e296]: Generating dashboard layout, wiring data models, configuring routes…
+            - generic [ref=e299]:
+              - paragraph [ref=e300]: Preview
+              - generic [ref=e301]:
+                - generic [ref=e302]:
+                  - generic [ref=e303]: Dashboard Overview
+                  - generic [ref=e304]: Live
+                - generic [ref=e305]:
+                  - generic [ref=e306]:
+                    - paragraph [ref=e307]: Metric A
+                    - paragraph [ref=e308]: —
+                    - paragraph [ref=e309]: —
+                  - generic [ref=e310]:
+                    - paragraph [ref=e311]: Metric B
+                    - paragraph [ref=e312]: —
+                    - paragraph [ref=e313]: —
+                  - generic [ref=e314]:
+                    - paragraph [ref=e315]: Metric C
+                    - paragraph [ref=e316]: —
+                    - paragraph [ref=e317]: —
+          - generic [ref=e335]:
+            - generic [ref=e336]: Full-stack TypeScript · Auto-deploy
+            - generic [ref=e339]: Export · Deploy
+      - generic [ref=e341]:
+        - generic [ref=e343]:
+          - paragraph [ref=e344]: Features
+          - heading "Everything you need to ship AI-native products." [level=2] [ref=e345]
+          - paragraph [ref=e346]: Lovecode compresses months of work into a single afternoon while keeping the ergonomics and ownership of hand-written code.
+        - generic [ref=e347]:
+          - generic [ref=e349]:
+            - generic [ref=e350]:
+              - img [ref=e351]
+              - generic [ref=e361]: From idea to app
+            - heading "AI App Generation" [level=3] [ref=e362]
+            - paragraph [ref=e363]: Production-ready apps with UI, API, data, and routing — generated and wired automatically.
+            - generic [ref=e366]: Optimized for modern stacks
+          - generic [ref=e368]:
+            - generic [ref=e369]:
+              - img [ref=e370]
+              - generic [ref=e373]: Auto-routing
+            - heading "Intelligent Model Routing" [level=3] [ref=e374]
+            - paragraph [ref=e375]: Each agent automatically picks the best model for its task — code generation, analysis, planning, or review. No manual tuning needed.
+            - generic [ref=e378]: Optimized for modern stacks
+          - generic [ref=e380]:
+            - generic [ref=e381]:
+              - img [ref=e382]
+              - generic [ref=e384]: Built for teams
+            - heading "Local & Cloud Development" [level=3] [ref=e385]
+            - paragraph [ref=e386]: Build locally with your editor and terminal, or deploy to Lovecode Cloud with one click previews and staging URLs.
+            - generic [ref=e389]: Optimized for modern stacks
+          - generic [ref=e391]:
+            - generic [ref=e392]:
+              - img [ref=e393]
+              - generic [ref=e397]: You stay in control
+            - heading "Developer Friendly" [level=3] [ref=e398]
+            - paragraph [ref=e399]: Lovecode generates clean, idiomatic TypeScript you fully own. Edit, refactor, and commit like any other codebase.
+            - generic [ref=e402]: Optimized for modern stacks
+      - generic [ref=e404]:
+        - generic [ref=e406]:
+          - paragraph [ref=e407]: How it works
+          - heading "From prompt to production in three steps." [level=2] [ref=e408]
+          - paragraph [ref=e409]: Lovecode wraps an advanced AI orchestration engine in a developer-first workflow. You own the code; Lovecode handles the plumbing.
+        - generic [ref=e410]:
+          - generic [ref=e412]:
+            - generic [ref=e413]:
+              - img [ref=e415]
+              - generic [ref=e417]: "01"
+            - heading "Describe your idea" [level=3] [ref=e418]
+            - paragraph [ref=e419]: Write in natural language. Include the product, audience, and constraints — as if briefing a senior engineer.
+            - img [ref=e422]
+          - generic [ref=e425]:
+            - generic [ref=e426]:
+              - img [ref=e428]
+              - generic [ref=e431]: "02"
+            - heading "AI generates everything" [level=3] [ref=e432]
+            - paragraph [ref=e433]: Lovecode composes UI, API, data models, auth, and deployment into a cohesive Next.js project.
+            - img [ref=e436]
+          - generic [ref=e439]:
+            - generic [ref=e440]:
+              - img [ref=e442]
+              - generic [ref=e447]: "03"
+            - heading "Edit & deploy" [level=3] [ref=e448]
+            - paragraph [ref=e449]: Inspect the generated code, tweak anything you like, and deploy to Lovecode Cloud or your own infra.
+      - generic [ref=e452]:
+        - generic [ref=e453]:
+          - paragraph [ref=e454]: Desktop app
+          - heading "SoftChat — Desktop AI app builder" [level=2] [ref=e455]
+          - paragraph [ref=e456]: Generate apps locally on your machine with secure model connections. Download, install, and start building from your desktop.
+        - generic [ref=e457]:
+          - link "Download for Windows Installer & portable Download" [ref=e458] [cursor=pointer]:
+            - /url: https://www.gitcc.com/elsone/softchat/-/raw/main/out/installer/SoftChat%20Setup%201.0.0.exe?ref_type=heads
+            - generic [ref=e459]:
+              - img [ref=e461]
+              - generic [ref=e463]:
+                - paragraph [ref=e464]: Download for Windows
+                - paragraph [ref=e465]: Installer & portable
+            - generic [ref=e468]: Download
+          - generic [ref=e469]:
+            - generic [ref=e470]:
+              - img [ref=e472]
+              - generic [ref=e474]:
+                - paragraph [ref=e475]: Download for Linux
+                - paragraph [ref=e476]: AppImage & .deb builds
+                - paragraph [ref=e477]: Coming soon
+            - generic [ref=e480]: Notify me
+          - generic [ref=e481]:
+            - generic [ref=e482]:
+              - img [ref=e484]
+              - generic [ref=e488]:
+                - paragraph [ref=e489]: Download for Mac
+                - paragraph [ref=e490]: Apple silicon & Intel
+                - paragraph [ref=e491]: Coming soon
+            - generic [ref=e494]: Notify me
+    - generic [ref=e496]:
+      - generic [ref=e497]:
+        - generic [ref=e498]: LC
+        - generic [ref=e499]:
+          - paragraph [ref=e500]: Lovecode
+          - paragraph [ref=e501]: Build what you love
+      - generic [ref=e502]:
+        - link "Templates" [ref=e503] [cursor=pointer]:
+          - /url: /templates
+        - link "Pricing" [ref=e504] [cursor=pointer]:
+          - /url: /#pricing
+        - link "GitCC" [ref=e505] [cursor=pointer]:
+          - /url: https://www.gitcc.com/elsone/softchat/-/tree/master?ref_type=heads
+          - img [ref=e506]
+          - generic [ref=e509]: GitCC
+        - link "Home" [ref=e510] [cursor=pointer]:
+          - /url: /
+        - link "Projects" [ref=e511] [cursor=pointer]:
+          - /url: /projects
+      - generic [ref=e512]: © 2026 Lovecode. All rights reserved.
+  - button "Open Next.js Dev Tools" [ref=e525] [cursor=pointer]:
+    - img [ref=e526]
+  - alert [ref=e529]

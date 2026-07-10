@@ -1,0 +1,337 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model users {
+  id                  String                @id @db.Uuid
+  email               String                @db.VarChar
+  full_name           String?               @db.VarChar
+  phone               String?               @db.VarChar
+  avatar_url          String?               @db.VarChar
+  subscribed          Boolean?              @default(false)
+  subscription_type   String?               @db.VarChar
+  lovecode_api_key    String?               @db.VarChar
+  created_at          DateTime              @default(now()) @db.Timestamp(6)
+  updated_at          DateTime              @default(now()) @updatedAt @db.Timestamp(6)
+  status              String                @default("Active") @db.VarChar
+  last_active         DateTime?             @db.Timestamp(6)
+  login_frequency     Int                   @default(0)
+  app_usage_count     Int                   @default(0)
+  company             String?               @db.VarChar
+  location            String?               @db.VarChar
+  role                String?               @db.VarChar
+  bio                 String?
+  agent_memories      agent_memories[]
+  customers           customers?
+  files               files[]
+  payments            payments[]
+  project_generations project_generations[]
+  projects            projects[]
+  subscriptions       subscriptions[]
+  user_activities     user_activities[]
+  user_events         user_events[]
+  user_sessions       user_sessions[]
+  user_integrations   user_integrations[]
+
+  @@index([email], map: "ix_users_email")
+  @@index([status], map: "ix_users_status")
+  @@map("users")
+}
+
+model user_integrations {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  provider      String    @db.VarChar
+  access_token  String
+  refresh_token String?
+  expires_at    DateTime? @db.Timestamp(6)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  user          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([user_id, provider], map: "ix_user_integrations_user_id_provider")
+  @@index([provider], map: "ix_user_integrations_provider")
+  @@map("user_integrations")
+}
+
+model admin_users {
+  id                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                  String                  @unique @db.VarChar
+  password_hash          String                  @db.VarChar
+  full_name              String?                 @db.VarChar
+  role                   String                  @default("admin") @db.VarChar
+  is_active              Boolean?                @default(true)
+  reset_token            String?                 @db.VarChar
+  reset_token_expires_at DateTime?               @db.Timestamptz(6)
+  created_at             DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                @default(now()) @updatedAt @db.Timestamptz(6)
+  last_login_at          DateTime?               @db.Timestamptz(6)
+  admin_activity_logs    admin_activity_logs[]
+  admin_password_resets  admin_password_resets[]
+
+  @@index([email], map: "ix_admin_users_email")
+  @@map("admin_users")
+}
+
+model admin_activity_logs {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id    String?      @db.Uuid
+  admin_email String?      @db.VarChar
+  admin_name  String?      @db.VarChar
+  action      String       @db.VarChar
+  target      String?      @db.VarChar
+  target_id   String?      @db.VarChar
+  details     Json?
+  timestamp   DateTime?    @default(now()) @db.Timestamp(6)
+  created_at  DateTime?    @default(now()) @db.Timestamp(6)
+  admin       admin_users? @relation(fields: [admin_id], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([timestamp], map: "ix_admin_activity_logs_timestamp")
+  @@map("admin_activity_logs")
+}
+
+model project_generations {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String    @db.Uuid
+  project_id   String?   @db.Uuid
+  thread_id    String
+  prompt       String?
+  workflow     String?
+  status       String    @default("started")
+  error        String?
+  summary      String?
+  preview_url  String?
+  started_at   DateTime  @default(now()) @db.Timestamptz(6)
+  completed_at DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  projects     projects? @relation(fields: [project_id], references: [id], onUpdate: NoAction)
+  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([thread_id], map: "idx_project_generations_thread")
+  @@index([user_id, project_id, created_at(sort: Desc)], map: "idx_project_generations_user_project")
+  @@map("project_generations")
+}
+
+model agent_checkpoints {
+  id                   Int      @id @default(autoincrement())
+  thread_id            String
+  checkpoint_ns        String   @default("")
+  checkpoint_id        String
+  parent_checkpoint_id String?
+  checkpoint           String
+  metadata             String?
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([thread_id, checkpoint_ns, checkpoint_id])
+  @@index([thread_id, checkpoint_ns, created_at(sort: Desc)], map: "idx_agent_checkpoints_thread")
+  @@map("agent_checkpoints")
+}
+
+model agent_writes {
+  id            Int      @id @default(autoincrement())
+  thread_id     String
+  checkpoint_ns String   @default("")
+  checkpoint_id String
+  task_id       String
+  idx           Int
+  channel       String
+  value         String?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([thread_id, checkpoint_ns, checkpoint_id, task_id, idx])
+  @@index([thread_id, checkpoint_ns, checkpoint_id], map: "idx_agent_writes_thread")
+  @@map("agent_writes")
+}
+
+model agent_memories {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  project_id  String?   @db.Uuid
+  memory_type String
+  content     String
+  metadata    Json?
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  projects    projects? @relation(fields: [project_id], references: [id], onUpdate: NoAction)
+  users       users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, project_id, memory_type], map: "idx_agent_memories_lookup")
+  @@map("agent_memories")
+}
+
+model customers {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String    @unique @db.Uuid
+  stripe_customer_id String    @unique @db.VarChar
+  email              String?   @db.VarChar
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  user               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("customers")
+}
+
+model subscriptions {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String    @db.Uuid
+  stripe_subscription_id String    @unique @db.VarChar
+  status                 String    @db.VarChar
+  plan                   String?   @db.VarChar
+  amount                 Float?    @default(0)
+  billing_interval       String?   @db.VarChar
+  metadata               Json?
+  current_period_end     DateTime? @db.Timestamp(6)
+  created_at             DateTime  @default(now()) @db.Timestamp(6)
+  updated_at             DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  stripe_price_id        String?   @db.VarChar
+  current_period_start   DateTime? @db.Timestamp(6)
+  cancel_at_period_end   Boolean?  @default(false)
+  payment_method         String?   @db.VarChar
+  canceled_at            DateTime? @db.Timestamp(6)
+  cancellation_reason    String?
+  user                   users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([user_id], map: "ix_subscriptions_user_id")
+  @@index([status], map: "ix_subscriptions_status")
+  @@map("subscriptions")
+}
+
+model projects {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String                @db.Uuid
+  name                 String                @db.VarChar
+  description          String?
+  status               String                @default("Draft") @db.VarChar
+  deployments_count    Int                   @default(0)
+  deployments          Int?                  @default(0)
+  stars                Int                   @default(0)
+  forks                Int                   @default(0)
+  language             String?               @db.VarChar
+  framework            String?               @db.VarChar
+  created_at           DateTime              @default(now()) @db.Timestamp(6)
+  updated_at           DateTime              @default(now()) @updatedAt @db.Timestamp(6)
+  openhost_app_uuid      String?               @db.VarChar
+  openhost_domain_url    String?               @db.VarChar
+  openhost_deployed_at   DateTime?             @db.Timestamp(6)
+  gitcc_repo_url         String?               @db.VarChar
+  gitcc_deploy_key_uuid  String?               @db.VarChar
+  pocketbase_url         String?               @db.VarChar
+  pocketbase_admin_url   String?               @db.VarChar
+  agent_memories         agent_memories[]
+  files                files[]
+  project_generations  project_generations[]
+  user                 users                 @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([user_id], map: "ix_projects_user_id")
+  @@map("projects")
+}
+
+model files {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  project_id String    @db.Uuid
+  path       String    @db.VarChar
+  content    String?
+  name       String?   @db.VarChar
+  mime_type  String?   @db.VarChar
+  size_bytes Int?      @default(0)
+  status     String?   @default("active") @db.VarChar
+  metadata   Json?
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  updated_at DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  project    projects  @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([project_id, path], map: "ix_files_project_id_path")
+  @@map("files")
+}
+
+model admin_password_resets {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id    String      @db.Uuid
+  token_hash  String      @db.VarChar
+  expires_at  DateTime    @db.Timestamptz(6)
+  used        Boolean?    @default(false)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  admin_users admin_users @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([token_hash], map: "ix_admin_password_resets_token_hash")
+  @@map("admin_password_resets")
+}
+
+model alembic_version {
+  version_num String @id(map: "alembic_version_pkc") @db.VarChar(32)
+}
+
+model engagement_heatmap {
+  id    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  day   String   @db.VarChar
+  hour  Int
+  value Int      @default(0)
+  date  DateTime @db.Date
+
+  @@index([date], map: "ix_engagement_heatmap_date")
+}
+
+model feature_usage {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  feature_name String   @db.VarChar
+  count        Int      @default(0)
+  date         DateTime @db.Date
+
+  @@index([date], map: "ix_feature_usage_date")
+}
+
+model payments {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                  String   @db.Uuid
+  stripe_payment_intent_id String   @db.VarChar
+  amount                   Int
+  currency                 String   @db.VarChar
+  status                   String   @db.VarChar
+  created_at               DateTime @default(now()) @db.Timestamp(6)
+  users                    users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model user_activities {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id   String   @db.Uuid
+  action    String   @db.VarChar
+  details   String?  @db.VarChar
+  timestamp DateTime @default(now()) @db.Timestamp(6)
+  users     users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([timestamp], map: "ix_user_activities_timestamp")
+  @@index([user_id], map: "ix_user_activities_user_id")
+}
+
+model user_sessions {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String   @db.Uuid
+  started_at       DateTime @default(now()) @db.Timestamptz(6)
+  duration_seconds Int?
+  actions_count    Int?     @default(0)
+  ip_address       String?  @db.VarChar
+  users            users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "ix_user_sessions_user_id")
+  @@index([started_at], map: "ix_user_sessions_started_at")
+  @@map("user_sessions")
+}
+
+model user_events {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?  @db.Uuid
+  feature    String?  @db.VarChar
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users?   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "ix_user_events_user_id")
+  @@index([created_at], map: "ix_user_events_created_at")
+  @@map("user_events")
+}

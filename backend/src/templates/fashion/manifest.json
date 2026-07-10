@@ -1,0 +1,11 @@
+{
+  "name": "Fashion",
+  "category": "fashion",
+  "description": "Minimal scaffold for Fashion projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

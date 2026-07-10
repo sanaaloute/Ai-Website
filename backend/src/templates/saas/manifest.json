@@ -1,0 +1,11 @@
+{
+  "name": "Saas",
+  "category": "saas",
+  "description": "Minimal scaffold for Saas projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

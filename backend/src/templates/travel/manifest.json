@@ -1,0 +1,11 @@
+{
+  "name": "Travel",
+  "category": "travel",
+  "description": "Minimal scaffold for Travel projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

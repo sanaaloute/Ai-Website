@@ -1,0 +1,11 @@
+{
+  "name": "Ecommerce",
+  "category": "ecommerce",
+  "description": "Minimal scaffold for Ecommerce projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

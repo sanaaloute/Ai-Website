@@ -1,0 +1,11 @@
+{
+  "name": "Automobile",
+  "category": "automobile",
+  "description": "Minimal scaffold for Automobile projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

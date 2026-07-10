@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.next
+.git
+.playwright-mcp
+*.db
+*.db-journal
+.env
+.env.local
+.env.*.local

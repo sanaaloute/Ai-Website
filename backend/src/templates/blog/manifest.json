@@ -1,0 +1,11 @@
+{
+  "name": "Blog",
+  "category": "blog",
+  "description": "Minimal scaffold for Blog projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

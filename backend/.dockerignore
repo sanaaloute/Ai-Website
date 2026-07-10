@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+*.tsbuildinfo
+
+# Env files (keep example)
+.env
+.env.*
+!.env.example
+
+# Testing
+coverage
+.nyc_output
+
+# Logs
+*.log
+logs
+npm-debug.log*
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Docker compose files (not needed in image)
+docker-compose*.yml
+
+# OS
+.DS_Store
+Thumbs.db

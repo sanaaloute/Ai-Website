@@ -1,0 +1,11 @@
+{
+  "name": "Restaurant",
+  "category": "restaurant",
+  "description": "Minimal scaffold for Restaurant projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}

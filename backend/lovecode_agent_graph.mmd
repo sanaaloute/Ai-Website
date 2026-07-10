@@ -1,0 +1,45 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	coordinator(coordinator)
+	analyzer(analyzer)
+	template_selector(template_selector)
+	planner(planner)
+	pre_flight_validator(pre_flight_validator)
+	executor(executor)
+	file_state_tracker(file_state_tracker)
+	schema_adaptor(schema_adaptor)
+	reviewer(reviewer)
+	debugger(debugger)
+	answer_generator(answer_generator)
+	finalize(finalize)
+	increment_retry(increment_retry)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> coordinator;
+	analyzer -.-> answer_generator;
+	analyzer -.-> finalize;
+	analyzer -.-> planner;
+	analyzer -.-> template_selector;
+	answer_generator --> finalize;
+	coordinator --> analyzer;
+	debugger -.-> executor;
+	debugger -.-> reviewer;
+	executor --> file_state_tracker;
+	file_state_tracker --> schema_adaptor;
+	increment_retry --> executor;
+	planner -.-> debugger;
+	planner -.-> pre_flight_validator;
+	pre_flight_validator -.-> executor;
+	pre_flight_validator -.-> planner;
+	reviewer -.-> finalize;
+	reviewer -.-> increment_retry;
+	schema_adaptor --> reviewer;
+	template_selector --> planner;
+	finalize --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

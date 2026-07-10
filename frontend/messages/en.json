@@ -1,0 +1,349 @@
+{
+  "metadata": {
+    "title": "AI-Website",
+    "description": "AI-Website is an AI app builder that turns ideas into full-stack web applications in seconds."
+  },
+  "navbar": {
+    "brandName": "AI-Website",
+    "brandTagline": "Build what you love",
+    "home": "Home",
+    "pricing": "Pricing",
+    "projects": "Projects",
+    "templates": "Templates",
+    "github": "GitHub",
+    "getApiKey": "Get API Key",
+    "profile": "Profile",
+    "login": "Log in / Register",
+    "loginShort": "Log in",
+    "downloadSoftChat": "Download SoftChat",
+    "toggleNav": "Toggle navigation",
+    "close": "Close",
+    "download": "Download"
+  },
+  "homePageTitle": {
+    "rotating1": "Websites built from a single prompt.",
+    "rotating2": "Describe your idea. AI handles the rest.",
+    "rotating3": "Ship without the grind.",
+    "rotating4": "Your next startup starts here."
+  },
+  "promptInput": {
+    "placeholder": "e.g. \"Build a SaaS dashboard for tracking MRR, churn, and growth.\"",
+    "generate": "Generate",
+    "provider": "Provider",
+    "shuffleIdeas": "Generate more ideas",
+    "startFromRealWebsite": "Start from a real website",
+    "noticeLoginRequired": "Log in or create an account to continue.",
+    "noticeApiKeyRequired": "GitHub API key required before generating from homepage.",
+    "noticeApiKeyInvalid": "GitHub API key is required.",
+    "noticeApiKeyVerifyFail": "Could not verify your AI-Website API key right now.",
+    "noticeCouldNotStart": "Could not start generation. Try again.",
+    "apiKeyDialogDescription": "GitHub API Provider requires a valid API key to generate applications. Get your key from the GitHub console and paste it below to continue."
+  },
+  "howItWorks": {
+    "overline": "How it works",
+    "heading": "From prompt to production in three steps.",
+    "subheading": "AI-Website wraps an advanced AI orchestration engine in a developer-first workflow. You own the code; AI-Website handles the plumbing.",
+    "step1": {
+      "label": "01",
+      "title": "Describe your idea",
+      "body": "Write in natural language. Include the product, audience, and constraints — as if briefing a senior engineer."
+    },
+    "step2": {
+      "label": "02",
+      "title": "AI generates everything",
+      "body": "AI-Website composes UI, API, data models, auth, and deployment into a cohesive Next.js project."
+    },
+    "step3": {
+      "label": "03",
+      "title": "Edit & deploy",
+      "body": "Inspect the generated code, tweak anything you like, and deploy to AI-Website Cloud or your own infra."
+    }
+  },
+  "pricing": {
+    "overline": "Pricing",
+    "subheading": "Start free, upgrade when you are ready to ship. No hidden fees, cancel anytime.",
+    "starter": {
+      "name": "Starter",
+      "description": "Perfect for hobbyists and side projects.",
+      "price": "$0",
+      "period": "forever",
+      "cta": "Get Started",
+      "features": [
+        "3 projects",
+        "Local development",
+        "Community templates",
+        "Standard AI models",
+        "GitHub integration"
+      ]
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "For builders shipping production apps.",
+      "price": "$19",
+      "period": "/month",
+      "cta": "Upgrade to Pro",
+      "badge": "Most Popular",
+      "features": [
+        "Unlimited projects",
+        "Local + Cloud development",
+        "Priority AI routing",
+        "Advanced model access",
+        "One-click deployments",
+        "Custom domains",
+        "Email support"
+      ]
+    },
+    "team": {
+      "name": "Team",
+      "description": "Collaborate and scale with your team.",
+      "price": "$49",
+      "period": "/seat /month",
+      "cta": "Contact Sales",
+      "features": [
+        "Everything in Pro",
+        "Shared team workspaces",
+        "Role-based access",
+        "SSO & SAML",
+        "Audit logs",
+        "Dedicated support",
+        "Custom SLA"
+      ]
+    },
+    "trustNoCard": "No credit card required for Starter",
+    "trustCancel": "Cancel anytime",
+    "trustRefund": "14-day refund guarantee"
+  },
+  "download": {
+    "overline": "Desktop app",
+    "heading": "SoftChat — Desktop AI app builder",
+    "description": "Generate apps locally on your machine with secure model connections. Download, install, and start building from your desktop.",
+    "windows": "Download for Windows",
+    "windowsDesc": "Installer & portable",
+    "linux": "Download for Linux",
+    "linuxDesc": "AppImage & .deb builds",
+    "mac": "Download for Mac",
+    "macDesc": "Apple silicon & Intel",
+    "comingSoon": "Coming soon",
+    "download": "Download",
+    "notifyMe": "Notify me"
+  },
+  "footer": {
+    "brandName": "AI-Website",
+    "brandTagline": "Build what you love",
+    "templates": "Templates",
+    "pricing": "Pricing",
+    "github": "GitHub",
+    "home": "Home",
+    "projects": "Projects",
+    "copyright": "© {year} AI-Website. All rights reserved."
+  },
+  "loginSection": {
+    "loginSubtitle": "Sign in to access your workspace",
+    "registerSubtitle": "Create your account to get started",
+    "forgotSubtitle": "Reset your password",
+    "emailRequired": "Email and password are required.",
+    "passwordMismatch": "Passwords do not match.",
+    "loginSuccess": "Logged in. Redirecting…",
+    "registerSuccess": "Account created. You can now sign in.",
+    "genericError": "Something went wrong. Please try again.",
+    "redirecting": "Taking you home…"
+  },
+  "loginPage": {
+    "subtitle": "Log in or create an account",
+    "backToHome": "Back to",
+    "homeLink": "home"
+  },
+  "languageSwitcher": {
+    "label": "Language"
+  },
+  "loginForm": {
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "confirmPasswordLabel": "Confirm password",
+    "pleaseWait": "Please wait…",
+    "signIn": "Sign In",
+    "createAccount": "Create account",
+    "sendResetLink": "Send reset link",
+    "resetSentMessage": "Check your email for a reset link.",
+    "forgotPassword": "Forgot password?",
+    "alreadyHaveAccount": "Already have an account?",
+    "rememberPassword": "Remember your password?",
+    "signInButton": "Sign in",
+    "emailPlaceholder": "you@company.com"
+  },
+  "promptIdeas": {
+    "list": [
+      {
+        "id": "shop-sneakers",
+        "sector": "E‑commerce",
+        "title": "Premium sneaker store",
+        "description": "Build a premium online sneaker shopping website with a complete e-commerce experience. The homepage should open with a bold full-width hero carousel showcasing featured drops, limited editions, athlete collaborations, and brand stories, followed by trending collections, new arrivals, sale banners, and a newsletter signup section. Implement a sticky header with a mega-menu navigation organized by brand, gender, release calendar, collaborations, and sale, plus a predictive search bar with autocomplete suggestions, recent searches, and visual product thumbnails. The product grid needs multi-select filters for brand, size, color, price range, release year, and condition, along with sorting options and a pagination or infinite-scroll toggle. Product cards should feature an image swap on hover, quick-view button, wishlist heart toggle, available size chips, star ratings, and limited-stock badges. Each product detail page must include an expandable image gallery with zoom and video placeholder, color and size variant selectors, a comprehensive size-guide modal, tabbed sections for description, materials, customer reviews with photos, Q&A, shipping and returns, trust badges, and a sticky add-to-cart bar with size reminders. The cart should be a slide-out mini-cart showing item images, editable quantity steppers, a saved-for-later option, promo-code input, free-shipping progress indicator, and estimated totals with tax. Checkout should support guest checkout, editable shipping address with address autocomplete, saved payment methods, Apple Pay and Google Pay placeholders, an order summary with line-item discounts, and a confirmation page with order number, tracking link, and social sharing. User accounts should include order history with reorder buttons, wishlist management, back-in-stock notifications, and loyalty points status. Mobile must be fully responsive with a bottom navigation bar, thumb-friendly filters, swipeable image galleries, and one-tap mobile payments. Use a bold streetwear aesthetic: high-contrast colors, oversized typography, gritty textures, dynamic motion, and campaign photography."
+      },
+      {
+        "id": "shop-jewelry",
+        "sector": "E‑commerce",
+        "title": "Handmade jewelry boutique",
+        "description": "Create an elegant online boutique for handmade and artisan jewelry. The homepage should feature a cinematic hero with model photography, a short brand film placeholder, curated collection blocks for necklaces, rings, earrings, and bracelets, and a gift-guide teaser. Implement refined navigation with dropdowns for collections, metals, gemstones, occasions, and personalization, plus a search bar that suggests products, materials, and common queries. The product grid should offer a filter sidebar for metal type, gemstone, price range, style, and availability, with product cards that display hover zoom, 360-degree spin placeholder, wishlist toggle, and handmade badges. Each product detail page needs a high-resolution image gallery with macro detail shots, metal and gemstone variant selectors, engraving text input with live preview, ring-size guide modal, gift-wrap and gift-message options, tabbed sections for craftsmanship story, materials, care instructions, customer reviews, and shipping policies, plus related-products and complete-the-look carousels. The cart should be a refined shopping bag with item thumbnails, quantity controls, promo-code field, saved items, free-shipping progress, and gift options summary. Checkout should allow guest checkout, multiple shipping addresses, secure card payment, PayPal, and buy-now-pay-later options, ending with an elegant confirmation and gift-receipt option. Accounts should include order history, wishlist, saved addresses, ring-size profile, loyalty rewards, and back-in-stock alerts. Add a virtual try-on placeholder and a jewelry care quiz. Mobile should feel luxurious with full-bleed imagery, simplified bottom navigation, and thumb-friendly selectors. Use a soft luxury palette: cream, blush, champagne gold, serif typography, and lifestyle photography."
+      },
+      {
+        "id": "shop-grocery",
+        "sector": "E‑commerce",
+        "title": "Organic grocery delivery",
+        "description": "Design a full-featured online organic grocery store with home delivery and subscription capabilities. The homepage should welcome shoppers with a seasonal produce hero, weekly deals carousel, shop-by-category tiles for produce, dairy, pantry, and beverages, recipe inspiration, and a prominent delivery-zip-code checker. Implement category-focused mega-menu navigation with quick links to dietary preferences, local farms, and weekly specials, plus a smart search that recognizes products, brands, recipes, and dietary tags. The product grid should support filters for category, dietary needs like vegan and gluten-free, organic certification, brand, price, unit size, and customer rating, with product cards showing unit pricing, organic badges, quick-add buttons, and subscription indicators. Each product detail page should include multiple product images, origin and certification info, nutrition highlights, dietary tags, customer reviews, related recipes, subscription frequency selector, add-to-list option, and a sticky add-to-cart bar. The cart should be a mini-cart with delivery-slot picker, saved shopping lists, quantity steppers, promo-code field, free-delivery progress, and substitution preferences. Checkout should support guest checkout, saved addresses, delivery instructions, tipping option, multiple payment methods, EBT placeholder, and order confirmation with expected delivery window and driver tracking link. User accounts should show order history with reorder buttons, saved lists, dietary preferences, address book, and loyalty points. Include a meal-planning tool and subscription box builder. Mobile should prioritize quick add-to-cart, thumb-friendly category tabs, and easy delivery scheduling. Use fresh green tones, clean sans-serif typography, and high-quality food photography."
+      },
+      {
+        "id": "shop-furniture",
+        "sector": "E‑commerce",
+        "title": "Modern furniture showroom",
+        "description": "Build a modern furniture e-commerce website that feels like a digital showroom. The homepage should feature an editorial hero with room-scene photography, shoppable room collections, seasonal lookbooks, and a room-style quiz. Implement navigation organized by room such as living room, bedroom, dining room, and office, plus a persistent search with room, style, and product suggestions. The product grid should provide filters for room, category, style, color, material, price range, dimensions, and availability, with large product cards that display hover zoom, quick-view, wishlist, financing badge, and delivery estimate. Each product detail page must showcase a full-width image gallery with dimension overlays, 360 spin and AR-view placeholders, color and fabric swatches, configuration options, assembly service toggle, care instructions, customer photos section, detailed specs, reviews, Q&A, delivery and return info, and related products. The cart should include a mini-cart with white-glove delivery option, assembly service, delivery-zip-code checker, saved items, promo-code field, and free-shipping progress. Checkout should support guest checkout, delivery date selection, room-of-choice delivery instructions, financing application placeholder, payment options, and order confirmation with delivery tracking. Accounts should include order history, wishlist, saved room boards, design consultations booking, and notifications. Add a room planner tool, comparison tool, and inspiration gallery with shoppable hotspots. Mobile should optimize image browsing, simplified filters, and touch-friendly room navigation. Use a clean editorial layout with warm neutrals, ample whitespace, and architectural photography."
+      },
+      {
+        "id": "shop-beauty",
+        "sector": "E‑commerce",
+        "title": "Clean beauty cosmetics shop",
+        "description": "Create a clean beauty online shop centered on skincare and cosmetics discovery. The homepage should feature a soft hero with brand values, best-sellers carousel, routine bundles, before-and-after testimonials, and a skincare quiz callout. Implement navigation with dropdowns for face, eyes, lips, tools, sets, ingredients, and skin concerns, plus an intelligent search that suggests products, ingredients, routines, and skin concerns. The product grid should offer filters for category, skin type, concern, ingredient preferences, shade range, price, clean certifications, and rating, with product cards that show hover swatches, quick-add, wishlist, clean badges, and review counts. Each product detail page should include an image gallery with texture and application shots, shade finder with skin-tone swatches and virtual try-on placeholder, size and format variants, ingredient highlights, how-to-use tabs, customer review gallery with before-and-after photos, Q&A, dermatologist notes, and related products. The cart should be a mini-cart with samples selector, auto-replenishment subscription toggle, promo-code field, free-shipping progress, and loyalty-points preview. Checkout should support guest checkout, saved addresses, payment options, buy-now-pay-later, gift options, and confirmation with routine tips. Accounts should feature order history, refill reminders, wishlist, skin profile, rewards points, and personalized recommendations. Include a skincare quiz, routine builder, and subscription manager. Mobile should feel clean and fast with swipeable galleries, bottom navigation, and one-tap shade matching. Use a soft pastel aesthetic with clean sans-serif typography, soft gradients, and lifestyle photography."
+      },
+      {
+        "id": "shop-electronics",
+        "sector": "E‑commerce",
+        "title": "Consumer electronics store",
+        "description": "Build a consumer electronics e-commerce website with a tech-forward shopping experience. The homepage should feature a dynamic hero with deal countdowns, new arrivals, category tiles for laptops, phones, audio, and accessories, and a trade-in promo banner. Implement navigation with mega-menus for each category, brand hubs, deals, and support, plus a powerful search with autocomplete, spec filters, and visual results. The product grid should provide filters for brand, price, rating, features, specifications, compatibility, and color, with product cards that show key specs, badges, compare checkbox, quick-view, and wishlist. Each product detail page must include a gallery with images and video, color and storage configuration, spec-comparison tables, detailed tabs for specifications, reviews, Q&A, and support, bundle recommendations, extended warranty selector, store pickup option, trade-in estimate widget, financing options, and trust badges. The cart should be a mini-cart with accessory upsells, protection-plan options, promo-code field, free-shipping progress, saved items, and estimated totals. Checkout should support guest checkout, shipping and billing addresses, multiple payment methods including installment plans, order summary with discounts, and confirmation with setup guides and tracking. Accounts should include order history, wishlist, product registrations, notifications, and loyalty rewards. Add a product comparison tool, compatibility checker, and deal alerts. Mobile should prioritize spec highlights, tap-to-call support, and mobile wallet payments. Use a sleek dark-and-neon tech aesthetic with glassmorphism, grid lines, and product renders."
+      },
+      {
+        "id": "shop-fashion",
+        "sector": "E‑commerce",
+        "title": "Trendy fashion marketplace",
+        "description": "Design a trendy online fashion store with an editorial shopping experience. The homepage should open with a lookbook-style hero, seasonal campaign carousels, shop-by-category tiles for women, men, and accessories, style stories, and an outfit inspiration feed. Implement navigation with dropdowns for categories, collections, designers, sale, and style edits, plus a visual search with autocomplete, trending terms, and recently viewed. The product grid should support filters for size, color, style, price, brand, material, and sustainability credentials, with product cards that show alternate images on hover, quick-view modal, wishlist, size availability dots, and sale badges. Each product detail page should include a large image gallery with zoom, color and size selectors, fit predictor tool, size-guide popup, styling suggestions, materials and sustainability info, customer reviews with fit details, Q&A, and related products. The cart should be a slide-out mini-cart with saved outfits, promo-code field, free-shipping progress, recently viewed, and saved-for-later. Checkout should support guest checkout, address book, multiple shipping options, payment methods, buy-now-pay-later, gift wrapping, and confirmation with order tracker. Accounts should include order history, wishlist, saved outfits, size profile, notifications, and loyalty points. Add a style quiz, outfit builder, and live chat placeholder. Mobile should feature swipeable lookbook cards, bottom nav, and thumb-friendly size selection. Use a dynamic editorial aesthetic with bold typography, campaign photography, and fluid layouts."
+      },
+      {
+        "id": "shop-pets",
+        "sector": "E‑commerce",
+        "title": "Pet supplies superstore",
+        "description": "Create an online pet supplies superstore that feels friendly and personalized. The homepage should feature a playful hero with pet photography, shop-by-pet tiles for dog, cat, bird, and fish, best-selling categories, auto-delivery promotion, and a pet profile callout. Implement navigation organized by pet type and product category such as food, toys, grooming, and health, plus a search bar with pet-specific suggestions and reorder shortcuts. The product grid should provide filters for pet type, category, brand, life stage, dietary needs, price, and rating, with product cards that display vet-diet badges, quick-add, autoship indicator, and reviews. Each product detail page should include multiple images, feeding guide based on pet weight, flavor or size variants, auto-delivery frequency selector, ingredient or material info, customer reviews with pet photos, Q&A, and related products. The cart should be a mini-cart with autoship discount summary, delivery schedule, promo-code field, free-shipping progress, and reorder buttons. Checkout should support guest checkout, saved pet profiles, delivery address, payment options, and confirmation with delivery estimate. Accounts should include order history with one-click reorder, wishlist, pet profiles with birthday reminders, notifications, and loyalty points. Add a pet food quiz, subscription builder, and comparison tool. Mobile should be playful and easy with pet-type tabs, quick-add buttons, and vet chat placeholder. Use friendly colors, rounded shapes, playful illustrations, and happy pet photography."
+      },
+      {
+        "id": "shop-baby",
+        "sector": "E‑commerce",
+        "title": "Baby products & registry store",
+        "description": "Build an online baby products store integrated with a gift registry. The homepage should feature a gentle hero with family photography, shop-by-category tiles for strollers, car seats, clothing, feeding, and nursery, registry spotlight, and a parent checklist callout. Implement navigation with dropdowns for categories, age ranges, brands, registry, and advice, plus a search that understands baby milestones and product types. The product grid should support filters for age range, category, brand, price, safety ratings, and color, with product cards showing safety badges, quick-view, wishlist, and registry-add buttons. Each product detail page should include an image gallery, color and size variants, age and weight guidance, safety certifications, parent reviews, Q&A, care instructions, related products, and registry-add option. The cart should include a mini-cart with gift-message input, gift-receipt option, group-gifting progress indicator, promo-code field, and free-shipping progress. Checkout should support guest checkout, multiple shipping addresses, gift options, payment methods, and confirmation with a thank-you message and registry update. Accounts should include order history, wishlist, registries, saved addresses, parent checklist, and notifications. Add a registry creation and sharing tool, group-gifting feature, and subscription bundles for diapers and wipes. Mobile should be reassuring and easy with large buttons, age-range chips, and simplified checkout. Use gentle pastel colors, soft rounded corners, and reassuring safety badges."
+      },
+      {
+        "id": "shop-wine",
+        "sector": "E‑commerce",
+        "title": "Curated wine & spirits shop",
+        "description": "Create an online wine and spirits store with an age-verification gate and a sophisticated discovery experience. The homepage should feature a dark hero with curated collections, seasonal selections, wine-club highlights, food-pairing features, and corporate gifting. Implement navigation by region, grape, style, spirits type, wine club, and gifts, plus a search with autocomplete for wines, regions, pairings, and producers. The product grid should provide filters for region, grape, style, price, rating, vintage, availability, and food pairing, with product cards showing tasting notes preview, ratings, badges, and quick-add. Each product detail page must include a gallery with bottle and vineyard shots, detailed tasting notes, food-pairing suggestions, producer story, customer ratings and reviews, Q&A, delivery and storage info, club-member pricing, and related wines. The cart should be a mini-cart with mixed-case builder, savings summary, delivery schedule calendar, promo-code field, gift-message option, and free-shipping progress. Checkout should support age verification, guest checkout, saved addresses, payment methods, corporate-gifting options, and confirmation with delivery tracking and cellar-management link. Accounts should include order history, wine club membership, wishlist, saved preferences, and notifications. Add a wine quiz, mixed-case builder, subscription tiers, and corporate-gifting portal. Mobile should maintain elegance with swipeable collections and easy age-gate. Use a sophisticated dark palette with gold accents, serif typography, and cellar-inspired photography."
+      },
+      {
+        "id": "shop-sports",
+        "sector": "E‑commerce",
+        "title": "Sports equipment store",
+        "description": "Build an online sports equipment store with an energetic, performance-driven shopping experience. The homepage should feature an action-packed hero with athlete photography, shop-by-sport tiles for running, cycling, gym, and outdoor, new gear drops, and a gear-finder quiz. Implement navigation organized by sport, activity, gender, brands, and sale, plus a predictive search with sport-specific suggestions and recent searches. The product grid should offer filters for sport, skill level, brand, price, size, color, features, and rating, with product cards that show action images, quick-view, compare checkbox, wishlist, and sale badges. Each product detail page should include an image gallery with video placeholder, size and color selectors, size charts, fit guidance, specs and features, customer reviews with performance notes, Q&A, and related gear. The cart should be a mini-cart with team bulk-order form access, promo-code field, free-shipping progress, saved items, and recommended accessories. Checkout should support guest checkout, shipping address, store pickup option, payment methods, team discount codes, and confirmation with tracking. Accounts should include order history, wishlist, team affiliations, loyalty program status, and notifications. Add a gear-finder wizard, product comparison tool, and team bulk ordering. Mobile should prioritize quick filtering by sport, thumb-friendly size charts, and action-focused imagery. Use an energetic athletic aesthetic with bold colors, dynamic typography, and action photography."
+      },
+      {
+        "id": "shop-books",
+        "sector": "E‑commerce",
+        "title": "Independent online bookstore",
+        "description": "Design an independent online bookstore with a cozy, discovery-focused shopping experience. The homepage should feature a warm hero with staff picks, browse-by-genre tiles, new releases, bestsellers, local events, and a newsletter signup. Implement navigation with dropdowns for genres, authors, formats, collections, and events, plus a search that suggests books, authors, genres, and ISBN lookups. The product grid should support filters for genre, format, price, rating, age range, language, and availability, with product cards showing cover images, format badges, ratings, quick-view, and wishlist. Each product detail page should include a large cover image, synopsis, author bio, page count, publication details, formats like hardcover and ebook, customer reviews, related-reading suggestions, look-inside preview placeholder, and add-to-list options. The cart should be a mini-cart with saved-for-later, promo-code field, free-shipping progress, and format summaries. Checkout should support guest checkout, shipping or digital delivery options, payment methods, gift options, and confirmation with order number and estimated delivery. Accounts should include order history, wishlists, reading lists, membership status, and notifications. Add a book quiz, staff picks, pre-order flow, membership discount banner, and local events section. Mobile should feel like a pocket bookstore with swipeable covers and simple genre tabs. Use a cozy literary aesthetic with warm paper tones, serif typography, and soft photography."
+      },
+      {
+        "id": "shop-decor",
+        "sector": "E‑commerce",
+        "title": "Home decor & lighting store",
+        "description": "Create a home decor and lighting e-commerce website with a curated lifestyle experience. The homepage should feature an inviting hero with room-scene photography, shop-by-room tiles, style collections like bohemian, modern, and Scandinavian, seasonal trends, and a room-inspiration quiz. Implement navigation by room, style, category, lighting, and sale, plus a visual search with room, style, and product suggestions. The product grid should offer filters for room, style, color, material, price, dimensions, and availability, with product cards displaying scene images, shoppable tags, hover zoom, wishlist, and bundle badges. Each product detail page should include a gallery with room-scene and detail shots, color and material swatches, lighting sizing guide, dimensions, care instructions, customer reviews, Q&A, related products, and styling tips. The cart should be a mini-cart with bundle-and-save sets, assembly-service option, promo-code field, free-shipping progress, and saved items. Checkout should support guest checkout, delivery address with access instructions, payment methods, gift options, and confirmation with delivery tracking. Accounts should include order history, wishlist, saved rooms, design consultations, and back-in-stock alerts. Add a room-style quiz, paint and textile swatch samples flow, and back-in-stock alerts. Mobile should emphasize full-bleed room imagery and easy style filtering. Use a warm lifestyle aesthetic with curated room photography, soft neutrals, and natural textures."
+      },
+      {
+        "id": "shop-subscription",
+        "sector": "E‑commerce",
+        "title": "Beauty subscription box",
+        "description": "Build a beauty subscription box e-commerce website with a personalized membership experience. The homepage should feature a glam hero with unboxing photography, quiz callout, plan-selection teaser, subscriber gallery, and referral promotion. Implement navigation for quiz, plans, shop, gifts, and community, plus a search for products and member perks. The product grid should support filters for category, brand, skin type, and member exclusives, with product cards showing member pricing, ratings, and quick-add. Each product detail page should include images, ingredient highlights, reviews, Q&A, and an add-to-next-box option. The quiz should ask about skin type, tone, concerns, and preferences to personalize the box. Plan selection should clearly present monthly and annual pricing with savings, cancellation flexibility, and a reveal countdown. Subscriber portal should allow skipping a month, swapping products, managing frequency, viewing upcoming boxes, and accessing the members-only shop. Referral rewards widget and cancellation feedback flow should be included. Checkout should support subscription signup, gift subscriptions, promo codes, payment methods, and confirmation with first-box delivery estimate. Accounts should include subscription management, order history, loyalty points, and referral status. Mobile should make quiz and plan selection thumb-friendly with swipeable cards. Use a feminine glam aesthetic with surprise-and-delight visuals, soft pinks, and glitter accents."
+      },
+      {
+        "id": "shop-digital",
+        "sector": "E‑commerce",
+        "title": "Digital products marketplace",
+        "description": "Create an online marketplace for digital products like templates, icons, courses, and presets. The homepage should feature a creative hero with featured products, category tiles, creator spotlights, trending downloads, and a license guide. Implement navigation by category, creator, collections, and licenses, plus a search with filters for file type, software compatibility, and license tier. The product grid should support filters for category, price, rating, license, file type, and compatibility, with product cards showing thumbnails, preview badges, ratings, quick-view, and creator info. Each product detail page should include a preview gallery with image, video, or audio placeholders, license-tier selector with usage rights, creator storefront link, customer reviews, Q&A, related products, and an add-to-cart button. The cart should be a mini-cart with bulk-discount logic, license summaries, promo-code field, and instant-download notice. Checkout should support guest checkout, payment methods, and confirmation with download links and license details. Accounts should include a downloads library, order history, wishlist, followed creators, and seller dashboard mock. Add creator storefront pages, ratings and reviews, and a bulk-pricing calculator. Mobile should optimize thumbnail browsing and quick downloads. Use a modern creative aesthetic with bold product thumbnails, vibrant accents, and clean grids."
+      },
+      {
+        "id": "shop-watches",
+        "sector": "E‑commerce",
+        "title": "Luxury watch boutique",
+        "description": "Build a luxury watch e-commerce website with a refined, high-end shopping experience. The homepage should feature an elegant hero with macro watch photography, collection highlights for dress, sport, and vintage styles, brand heritage storytelling, and a concierge appointment callout. Implement navigation by collection, brand, complications, straps, and services, plus a search with autocomplete for models, references, and materials. The product grid should offer filters for style, brand, case size, material, movement, price, and availability, with product cards displaying high-resolution thumbnails, quick-view, wishlist, and certified badges. Each product detail page must include a gallery with macro detail shots, 360 view placeholder, strap-configurator options, case and movement specifications, authenticity certificate badge, financing and trade-in CTAs, concierge chat placeholder, customer reviews, Q&A, and related watches. The cart should be a mini-cart with watch-care kit upsells, promo-code field, insurance option, free-shipping progress, and saved items. Checkout should support guest checkout, secure payment, financing application placeholder, wire transfer option, and confirmation with ownership-registration link. Accounts should include order history, wishlist, registered watches, service history, notifications, and loyalty status. Add a strap configurator, authenticity verification flow, and trade-in estimator. Mobile should preserve luxury with full-screen galleries and discreet navigation. Use a refined premium aesthetic with dark backgrounds, metallic accents, serif typography, and studio photography."
+      },
+      {
+        "id": "shop-plants",
+        "sector": "E‑commerce",
+        "title": "Online plant & garden shop",
+        "description": "Design an online plant and garden shop with a fresh, botanical shopping experience. The homepage should feature a nature-inspired hero with seasonal plant collections, shop-by-category tiles, plant-care tips, and a plant-finder quiz. Implement navigation by plant type, plant size, light needs, pet safety, and gardening supplies, plus a smart search with plant names, care terms, and difficulty levels. The product grid should support filters for light level, pet safety, ease of care, plant size, price, and category, with product cards showing plant images, care icons, quick-add, and wishlist. Each product detail page should include a gallery with plant and pot images, care instructions, watering reminders, light and humidity needs, size guide, pet-safety badge, customer reviews with growth photos, Q&A, and related plants and pots. The cart should be a mini-cart with pots and planters bundling, seasonal garden kits, promo-code field, free-shipping progress, and care-guide upsell. Checkout should support guest checkout, delivery address with plant-care delivery instructions, payment methods, and confirmation with care calendar. Accounts should include order history, wishlist, plant collection with care reminders, and loyalty points. Add a plant-finder quiz, subscription for monthly plants, and plant-care blog integration. Mobile should feel like a pocket greenhouse with care icons and swipeable plant cards. Use fresh botanical greens, earthy tones, and natural photography."
+      },
+      {
+        "id": "shop-printondemand",
+        "sector": "E‑commerce",
+        "title": "Custom print-on-demand store",
+        "description": "Create a custom print-on-demand store for t-shirts and merchandise. The homepage should feature a bold hero with creator photography, product category tiles for apparel, mugs, and phone cases, design inspiration gallery, and a design-your-own callout. Implement navigation by product type, categories, design collections, and seller hub, plus a search for designs, products, and creators. The product grid should support filters for product type, color, size, price, rating, and design style, with product cards showing mockup images, creator credits, quick-view, and wishlist. Each product detail page should include a product designer tool mock for uploading images and adding text, color and size selectors, preview mockups, bulk-pricing table, saved designs gallery, campaign countdowns for limited drops, and customer reviews. The cart should be a mini-cart with saved designs, promo-code field, free-shipping progress, and seller profit summary. Checkout should support guest checkout, shipping address, payment methods, and confirmation with estimated production and delivery dates. Accounts should include order history, saved designs, uploaded artwork, followed creators, and seller profit calculator. Add a design tool mock, campaign countdowns, and bulk-pricing table. Mobile should make design uploads and previews easy with a touch-friendly canvas. Use a youthful streetwear aesthetic with bold graphics, bright colors, and energetic photography."
+      },
+      {
+        "id": "shop-office",
+        "sector": "E‑commerce",
+        "title": "B2B office supplies marketplace",
+        "description": "Build a B2B office supplies e-commerce website with a professional, efficiency-focused experience. The homepage should feature a clean hero with workplace photography, category tiles for furniture, stationery, tech, and breakroom, volume-pricing highlights, and a quick-reorder callout. Implement navigation by category, brand, deals, services, and account, plus a search with SKU, product, and order lookup. The product grid should support filters for category, brand, price, availability, eco-friendly options, and bulk tiers, with product cards showing volume-pricing display, quick-add, compare checkbox, and wishlist. Each product detail page should include images, specs, volume-pricing tiers, related products, customer reviews, Q&A, and an add-to-list option. The cart should include a mini-cart with quick-reorder lists, promo-code field, free-shipping progress, and multi-user approval notices. Checkout should support purchase-order option, multi-user account roles, approval-workflow placeholder, shipping and billing addresses, payment methods, and confirmation with invoice details. Accounts should include order history with invoice downloads, approval workflows, quote requests, saved lists, multi-user roles, and a dedicated account dashboard. Add a quote-request form, quick-reorder lists, and multi-user account management. Mobile should maintain productivity with quick search, saved lists, and easy reordering. Use a professional clean aesthetic with blue and gray tones, clean grids, and corporate photography."
+      },
+      {
+        "id": "shop-vintage",
+        "sector": "E‑commerce",
+        "title": "Second-hand fashion marketplace",
+        "description": "Create a second-hand and vintage clothing marketplace with a community-driven shopping experience. The homepage should feature a retro editorial hero with curated vintage drops, category and era tiles, seller spotlights, and a make-an-offer callout. Implement navigation by category, era, size, condition, and designer, plus a search with filters for vintage, designer, and seller. The product grid should support filters for category, era, size, color, condition grade, price, and seller rating, with product cards showing polaroid-style images, condition badges, seller ratings, wishlist, and quick-view. Each product detail page should include multiple photos, condition-grade badges, measurements, material details, seller ratings and reviews, make-an-offer button, Q&A, shipping options, and related listings. The cart should be a mini-cart with shipping estimator, saved searches alerts, promo-code field, and returns policy summary. Checkout should support guest checkout, shipping address, payment methods, and confirmation with seller notification. Accounts should include order history, wishlist, saved searches with alerts, seller dashboard mock, and messaging placeholder. Add authenticated luxury section, listing-creation mock for sellers, and saved-search alerts. Mobile should feel like a vintage magazine with swipeable polaroid cards and easy offer flow. Use a retro editorial aesthetic with warm film tones, serif typography, and polaroid-style product images."
+      },
+      {
+        "id": "shop-supplements",
+        "sector": "E‑commerce",
+        "title": "Fitness supplements store",
+        "description": "Build an online fitness supplements store with a performance-focused shopping experience. The homepage should feature a high-energy hero with athlete photography, shop-by-goal categories like muscle, energy, weight loss, and wellness, bestsellers, and a supplement-stack quiz. Implement navigation by goal, category, brand, and sale, plus a search with product, ingredient, and goal suggestions. The product grid should offer filters for goal, category, brand, flavor, price, rating, and dietary preference, with product cards showing key benefits, quick-add, wishlist, and subscription badges. Each product detail page should include images, ingredient breakdown, nutrition facts, flavor selector with reviews per flavor, serving size guidance, customer reviews with results photos, Q&A, related products, and subscribe-and-save pricing. The cart should be a mini-cart with workout bundle recommendations, loyalty points preview, promo-code field, free-shipping progress, and subscription toggles. Checkout should support guest checkout, saved addresses, payment methods, subscription options, and confirmation with stack suggestions. Accounts should include order history, wishlist, loyalty points, subscription management, and workout goals. Add a supplement-stack quiz, workout bundle recommendations, and loyalty program. Mobile should prioritize quick goal-based filtering and easy flavor selection. Use a bold athletic aesthetic with high-contrast colors, sharp typography, and action photography."
+      },
+      {
+        "id": "shop-kitchen",
+        "sector": "E‑commerce",
+        "title": "Kitchenware & cookware shop",
+        "description": "Design an online kitchenware and cookware store with a warm, culinary shopping experience. The homepage should feature an appetizing hero with recipe photography, collection tiles for knives, cookware, appliances, and tableware, chef-curated sets, and a recipe inspiration section. Implement navigation by category, material, brand, recipes, and gifts, plus a search with product, recipe, and ingredient suggestions. The product grid should support filters for category, material like stainless steel, cast iron, and ceramic, price, rating, color, and dishwasher safety, with product cards showing product images, quick-view, wishlist, and bundle badges. Each product detail page should include an image gallery, material and size selectors, care instructions, recipe cards that link to shoppable ingredients, customer reviews, Q&A, related products, and gift-registry add. The cart should be a mini-cart with bundle offers like starter-kitchen sets, gift-wrapping option, promo-code field, free-shipping progress, and saved items. Checkout should support guest checkout, registry lookup, gift options, shipping address, payment methods, and confirmation with care tips. Accounts should include order history, wishlist, gift registries, saved recipes, and loyalty points. Add recipe cards with shoppable ingredients, how-to video placeholders, and gift-registry feature. Mobile should make recipe browsing and quick add-to-cart easy with thumb-friendly filters. Use a warm culinary aesthetic with food photography, earthy tones, and clean typography."
+      },
+      {
+        "id": "shop-phones",
+        "sector": "E‑commerce",
+        "title": "Mobile phone & accessories store",
+        "description": "Create an online mobile phone and accessories store with a glossy tech shopping experience. The homepage should feature a vibrant hero with the latest phones, carrier promotions, trade-in banner, and accessory bundles. Implement navigation by phone brand, accessories, carriers, deals, and support, plus a search with phone models, accessories, and plans. The product grid should support filters for brand, price, color, storage, features, carrier, and rating, with product cards showing phone renders, quick-view, compare checkbox, and wishlist. Each product detail page should include a carrier comparison selector, phone-trade-in estimator, color and storage configuration, accessory bundling like cases and chargers, protection-plan options, installment-pricing calculator, activation-flow placeholder, product reviews, Q&A, and related accessories. The cart should be a mini-cart with accessory upsells, protection-plan options, promo-code field, free-shipping progress, and trade-in credit summary. Checkout should support guest checkout, carrier selection, shipping address, payment methods including installments, and confirmation with activation instructions and tracking. Accounts should include order history, wishlist, registered devices, trade-in history, and notifications. Add a trade-in estimator, carrier comparison tool, and activation flow placeholder. Mobile should feel native with swipeable phone galleries and carrier plan selectors. Use a glossy tech aesthetic with vibrant product renders, glassmorphism, and neon accents."
+      },
+      {
+        "id": "shop-coffee",
+        "sector": "E‑commerce",
+        "title": "Artisan coffee subscription",
+        "description": "Build an artisan coffee subscription e-commerce website with a warm, craft shopping experience. The homepage should feature a cozy hero with coffee photography, roast-level highlights, single-origin and blend collections, brewing guides, and a coffee quiz callout. Implement navigation by coffee type, roast level, brewing method, subscriptions, and gifts, plus a search with coffee origins, flavors, and equipment. The product grid should support filters for roast level, origin, flavor notes, price, format, and subscription eligibility, with product cards showing tasting notes, quick-add, wishlist, and subscription badges. Each product detail page should include an image gallery, roast-level indicator, flavor notes, origin story, brewing-guide content, grind-type options, subscription cadence selector, customer reviews, Q&A, and related coffees. The cart should be a mini-cart with subscription cadence options, gift subscription checkout, promo-code field, free-shipping progress, and brewing-guide upsell. Checkout should support guest checkout, subscription signup, gift subscriptions, shipping address, payment methods, and confirmation with first-roast delivery estimate. Accounts should include order history, subscription portal for skipping or swapping bags, wishlist, referral rewards, and loyalty points. Add a coffee quiz, subscription builder, brewing guides, and referral rewards page. Mobile should make quiz and subscription management easy with swipeable roast cards. Use a warm craft aesthetic with coffee-toned colors, rustic textures, and artisan photography."
+      }
+    ]
+  },
+  "loginRequired": {
+    "title": "Authentication Required",
+    "description": "Please log in or create an account to access this page.",
+    "loginButton": "Log in"
+  },
+  "templates": {
+    "download": "Download",
+    "editWithAi": "Edit with AI",
+    "cloningTitle": "Cloning repository…",
+    "cloningDesc": "Fetching files from GitHub",
+    "preparingTitle": "Preparing download…",
+    "preparingDesc": "Zipping and saving to your device",
+    "completedTitle": "Download complete",
+    "completedDesc": "File saved to your downloads folder",
+    "failedTitle": "Download failed",
+    "failedDesc": "Something went wrong",
+    "abortedTitle": "Download aborted",
+    "abortedDesc": "Operation cancelled by user",
+    "abort": "Abort",
+    "dismiss": "Dismiss"
+  },
+  "presets": {
+    "tpl_shop_now_title": "Shop Now",
+    "tpl_shop_now_desc": "A modern shoe shopping website with product catalog, cart, and checkout experience.",
+    "tpl_home_control_title": "Home Control",
+    "tpl_home_control_desc": "A smart home dashboard to monitor and control devices, energy usage, and room status."
+  }
+}

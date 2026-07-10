@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  address   String?
+  phone     String?
+  role      String   @default("user") // "user" or "admin"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+  carts     Cart[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  stock       Int      @default(0)
+  imageUrl    String   @default("/images/daacoo-main.png")
+  specs       String?  // JSON string of specs
+  version     String   // "Basic", "Pro", "Family", etc.
+  isAvailable Boolean  @default(true)
+  orderCount  Int      @default(0) // simulated popularity
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cartItems   Cart[]
+  orderItems  OrderItem[]
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String?
+  sessionId String?
+  productId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@unique([sessionId, productId])
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  userId          String?
+  guestEmail      String?
+  guestName       String?
+  guestPhone      String?
+  shippingAddress String
+  totalAmount     Float
+  status          String   @default("Pending") // "Pending", "Paid", "Shipped", "Delivered", "Cancelled"
+  paymentMethod   String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user    User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items   OrderItem[]
+  payment Payment?
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String?
+  name      String
+  price     Float
+  quantity  Int
+  imageUrl  String
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  orderId       String   @unique
+  amount        Float
+  method        String   // "stripe", "alipay", "wechatpay", "unionpay"
+  transactionId String?
+  status        String   @default("pending") // "pending", "success", "failed"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Visitor {
+  id        String   @id @default(uuid())
+  ip        String?
+  userAgent String?
+  path      String
+  createdAt DateTime @default(now())
+}

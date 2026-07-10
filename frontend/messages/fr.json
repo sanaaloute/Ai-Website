@@ -1,0 +1,349 @@
+{
+  "metadata": {
+    "title": "AI-Website",
+    "description": "AI-Website est un constructeur d'applications IA qui transforme les idées en applications web full-stack en quelques secondes."
+  },
+  "navbar": {
+    "brandName": "AI-Website",
+    "brandTagline": "Construisez ce que vous aimez",
+    "home": "Accueil",
+    "pricing": "Tarifs",
+    "projects": "Projets",
+    "templates": "Modèles",
+    "github": "GitHub",
+    "getApiKey": "Obtenir une clé API",
+    "profile": "Profil",
+    "login": "Connexion / Inscription",
+    "loginShort": "Connexion",
+    "downloadSoftChat": "Télécharger SoftChat",
+    "toggleNav": "Basculer la navigation",
+    "close": "Fermer",
+    "download": "Download"
+  },
+  "homePageTitle": {
+    "rotating1": "Des sites web complets à partir d'une phrase.",
+    "rotating2": "Décrivez votre idée. L'IA s'occupe du reste.",
+    "rotating3": "Livrez sans effort.",
+    "rotating4": "Votre prochaine startup commence ici."
+  },
+  "promptInput": {
+    "placeholder": "ex. \"Construisez un tableau de bord SaaS pour suivre le MRR, le churn et la croissance.\"",
+    "generate": "Générer",
+    "provider": "Fournisseur",
+    "shuffleIdeas": "Générer plus d'idées",
+    "startFromRealWebsite": "Commencer par un vrai site web",
+    "noticeLoginRequired": "Connectez-vous ou créez un compte pour continuer.",
+    "noticeApiKeyRequired": "Clé API GitHub requise avant de générer depuis la page d'accueil.",
+    "noticeApiKeyInvalid": "Une clé API GitHub est requise.",
+    "noticeApiKeyVerifyFail": "Impossible de vérifier votre clé API AI-Website pour le moment.",
+    "noticeCouldNotStart": "Impossible de lancer la génération. Réessayez.",
+    "apiKeyDialogDescription": "Le fournisseur d'API GitHub nécessite une clé API valide pour générer des applications. Obtenez votre clé depuis la console GitHub et collez-la ci-dessous pour continuer."
+  },
+  "howItWorks": {
+    "overline": "Comment ça marche",
+    "heading": "De l'invite à la production en trois étapes.",
+    "subheading": "AI-Website enveloppe un moteur d'orchestration IA avancé dans un workflow pensé pour les développeurs. Vous possédez le code ; AI-Website gère la plomberie.",
+    "step1": {
+      "label": "01",
+      "title": "Décrivez votre idée",
+      "body": "Écrivez en langage naturel. Incluez le produit, le public et les contraintes — comme si vous briefiez un ingénieur senior."
+    },
+    "step2": {
+      "label": "02",
+      "title": "L'IA génère tout",
+      "body": "AI-Website compose l'interface utilisateur, l'API, les modèles de données, l'authentification et le déploiement dans un projet Next.js cohérent."
+    },
+    "step3": {
+      "label": "03",
+      "title": "Modifiez et déployez",
+      "body": "Inspectez le code généré, modifiez ce que vous voulez, et déployez sur AI-Website Cloud ou votre propre infrastructure."
+    }
+  },
+  "pricing": {
+    "overline": "Tarifs",
+    "subheading": "Commencez gratuitement, passez à la vitesse supérieure quand vous êtes prêt à livrer. Aucun frais caché, annulez à tout moment.",
+    "starter": {
+      "name": "Starter",
+      "description": "Parfait pour les passionnés et les projets annexes.",
+      "price": "0 €",
+      "period": "pour toujours",
+      "cta": "Commencer",
+      "features": [
+        "3 projets",
+        "Développement local",
+        "Modèles communautaires",
+        "Modèles IA standard",
+        "Intégration GitHub"
+      ]
+    },
+    "pro": {
+      "name": "Pro",
+      "description": "Pour les créateurs livrant des applications en production.",
+      "price": "19 €",
+      "period": "/mois",
+      "cta": "Passer à Pro",
+      "badge": "Le plus populaire",
+      "features": [
+        "Projets illimités",
+        "Développement local + Cloud",
+        "Routage IA prioritaire",
+        "Accès aux modèles avancés",
+        "Déploiements en un clic",
+        "Domaines personnalisés",
+        "Support par email"
+      ]
+    },
+    "team": {
+      "name": "Équipe",
+      "description": "Collaborez et passez à l'échelle avec votre équipe.",
+      "price": "49 €",
+      "period": "/place /mois",
+      "cta": "Contacter les ventes",
+      "features": [
+        "Tout ce qui est dans Pro",
+        "Espaces de travail partagés",
+        "Accès basé sur les rôles",
+        "SSO et SAML",
+        "Journaux d'audit",
+        "Support dédié",
+        "SLA personnalisé"
+      ]
+    },
+    "trustNoCard": "Aucune carte de crédit requise pour Starter",
+    "trustCancel": "Annulez à tout moment",
+    "trustRefund": "Garantie de remboursement de 14 jours"
+  },
+  "download": {
+    "overline": "Application de bureau",
+    "heading": "SoftChat — Constructeur d'applications IA de bureau",
+    "description": "Générez des applications localement sur votre machine avec des connexions de modèles sécurisées. Téléchargez, installez et commencez à construire depuis votre bureau.",
+    "windows": "Télécharger pour Windows",
+    "windowsDesc": "Installateur et portable",
+    "linux": "Télécharger pour Linux",
+    "linuxDesc": "Builds AppImage et .deb",
+    "mac": "Télécharger pour Mac",
+    "macDesc": "Apple Silicon et Intel",
+    "comingSoon": "Bientôt disponible",
+    "download": "Télécharger",
+    "notifyMe": "Me notifier"
+  },
+  "footer": {
+    "brandName": "AI-Website",
+    "brandTagline": "Construisez ce que vous aimez",
+    "templates": "Modèles",
+    "pricing": "Tarifs",
+    "github": "GitHub",
+    "home": "Accueil",
+    "projects": "Projets",
+    "copyright": "© {year} AI-Website. Tous droits réservés."
+  },
+  "loginSection": {
+    "loginSubtitle": "Connectez-vous pour accéder à votre espace de travail",
+    "registerSubtitle": "Créez votre compte pour commencer",
+    "forgotSubtitle": "Réinitialisez votre mot de passe",
+    "emailRequired": "L'email et le mot de passe sont requis.",
+    "passwordMismatch": "Les mots de passe ne correspondent pas.",
+    "loginSuccess": "Connecté. Redirection…",
+    "registerSuccess": "Compte créé. Vous pouvez maintenant vous connecter.",
+    "genericError": "Une erreur s'est produite. Veuillez réessayer.",
+    "redirecting": "Retour à l'accueil…"
+  },
+  "loginPage": {
+    "subtitle": "Connectez-vous ou créez un compte",
+    "backToHome": "Retour à l'",
+    "homeLink": "accueil"
+  },
+  "languageSwitcher": {
+    "label": "Langue"
+  },
+  "loginForm": {
+    "emailLabel": "Email",
+    "passwordLabel": "Mot de passe",
+    "confirmPasswordLabel": "Confirmer le mot de passe",
+    "pleaseWait": "Veuillez patienter…",
+    "signIn": "Se connecter",
+    "createAccount": "Créer un compte",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "resetSentMessage": "Vérifiez votre email pour le lien de réinitialisation.",
+    "forgotPassword": "Mot de passe oublié ?",
+    "alreadyHaveAccount": "Déjà un compte ?",
+    "rememberPassword": "Vous vous souvenez de votre mot de passe ?",
+    "signInButton": "Se connecter",
+    "emailPlaceholder": "vous@entreprise.com"
+  },
+  "promptIdeas": {
+    "list": [
+      {
+        "id": "shop-sneakers",
+        "sector": "E‑commerce",
+        "title": "Magasin de sneakers premium",
+        "description": "Créez un site e-commerce premium de sneakers avec une expérience d'achat complète. La page d'accueil doit s'ouvrir sur un hero carousel pleine largeur audacieux présentant les sorties phares, les éditions limitées, les collaborations avec des athlètes et les histoires de marque, suivi de collections tendance, de nouveautés, de bannières promotionnelles et d'une section d'inscription à la newsletter. Implémentez un header sticky avec un méga-menu organisé par marque, genre, calendrier des sorties, collaborations et soldes, plus une barre de recherche prédictive avec suggestions automatiques, recherches récentes et vignettes visuelles de produits. La grille de produits a besoin de filtres multi-sélection par marque, taille, couleur, gamme de prix, année de sortie et état, ainsi que d'options de tri et de bascule entre pagination et défilement infini. Les fiches produit doivent présenter un changement d'image au survol, un bouton de vue rapide, un cœur de favoris, des chips de tailles disponibles, des étoiles de notation et des badges de stock limité. Chaque page produit doit inclure une galerie d'images extensible avec zoom et placeholder vidéo, des sélecteurs de variantes couleur et taille, une modal complète de guide des tailles, des sections sous onglets pour la description, les matériaux, les avis clients avec photos, les questions-réponses, la livraison et les retours, les badges de confiance et une barre d'ajout au panier sticky avec rappels de taille. Le panier doit être un mini-panier latéral affichant les images des articles, des sélecteurs de quantité modifiables, une option de sauvegarde pour plus tard, un champ de code promo, un indicateur de progression pour la livraison gratuite et des totaux estimés avec taxes. Le checkout doit prendre en charge l'achat invité, une adresse de livraison modifiable avec autocomplétion, des méthodes de paiement enregistrées, des placeholders Apple Pay et Google Pay, un récapitulatif de commande avec remises par ligne et une page de confirmation avec numéro de commande, lien de suivi et partage social. Les comptes utilisateurs doivent inclure l'historique des commandes avec boutons de recommande, la gestion des favoris, les notifications de retour en stock et le statut des points de fidélité. Le mobile doit être entièrement responsive avec une barre de navigation inférieure, des filtres adaptés au pouce, des galeries d'images swipeables et des paiements mobiles en un clic. Utilisez une esthétique streetwear audacieuse : couleurs contrastées, typographie imposante, textures rugueuses, mouvement dynamique et photographie de campagne."
+      },
+      {
+        "id": "shop-jewelry",
+        "sector": "E‑commerce",
+        "title": "Boutique de bijoux artisanaux",
+        "description": "Créez une boutique en ligne élégante pour bijoux faits main et artisanaux. La page d'accueil doit présenter un hero cinématographique avec photographie de mannequins, un placeholder pour un court-métrage de marque, des blocs de collections curatées pour colliers, bagues, boucles d'oreilles et bracelets, et un aperçu du guide cadeaux. Implémentez une navigation raffinée avec menus déroulants pour les collections, métaux, pierres précieuses, occasions et personnalisation, plus une barre de recherche suggérant des produits, matériaux et requêtes courantes. La grille de produits doit offrir une barre latérale de filtres par type de métal, pierre, gamme de prix, style et disponibilité, avec des fiches affichant un zoom au survol, un placeholder de rotation 360°, un toggle de favoris et des badges faits main. Chaque page produit doit comprendre une galerie haute résolution avec photos macro, des sélecteurs de variantes de métal et de pierre, un champ de gravure avec aperçu en direct, une modal de guide des tailles de bague, des options d'emballage cadeau et de message, des sections sous onglets pour l'histoire artisanale, les matériaux, les instructions d'entretien, les avis clients et les politiques d'expédition, plus des carrousels de produits associés et complétez le look. Le panier doit être un shopping bag raffiné avec vignettes, contrôles de quantité, champ de code promo, articles sauvegardés, progression de livraison gratuite et résumé des options cadeau. Le checkout doit permettre l'achat invité, plusieurs adresses de livraison, paiement sécurisé par carte, PayPal et options de paiement fractionné, avec une confirmation élégante et une option de reçu cadeau. Les comptes doivent inclure l'historique des commandes, les favoris, les adresses enregistrées, le profil de taille de bague, les récompenses de fidélité et les alertes de retour en stock. Ajoutez un placeholder d'essayage virtuel et un quiz d'entretien des bijoux. Le mobile doit se sentir luxueux avec des images full-bleed, une navigation inférieure simplifiée et des sélecteurs adaptés au pouce. Utilisez une palette luxueuse et douce : crème, rose poudré, or champagne, typographie serif et photographie lifestyle."
+      },
+      {
+        "id": "shop-grocery",
+        "sector": "E‑commerce",
+        "title": "Épicerie bio à domicile",
+        "description": "Concevez un supermarché en ligne bio complet avec livraison à domicile et capacités d'abonnement. La page d'accueil doit accueillir les acheteurs avec un hero de produits de saison, un carrousel d'offres hebdomadaires, des tuiles de navigation par catégorie comme produits frais, laitages, épicerie et boissons, des inspirations de recettes et un vérificateur de code postal de livraison bien visible. Implémentez une méga-navigation centrée sur les catégories avec des liens rapides vers préférences alimentaires, fermes locales et offres hebdomadaires, plus une recherche intelligente reconnaissant les produits, marques, recettes et étiquettes diététiques. La grille de produits doit supporter des filtres par catégorie, besoins alimentaires comme végan et sans gluten, certification bio, marque, prix, taille d'unité et notation, avec des fiches affichant le prix à l'unité, des badges bio, des boutons d'ajout rapide et des indicateurs d'abonnement. Chaque page produit doit inclure plusieurs images du produit, des informations d'origine et de certification, des points nutritionnels, des étiquettes diététiques, des avis clients, des recettes associées, un sélecteur de fréquence d'abonnement, une option d'ajout à la liste et une barre d'ajout au panier sticky. Le panier doit être un mini-panier avec sélection de créneau de livraison, listes de courses sauvegardées, sélecteurs de quantité, champ de code promo, progression de livraison gratuite et préférences de substitution. Le checkout doit supporter l'achat invité, les adresses enregistrées, les instructions de livraison, l'option de pourboire, plusieurs méthodes de paiement, un placeholder EBT et une confirmation de commande avec fenêtre de livraison estimée et lien de suivi du livreur. Les comptes doivent afficher l'historique des commandes avec boutons de recommande, les listes enregistrées, les préférences alimentaires, le carnet d'adresses et les points de fidélité. Ajoutez un outil de planification de repas et un constructeur de box d'abonnement. Le mobile doit prioriser l'ajout rapide au panier, les onglets de catégorie adaptés au pouce et la planification simple des livraisons. Utilisez des tons verts frais, une typographie sans-serif épurée et une photographie alimentaire de qualité."
+      },
+      {
+        "id": "shop-furniture",
+        "sector": "E‑commerce",
+        "title": "Showroom de meubles modernes",
+        "description": "Créez un site e-commerce de meubles modernes qui ressemble à un showroom digital. La page d'accueil doit présenter un hero éditorial avec photographie d'ambiances, des collections de pièces shoppable, des lookbooks saisonniers et un quiz de style de pièce. Implémentez une navigation organisée par pièce comme salon, chambre, salle à manger et bureau, plus une recherche persistante avec suggestions de pièce, style et produit. La grille de produits doit fournir des filtres par pièce, catégorie, style, couleur, matériau, gamme de prix, dimensions et disponibilité, avec de grandes fiches produit affichant un zoom au survol, une vue rapide, les favoris, un badge de financement et une estimation de livraison. Chaque page produit doit mettre en avant une galerie pleine largeur avec superposition des dimensions, des placeholders de rotation 360 et de vue AR, des échantillons de couleurs et de tissus, des options de configuration, un toggle pour le service de montage, une section photos clients, des spécifications détaillées, des avis, des questions-réponses, des informations de livraison et retour et des produits associés. Le panier doit inclure un mini-panier avec option de livraison white-glove, service de montage, vérificateur de code postal, articles sauvegardés, champ de code promo et progression de livraison gratuite. Le checkout doit supporter l'achat invité, la sélection de date de livraison, les instructions de livraison dans la pièce de choix, un placeholder de demande de financement, les options de paiement et la confirmation avec suivi de livraison. Les comptes doivent inclure l'historique des commandes, les favoris, les moodboards de pièces enregistrés, la réservation de consultations design et les notifications. Ajoutez un outil de planification de pièce, un comparateur de produits et une galerie d'inspiration avec hotspots cliquables. Le mobile doit optimiser la navigation d'images, les filtres simplifiés et la navigation tactile par pièce. Utilisez une mise en page éditoriale épurée avec des neutres chauds, beaucoup d'espace blanc et une photographie architecturale."
+      },
+      {
+        "id": "shop-beauty",
+        "sector": "E‑commerce",
+        "title": "Boutique de beauté clean",
+        "description": "Créez une boutique en ligne de beauté clean centrée sur la découverte de soins de la peau et de cosmétiques. La page d'accueil doit présenter un hero doux avec les valeurs de la marque, un carrousel de best-sellers, des bundles de routine, des témoignages avant/après et un appel à un quiz de soins de la peau. Implémentez une navigation avec menus déroulants pour visage, yeux, lèvres, accessoires, sets, ingrédients et problèmes de peau, plus une recherche intelligente suggérant des produits, ingrédients, routines et problèmes de peau. La grille de produits doit offrir des filtres par catégorie, type de peau, problème, préférences d'ingrédients, gamme de teintes, prix, certifications clean et notation, avec des fiches affichant des échantillons de teinte au survol, un ajout rapide, les favoris, des badges clean et le nombre d'avis. Chaque page produit doit inclure une galerie d'images avec des photos de texture et d'application, un assistant de teinte avec échantillons de carnation et un placeholder d'essayage virtuel, des variantes de taille et format, des points forts d'ingrédients, des onglets d'utilisation, une galerie d'avis avec photos avant/après, des questions-réponses, des notes dermatologiques et des produits associés. Le panier doit être un mini-panier avec sélection d'échantillons, toggle d'abonnement de réapprovisionnement automatique, champ de code promo, progression de livraison gratuite et aperçu des points de fidélité. Le checkout doit supporter l'achat invité, les adresses enregistrées, les options de paiement, le paiement fractionné, les options cadeau et la confirmation avec conseils de routine. Les comptes doivent inclure l'historique des commandes, les rappels de recharge, les favoris, le profil de peau, les points de récompense et les recommandations personnalisées. Ajoutez un quiz de soins de la peau, un constructeur de routine et un gestionnaire d'abonnements. Le mobile doit se sentir épuré et rapide avec des galeries swipeables, une navigation inférieure et un match de teinte en un clic. Utilisez une esthétique pastel douce avec une typographie sans-serif propre, des dégradés doux et une photographie lifestyle."
+      },
+      {
+        "id": "shop-electronics",
+        "sector": "E‑commerce",
+        "title": "Magasin d'électronique grand public",
+        "description": "Créez un site e-commerce d'électronique grand public avec une expérience d'achat technologique avancée. La page d'accueil doit présenter un hero dynamique avec compte à rebours d'offres, nouveautés, tuiles de catégories pour ordinateurs portables, téléphones, audio et accessoires, et une bannière promotionnelle de reprise. Implémentez une navigation avec méga-menus pour chaque catégorie, hubs de marque, offres et support, plus une recherche puissante avec autocomplétion, filtres de spécifications et résultats visuels. La grille de produits doit fournir des filtres par marque, prix, notation, fonctionnalités, spécifications, compatibilité et couleur, avec des fiches affichant les spécifications clés, les badges, la case à cocher de comparaison, la vue rapide et les favoris. Chaque page produit doit inclure une galerie avec images et vidéo, configuration couleur et stockage, tableaux de comparaison de spécifications, des onglets détaillés pour spécifications, avis, questions-réponses et support, recommandations de bundles, sélection de garantie étendue, option de retrait en magasin, widget d'estimation de reprise, options de financement et badges de confiance. Le panier doit être un mini-panier avec upsells d'accessoires, options de plan de protection, champ de code promo, progression de livraison gratuite, articles sauvegardés et totaux estimés. Le checkout doit supporter l'achat invité, les adresses de livraison et de facturation, plusieurs méthodes de paiement incluant les plans de versement, un récapitulatif de commande avec remises et une confirmation avec guides de configuration et suivi. Les comptes doivent inclure l'historique des commandes, les favoris, les enregistrements de produits, les notifications et les récompenses de fidélité. Ajoutez un outil de comparaison de produits, un vérificateur de compatibilité et des alertes d'offres. Le mobile doit prioriser les points forts de spécifications, l'appel au support et les paiements par portefeuille mobile. Utilisez une esthétique tech sombre avec des accents néon, du glassmorphism, des lignes de grille et des rendus de produits."
+      },
+      {
+        "id": "shop-fashion",
+        "sector": "E‑commerce",
+        "title": "Boutique de mode tendance",
+        "description": "Concevez une boutique de mode en ligne tendance avec une expérience d'achat éditoriale. La page d'accueil doit s'ouvrir sur un hero de style lookbook, des carrousels de campagnes saisonnières, des tuiles de navigation par catégorie femme, homme et accessoires, des histoires de style et un feed d'inspiration de tenues. Implémentez une navigation avec menus déroulants pour catégories, collections, designers, soldes et éditions de style, plus une recherche visuelle avec autocomplétion, termes tendance et récemment consultés. La grille de produits doit supporter des filtres par taille, couleur, style, prix, marque, matériau et critères de durabilité, avec des fiches affichant des images alternatives au survol, une modal de vue rapide, les favoris, des points de disponibilité des tailles et des badges de soldes. Chaque page produit doit inclure une grande galerie d'images avec zoom, des sélecteurs de couleur et taille, un outil de prédiction de taille, une popup de guide des tailles, des suggestions de stylisme, des informations sur les matériaux et la durabilité, des avis clients avec détails d'ajustement, des questions-réponses et des produits associés. Le panier doit être un mini-panier latéral avec tenues sauvegardées, champ de code promo, progression de livraison gratuite, récemment consultés et sauvegardés pour plus tard. Le checkout doit supporter l'achat invité, le carnet d'adresses, plusieurs options de livraison, méthodes de paiement, paiement fractionné, emballage cadeau et confirmation avec suivi de commande. Les comptes doivent inclure l'historique des commandes, les favoris, les tenues sauvegardées, le profil de taille, les notifications et les points de fidélité. Ajoutez un quiz de style, un créateur de tenues et un placeholder de chat en direct. Le mobile doit proposer des cartes lookbook swipeables, une navigation inférieure et une sélection de taille adaptée au pouce. Utilisez une esthétique éditoriale dynamique avec une typographie audacieuse, de la photographie de campagne et des layouts fluides."
+      },
+      {
+        "id": "shop-pets",
+        "sector": "E‑commerce",
+        "title": "Animalerie en ligne",
+        "description": "Créez une animalerie en ligne qui se sente amicale et personnalisée. La page d'accueil doit présenter un hero ludique avec photographie d'animaux, des tuiles de shopping par type d'animal comme chien, chat, oiseau et poisson, les catégories les plus vendues, une promotion d'abonnement automatique et un appel à la création de profil animal. Implémentez une navigation organisée par type d'animal et catégorie de produit comme nourriture, jouets, toilettage et santé, plus une barre de recherche avec suggestions spécifiques à l'animal et raccourcis de recommande. La grille de produits doit fournir des filtres par type d'animal, catégorie, marque, stade de vie, besoins alimentaires, prix et notation, avec des fiches affichant des badges de régime vétérinaire, un ajout rapide, un indicateur autoship et des avis. Chaque page produit doit inclure plusieurs images, un guide d'alimentation basé sur le poids de l'animal, des variantes de saveur ou taille, un sélecteur de fréquence d'abonnement automatique, des informations sur les ingrédients ou matériaux, des avis clients avec photos d'animaux, des questions-réponses et des produits associés. Le panier doit être un mini-panier avec résumé de remise autoship, calendrier de livraison, champ de code promo, progression de livraison gratuite et boutons de recommande. Le checkout doit supporter l'achat invité, les profils d'animaux enregistrés, l'adresse de livraison, les options de paiement et la confirmation avec estimation de livraison. Les comptes doivent inclure l'historique des commandes avec recommande en un clic, les favoris, les profils d'animaux avec rappels d'anniversaire, les notifications et les points de fidélité. Ajoutez un quiz d'alimentation pour animaux, un constructeur d'abonnements et un outil de comparaison. Le mobile doit être ludique et facile avec des onglets par type d'animal, des boutons d'ajout rapide et un placeholder de chat vétérinaire. Utilisez des couleurs amicales, des formes arrondies, des illustrations ludiques et une photographie d'animaux heureux."
+      },
+      {
+        "id": "shop-baby",
+        "sector": "E‑commerce",
+        "title": "Magasin de produits bébé et liste de naissance",
+        "description": "Créez un magasin en ligne de produits pour bébé intégré à une liste de naissance. La page d'accueil doit présenter un hero doux avec photographie familiale, des tuiles de navigation par catégorie comme poussettes, sièges-auto, vêtements, alimentation et chambre bébé, un spotlight de liste de naissance et un appel à une checklist parentale. Implémentez une navigation avec menus déroulants pour catégories, tranches d'âge, marques, liste de naissance et conseils, plus une recherche comprenant les étapes de développement du bébé et les types de produits. La grille de produits doit supporter des filtres par tranche d'âge, catégorie, marque, prix, notations de sécurité et couleur, avec des fiches affichant des badges de sécurité, une vue rapide, les favoris et des boutons d'ajout à la liste. Chaque page produit doit inclure une galerie d'images, des variantes de couleur et taille, des conseils d'âge et de poids, des certifications de sécurité, des avis de parents, des questions-réponses, des instructions d'entretien, des produits associés et une option d'ajout à la liste. Le panier doit inclure un mini-panier avec champ de message cadeau, option de reçu cadeau, indicateur de progression de cadeau groupé, champ de code promo et progression de livraison gratuite. Le checkout doit supporter l'achat invité, plusieurs adresses de livraison, options cadeau, méthodes de paiement et confirmation avec message de remerciement et mise à jour de la liste. Les comptes doivent inclure l'historique des commandes, les favoris, les listes de naissance, les adresses enregistrées, la checklist parentale et les notifications. Ajoutez un outil de création et de partage de liste, une fonctionnalité de cadeau groupé et des bundles d'abonnement pour couches et lingettes. Le mobile doit être rassurant et facile avec de grands boutons, des chips de tranche d'âge et un checkout simplifié. Utilisez des couleurs pastel douces, des coins légèrement arrondis et des badges de sécurité rassurants."
+      },
+      {
+        "id": "shop-wine",
+        "sector": "E‑commerce",
+        "title": "Caviste de vins et spiritueux",
+        "description": "Créez une boutique en ligne de vins et spiritueux avec une porte de vérification d'âge et une expérience de découverte sophistiquée. La page d'accueil doit présenter un hero sombre avec collections curatées, sélections saisonnières, points forts du club de vin, suggestions d'accords mets et vins et cadeaux corporate. Implémentez une navigation par région, cépage, style, type de spiritueux, club de vin et cadeaux, plus une recherche avec autocomplétion pour vins, régions, accords et producteurs. La grille de produits doit fournir des filtres par région, cépage, style, prix, notation, millésime, disponibilité et accord mets/vins, avec des fiches affichant un aperçu des notes de dégustation, des notations, des badges et un ajout rapide. Chaque page produit doit inclure une galerie avec photos de bouteille et de vignoble, des notes de dégustation détaillées, des suggestions d'accords, l'histoire du producteur, des notations et avis clients, des questions-réponses, des informations de livraison et de stockage, des prix membres du club et des vins associés. Le panier doit être un mini-panier avec constructeur de caisses mixtes, résumé d'économies, calendrier de planification de livraison, champ de code promo, option de message cadeau et progression de livraison gratuite. Le checkout doit inclure la vérification d'âge, l'achat invité, les adresses enregistrées, les méthodes de paiement, les options de cadeaux corporate et la confirmation avec suivi de livraison et lien de gestion de cave. Les comptes doivent inclure l'historique des commandes, l'adhésion au club de vin, les favoris, les préférences enregistrées et les notifications. Ajoutez un quiz de vin, un constructeur de caisses mixtes, des niveaux d'abonnement et un portail de cadeaux corporate. Le mobile doit maintenir l'élégance avec des collections swipeables et une vérification d'âge simple. Utilisez une palette sombre et sophistiquée avec des accents dorés, une typographie serif et une photographie inspirée des caves."
+      },
+      {
+        "id": "shop-sports",
+        "sector": "E‑commerce",
+        "title": "Magasin d'équipement sportif",
+        "description": "Créez un magasin en ligne d'équipement sportif avec une expérience d'achat énergique et axée sur la performance. La page d'accueil doit présenter un hero rempli d'action avec photographie d'athlètes, des tuiles de shopping par sport comme course, cyclisme, salle de sport et outdoor, les nouveaux arrivages d'équipement et un quiz pour trouver l'équipement. Implémentez une navigation organisée par sport, activité, genre, marques et soldes, plus une recherche prédictive avec suggestions spécifiques au sport et recherches récentes. La grille de produits doit offrir des filtres par sport, niveau, marque, prix, taille, couleur, caractéristiques et notation, avec des fiches affichant des images d'action, une vue rapide, une case de comparaison, les favoris et des badges de soldes. Chaque page produit doit inclure une galerie d'images avec placeholder vidéo, des sélecteurs de taille et couleur, des guides des tailles, des conseils d'ajustement, des spécifications et caractéristiques, des avis clients avec notes de performance, des questions-réponses et des équipements associés. Le panier doit être un mini-panier avec accès à un formulaire de commande groupée pour équipes, champ de code promo, progression de livraison gratuite, articles sauvegardés et accessoires recommandés. Le checkout doit supporter l'achat invité, l'adresse de livraison, l'option de retrait en magasin, les méthodes de paiement, les codes de réduction pour équipes et la confirmation avec suivi. Les comptes doivent inclure l'historique des commandes, les favoris, les affiliations d'équipe, le statut du programme de fidélité et les notifications. Ajoutez un assistant de recherche d'équipement, un outil de comparaison et des commandes groupées pour équipes. Le mobile doit prioriser le filtrage rapide par sport, des guides des tailles adaptés au pouce et des images centrées sur l'action. Utilisez une esthétique sportive énergique avec des couleurs vives, une typographie dynamique et de la photographie d'action."
+      },
+      {
+        "id": "shop-books",
+        "sector": "E‑commerce",
+        "title": "Librairie indépendante en ligne",
+        "description": "Concevez une librairie en ligne indépendante avec une expérience d'achat chaleureuse centrée sur la découverte. La page d'accueil doit présenter un hero accueillant avec coups de cœur du staff, des tuiles de navigation par genre, les nouveautés, les best-sellers, les événements locaux et une inscription à la newsletter. Implémentez une navigation avec menus déroulants pour genres, auteurs, formats, collections et événements, plus une recherche suggérant des livres, auteurs, genres et recherches par ISBN. La grille de produits doit supporter des filtres par genre, format, prix, notation, tranche d'âge, langue et disponibilité, avec des fiches affichant les couvertures, les badges de format, les notations, une vue rapide et les favoris. Chaque page produit doit inclure une grande image de couverture, le synopsis, la biographie de l'auteur, le nombre de pages, les détails de publication, des formats comme relié et ebook, des avis clients, des suggestions de lectures connexes, un placeholder d'aperçu intérieur et des options d'ajout à une liste. Le panier doit être un mini-panier avec sauvegardés pour plus tard, champ de code promo, progression de livraison gratuite et résumé des formats. Le checkout doit supporter l'achat invité, les options de livraison ou de livraison numérique, les méthodes de paiement, les options cadeau et la confirmation avec numéro de commande et livraison estimée. Les comptes doivent inclure l'historique des commandes, les listes de souhaits, les listes de lecture, le statut de membre et les notifications. Ajoutez un quiz de livres, les coups de cœur du staff, un flux de précommande, une bannière de réduction par adhésion et une section d'événements locaux. Le mobile doit ressembler à une librairie de poche avec des couvertures swipeables et des onglets de genre simples. Utilisez une esthétique littéraire chaleureuse avec des tons papier doux, une typographie serif et une photographie douce."
+      },
+      {
+        "id": "shop-decor",
+        "sector": "E‑commerce",
+        "title": "Boutique de déco et luminaires",
+        "description": "Créez un site e-commerce de décoration et d'éclairage pour la maison avec une expérience lifestyle curatée. La page d'accueil doit présenter un hero accueillant avec photographie d'ambiances, des tuiles de shopping par pièce, des collections de style comme bohème, moderne et scandinave, les tendances saisonnières et un quiz d'inspiration de pièce. Implémentez une navigation par pièce, style, catégorie, éclairage et soldes, plus une recherche visuelle avec suggestions de pièce, style et produit. La grille de produits doit offrir des filtres par pièce, style, couleur, matériau, prix, dimensions et disponibilité, avec des fiches affichant des images d'ambiance, des tags cliquables, un zoom au survol, les favoris et des badges de bundle. Chaque page produit doit inclure une galerie avec photos d'ambiance et de détail, des échantillons de couleur et de matière, un guide de dimensionnement des luminaires, les dimensions, les instructions d'entretien, des avis clients, des questions-réponses, des produits associés et des conseils de stylisme. Le panier doit être un mini-panier avec des sets bundle-and-save, une option de service de montage, un champ de code promo, une progression de livraison gratuite et des articles sauvegardés. Le checkout doit supporter l'achat invité, l'adresse de livraison avec instructions d'accès, les méthodes de paiement, les options cadeau et la confirmation avec suivi de livraison. Les comptes doivent inclure l'historique des commandes, les favoris, les pièces enregistrées, les consultations design et les alertes de retour en stock. Ajoutez un quiz de style de pièce, un flux d'échantillons de peinture et de textile, et des alertes de retour en stock. Le mobile doit mettre en avant des images d'ambiance full-bleed et un filtrage facile par style. Utilisez une esthétique lifestyle chaleureuse avec des photos d'intérieurs curatés, des neutres doux et des textures naturelles."
+      },
+      {
+        "id": "shop-subscription",
+        "sector": "E‑commerce",
+        "title": "Box beauté par abonnement",
+        "description": "Créez un site e-commerce de box beauté par abonnement avec une expérience d'adhésion personnalisée. La page d'accueil doit présenter un hero glam avec photographie d'unboxing, un appel au quiz, un aperçu de la sélection de formule, une galerie d'abonnées et une promotion de parrainage. Implémentez une navigation pour quiz, formules, boutique, cadeaux et communauté, plus une recherche de produits et d'avantages membres. La grille de produits doit supporter des filtres par catégorie, marque, type de peau et exclusivités membres, avec des fiches affichant les prix membres, les notations et l'ajout rapide. Chaque page produit doit inclure des images, des points forts d'ingrédients, des avis, des questions-réponses et une option d'ajout à la prochaine box. Le quiz doit demander le type de peau, le teint, les préoccupations et les préférences pour personnaliser la box. La sélection de formule doit présenter clairement les tarifs mensuel et annuel avec économies, flexibilité d'annulation et compte à rebours avant la révélation. Le portail abonné doit permettre de sauter un mois, d'échanger des produits, de gérer la fréquence, de voir les prochaines boxes et d'accéder à la boutique exclusive membres. Incluez un widget de récompenses de parrainage et un flux de feedback lors de l'annulation. Le checkout doit supporter l'inscription à l'abonnement, les abonnements cadeaux, les codes promo, les méthodes de paiement et la confirmation avec l'estimation de livraison de la première box. Les comptes doivent inclure la gestion d'abonnement, l'historique des commandes, les points de fidélité et le statut de parrainage. Le mobile doit rendre le quiz et la sélection de formule adaptés au pouce avec des cartes swipeables. Utilisez une esthétique glam féminine avec des visuels de surprise et de joie, des roses doux et des accents brillants."
+      },
+      {
+        "id": "shop-digital",
+        "sector": "E‑commerce",
+        "title": "Marketplace de produits numériques",
+        "description": "Créez une marketplace en ligne de produits numériques comme templates, icônes, cours et presets. La page d'accueil doit présenter un hero créatif avec des produits en vedette, des tuiles de catégories, des spotlights de créateurs, les téléchargements tendance et un guide des licences. Implémentez une navigation par catégorie, créateur, collections et licences, plus une recherche avec filtres de type de fichier, compatibilité logicielle et niveau de licence. La grille de produits doit supporter des filtres par catégorie, prix, notation, licence, type de fichier et compatibilité, avec des fiches affichant des miniatures, des badges de preview, des notations, une vue rapide et les infos du créateur. Chaque page produit doit inclure une galerie de preview avec placeholders d'image, vidéo ou audio, un sélecteur de niveau de licence avec droits d'utilisation, un lien vers la boutique du créateur, des avis clients, des questions-réponses, des produits associés et un bouton d'ajout au panier. Le panier doit être un mini-panier avec logique de remise par volume, résumé des licences, champ de code promo et avis de téléchargement instantané. Le checkout doit supporter l'achat invité, les méthodes de paiement et la confirmation avec liens de téléchargement et détails de licence. Les comptes doivent inclure une bibliothèque de téléchargements, l'historique des commandes, les favoris, les créateurs suivis et un mock de dashboard vendeur. Ajoutez des pages de boutique de créateurs, des notations et avis, et une calculatrice de tarification par volume. Le mobile doit optimiser la navigation des miniatures et les téléchargements rapides. Utilisez une esthétique créative moderne avec des miniatures de produits frappantes, des accents vibrants et des grilles épurées."
+      },
+      {
+        "id": "shop-watches",
+        "sector": "E‑commerce",
+        "title": "Boutique de montres de luxe",
+        "description": "Créez un site e-commerce de montres de luxe avec une expérience d'achat raffinée et premium. La page d'accueil doit présenter un hero élégant avec photographie macro de montres, des points forts de collections pour les styles habillé, sport et vintage, un récit d'héritage de marque et un appel à rendez-vous avec concierge. Implémentez une navigation par collection, marque, complications, bracelets et services, plus une recherche avec autocomplétion pour modèles, références et matériaux. La grille de produits doit offrir des filtres par style, marque, taille de boîtier, matériau, mouvement, prix et disponibilité, avec des fiches affichant des miniatures haute résolution, une vue rapide, les favoris et des badges certifiés. Chaque page produit doit inclure une galerie avec photos macro détaillées, un placeholder de vue 360, des options de configurateur de bracelet, des spécifications de boîtier et de mouvement, un badge de certificat d'authenticité, des CTA de financement et de reprise, un placeholder de chat concierge, des avis clients, des questions-réponses et des montres associées. Le panier doit être un mini-panier avec upsells de kit d'entretien de montre, champ de code promo, option d'assurance, progression de livraison gratuite et articles sauvegardés. Le checkout doit supporter l'achat invité, le paiement sécurisé, un placeholder de demande de financement, une option de virement bancaire et une confirmation avec lien d'enregistrement de propriété. Les comptes doivent inclure l'historique des commandes, les favoris, les montres enregistrées, l'historique de service, les notifications et le statut de fidélité. Ajoutez un configurateur de bracelet, un flux de vérification d'authenticité et un estimateur de reprise. Le mobile doit préserver le luxe avec des galeries plein écran et une navigation discrète. Utilisez une esthétique premium raffinée avec des arrière-plans sombres, des accents métalliques, une typographie serif et de la photographie de studio."
+      },
+      {
+        "id": "shop-plants",
+        "sector": "E‑commerce",
+        "title": "Pépinière et jardinerie en ligne",
+        "description": "Concevez un magasin de plantes et de jardinage en ligne avec une expérience d'achat fraîche et botanique. La page d'accueil doit présenter un hero inspiré par la nature avec des collections de plantes de saison, des tuiles de navigation par catégorie, des conseils d'entretien des plantes et un quiz pour trouver la plante idéale. Implémentez une navigation par type de plante, taille de plante, besoins en lumière, sécurité animaux et fournitures de jardinage, plus une recherche intelligente avec noms de plantes, termes d'entretien et niveaux de difficulté. La grille de produits doit supporter des filtres par niveau de lumière, sécurité animaux, facilité d'entretien, taille de plante, prix et catégorie, avec des fiches affichant des images de plantes, des icônes d'entretien, un ajout rapide et les favoris. Chaque page produit doit inclure une galerie avec images de la plante et du pot, des instructions d'entretien, des rappels d'arrosage, des besoins en lumière et humidité, un guide des tailles, un badge de sécurité animaux, des avis clients avec photos de croissance, des questions-réponses et des plantes et pots associés. Le panier doit être un mini-panier avec regroupement de pots et cache-pots, des kits de jardinage saisonniers, un champ de code promo, une progression de livraison gratuite et un upsell de guide d'entretien. Le checkout doit supporter l'achat invité, une adresse de livraison avec instructions d'entretien pendant le transport, les méthodes de paiement et une confirmation avec calendrier d'entretien. Les comptes doivent inclure l'historique des commandes, les favoris, la collection de plantes avec rappels d'entretien et les points de fidélité. Ajoutez un quiz de recherche de plante, un abonnement mensuel de plantes et une intégration de blog sur l'entretien des plantes. Le mobile doit ressembler à une serre de poche avec des icônes d'entretien et des cartes de plantes swipeables. Utilisez des verts botaniques frais, des tons terreux et une photographie naturelle."
+      },
+      {
+        "id": "shop-printondemand",
+        "sector": "E‑commerce",
+        "title": "Boutique de personnalisation print-on-demand",
+        "description": "Créez une boutique de personnalisation print-on-demand pour t-shirts et merchandising. La page d'accueil doit présenter un hero audacieux avec photographie de créateurs, des tuiles de catégories de produits comme vêtements, mugs et coques de téléphone, une galerie d'inspiration de designs et un appel à créer le sien. Implémentez une navigation par type de produit, catégories, collections de designs et hub vendeur, plus une recherche de designs, produits et créateurs. La grille de produits doit supporter des filtres par type de produit, couleur, taille, prix, notation et style de design, avec des fiches affichant des mockups, les crédits du créateur, une vue rapide et les favoris. Chaque page produit doit inclure un mock d'outil de design pour télécharger des images et ajouter du texte, des sélecteurs de couleur et taille, des mockups de preview, un tableau de tarifs dégressifs, une galerie de designs sauvegardés, des compte à rebours de campagnes de drops limités et des avis clients. Le panier doit être un mini-panier avec des designs sauvegardés, un champ de code promo, une progression de livraison gratuite et un résumé des profits vendeur. Le checkout doit supporter l'achat invité, l'adresse de livraison, les méthodes de paiement et la confirmation avec les dates estimées de production et de livraison. Les comptes doivent inclure l'historique des commandes, les designs sauvegardés, les œuvres téléchargées, les créateurs suivis et une calculatrice de profits vendeur. Ajoutez un mock d'outil de design, des compte à rebours de campagnes et un tableau de tarifs dégressifs. Le mobile doit faciliter les téléchargements de designs et les previews avec un canvas tactile convivial. Utilisez une esthétique streetwear jeune avec des graphismes audacieux, des couleurs vives et une photographie énergique."
+      },
+      {
+        "id": "shop-office",
+        "sector": "E‑commerce",
+        "title": "Marketplace B2B de fournitures de bureau",
+        "description": "Créez un site e-commerce B2B de fournitures de bureau avec une expérience professionnelle axée sur l'efficacité. La page d'accueil doit présenter un hero épuré avec photographie d'espaces de travail, des tuiles de catégories comme mobilier, papeterie, technologie et pause-café, des points forts de tarification par volume et un appel à la réapprovisionnement rapide. Implémentez une navigation par catégorie, marque, offres, services et compte, plus une recherche par SKU, produit et recherche de commande. La grille de produits doit supporter des filtres par catégorie, marque, prix, disponibilité, options écologiques et niveaux de volume, avec des fiches affichant les tarifs par volume, l'ajout rapide, la case de comparaison et les favoris. Chaque page produit doit inclure des images, des spécifications, des niveaux de tarification par volume, des produits associés, des avis clients, des questions-réponses et une option d'ajout à une liste. Le panier doit inclure un mini-panier avec des listes de réapprovisionnement rapide, un champ de code promo, une progression de livraison gratuite et des avis d'approbation multi-utilisateurs. Le checkout doit supporter une option de bon de commande, des rôles multi-utilisateurs sur le compte, un placeholder de flux d'approbation, les adresses de livraison et de facturation, les méthodes de paiement et une confirmation avec détails de facture. Les comptes doivent inclure l'historique des commandes avec téléchargement de factures, les flux d'approbation, les demandes de devis, les listes enregistrées, les rôles multi-utilisateurs et un dashboard de compte dédié. Ajoutez un formulaire de demande de devis, des listes de réapprovisionnement rapide et une gestion de comptes multi-utilisateurs. Le mobile doit maintenir la productivité avec une recherche rapide, des listes enregistrées et une commande facile. Utilisez une esthétique professionnelle et épurée avec des tons bleus et gris, des grilles propres et une photographie corporate."
+      },
+      {
+        "id": "shop-vintage",
+        "sector": "E‑commerce",
+        "title": "Marketplace de mode seconde main",
+        "description": "Créez une marketplace de vêtements vintage et seconde main avec une expérience d'achat communautaire. La page d'accueil doit présenter un hero éditorial rétro avec des drops vintage curatés, des tuiles de catégorie et d'époque, des spotlights de vendeurs et un appel à faire une offre. Implémentez une navigation par catégorie, époque, taille, état et designer, plus une recherche avec filtres vintage, designer et vendeur. La grille de produits doit supporter des filtres par catégorie, époque, taille, couleur, grade d'état, prix et notation du vendeur, avec des fiches aux images de style polaroid, des badges d'état, des notations de vendeur, les favoris et une vue rapide. Chaque page produit doit inclure plusieurs photos, des badges de grade d'état, des mesures, des détails de matériaux, des notations et avis du vendeur, un bouton de faire une offre, des questions-réponses, des options d'expédition et des annonces associées. Le panier doit être un mini-panier avec un estimateur d'expédition, des alertes de recherches sauvegardées, un champ de code promo et un résumé de politique de retour. Le checkout doit supporter l'achat invité, l'adresse de livraison, les méthodes de paiement et la confirmation avec notification au vendeur. Les comptes doivent inclure l'historique des commandes, les favoris, les recherches sauvegardées avec alertes, un mock de dashboard vendeur et un placeholder de messagerie. Ajoutez une section de luxe authentifié, un mock de création d'annonces pour vendeurs et des alertes de recherches sauvegardées. Le mobile doit ressembler à un magazine vintage avec des cartes polaroid swipeables et un flux d'offres simple. Utilisez une esthétique éditoriale rétro avec des tons chauds de film, une typographie serif et des photos produit de style polaroid."
+      },
+      {
+        "id": "shop-supplements",
+        "sector": "E‑commerce",
+        "title": "Magasin de compléments fitness",
+        "description": "Créez un magasin en ligne de compléments fitness avec une expérience d'achat axée sur la performance. La page d'accueil doit présenter un hero plein d'énergie avec photographie d'athlètes, des catégories d'achat par objectif comme muscle, énergie, perte de poids et bien-être, des best-sellers et un quiz de stack de compléments. Implémentez une navigation par objectif, catégorie, marque et soldes, plus une recherche avec suggestions de produits, ingrédients et objectifs. La grille de produits doit offrir des filtres par objectif, catégorie, marque, saveur, prix, notation et préférence alimentaire, avec des fiches affichant les bénéfices clés, l'ajout rapide, les favoris et des badges d'abonnement. Chaque page produit doit inclure des images, un détail des ingrédients, un tableau nutritionnel, un sélecteur de saveur avec avis par saveur, des conseils de taille de portion, des avis clients avec photos de résultats, des questions-réponses, des produits associés et des tarifs d'abonnement et d'économie. Le panier doit être un mini-panier avec des recommandations de bundles d'entraînement, un aperçu des points de fidélité, un champ de code promo, une progression de livraison gratuite et des toggles d'abonnement. Le checkout doit supporter l'achat invité, les adresses enregistrées, les méthodes de paiement, les options d'abonnement et la confirmation avec suggestions de stack. Les comptes doivent inclure l'historique des commandes, les favoris, les points de fidélité, la gestion des abonnements et les objectifs d'entraînement. Ajoutez un quiz de stack de compléments, des recommandations de bundles d'entraînement et un programme de fidélité. Le mobile doit prioriser le filtrage rapide par objectif et la sélection facile de saveur. Utilisez une esthétique sportive audacieuse avec des couleurs à fort contraste, une typographie tranchante et de la photographie d'action."
+      },
+      {
+        "id": "shop-kitchen",
+        "sector": "E‑commerce",
+        "title": "Boutique d'ustensiles et cuisine",
+        "description": "Concevez un magasin en ligne d'ustensiles et d'articles de cuisine avec une expérience d'achat chaleureuse et culinaire. La page d'accueil doit présenter un hero appétissant avec photographie de recettes, des tuiles de collections pour couteaux, casseroles, électroménagers et vaisselle, des sets curatés par des chefs et une section d'inspiration de recettes. Implémentez une navigation par catégorie, matériau, marque, recettes et cadeaux, plus une recherche avec suggestions de produit, recette et ingrédient. La grille de produits doit supporter des filtres par catégorie, matériau comme acier inoxydable, fonte et céramique, prix, notation, couleur et compatibilité lave-vaisselle, avec des fiches affichant des images du produit, une vue rapide, les favoris et des badges de bundle. Chaque page produit doit inclure une galerie d'images, des sélecteurs de matériau et taille, des instructions d'entretien, des fiches recettes avec liens vers les ingrédients achetables, des avis clients, des questions-réponses, des produits associés et une option d'ajout à une liste de mariage. Le panier doit être un mini-panier avec des offres de bundles comme des sets de cuisine de démarrage, une option d'emballage cadeau, un champ de code promo, une progression de livraison gratuite et des articles sauvegardés. Le checkout doit supporter l'achat invité, la recherche de liste de mariage, les options cadeau, l'adresse de livraison, les méthodes de paiement et la confirmation avec conseils d'entretien. Les comptes doivent inclure l'historique des commandes, les favoris, les listes de mariage, les recettes enregistrées et les points de fidélité. Ajoutez des fiches recettes avec liens vers ingrédients achetables, des placeholders de tutoriels vidéo et une fonction de liste de mariage. Le mobile doit faciliter la navigation des recettes et l'ajout rapide au panier avec des filtres adaptés au pouce. Utilisez une esthétique culinaire chaleureuse avec de la photographie alimentaire, des tons terreux et une typographie épurée."
+      },
+      {
+        "id": "shop-phones",
+        "sector": "E‑commerce",
+        "title": "Magasin de téléphones et accessoires",
+        "description": "Créez un magasin en ligne de téléphones et accessoires avec une expérience d'achat tech brillante. La page d'accueil doit présenter un hero vibrant avec les derniers téléphones, les promotions d'opérateurs, une bannière de reprise et des bundles d'accessoires. Implémentez une navigation par marque de téléphone, accessoires, opérateurs, offres et support, plus une recherche par modèles de téléphone, accessoires et forfaits. La grille de produits doit supporter des filtres par marque, prix, couleur, stockage, fonctionnalités, opérateur et notation, avec des fiches affichant des rendus de téléphones, une vue rapide, une case de comparaison et les favoris. Chaque page produit doit inclure un sélecteur de comparaison d'opérateurs, un estimateur de reprise, une configuration de couleur et de stockage, un bundling d'accessoires comme coques et chargeurs, des options de plan de protection, une calculatrice de paiement échelonné, un placeholder de flux d'activation, des avis produits, des questions-réponses et des accessoires associés. Le panier doit être un mini-panier avec des upsells d'accessoires, des options de plan de protection, un champ de code promo, une progression de livraison gratuite et un résumé du crédit de reprise. Le checkout doit supporter l'achat invité, la sélection d'opérateur, l'adresse de livraison, les méthodes de paiement incluant les versements, et la confirmation avec instructions d'activation et suivi. Les comptes doivent inclure l'historique des commandes, les favoris, les appareils enregistrés, l'historique de reprise et les notifications. Ajoutez un estimateur de reprise, un outil de comparaison d'opérateurs et un placeholder de flux d'activation. Le mobile doit se sentir natif avec des galeries de téléphones swipeables et des sélecteurs de forfaits opérateur. Utilisez une esthétique tech brillante avec des rendus de produits vibrants, du glassmorphism et des accents néon."
+      },
+      {
+        "id": "shop-coffee",
+        "sector": "E‑commerce",
+        "title": "Abonnement de café artisanal",
+        "description": "Créez un site e-commerce d'abonnement de café artisanal avec une expérience d'achat chaleureuse et artisanale. La page d'accueil doit présenter un hero cozy avec photographie de café, des points forts par niveau de torréfaction, des collections de single-origin et d'assemblages, des guides de brassage et un appel à un quiz de café. Implémentez une navigation par type de café, niveau de torréfaction, méthode de préparation, abonnements et cadeaux, plus une recherche par origines de café, saveurs et équipements. La grille de produits doit supporter des filtres par niveau de torréfaction, origine, notes de dégustation, prix, format et éligibilité à l'abonnement, avec des fiches affichant des notes de dégustation, l'ajout rapide, les favoris et des badges d'abonnement. Chaque page produit doit inclure une galerie d'images, un indicateur de niveau de torréfaction, des notes de saveur, l'histoire de l'origine, du contenu de guides de préparation, des options de mouture, un sélecteur de cadence d'abonnement, des avis clients, des questions-réponses et des cafés associés. Le panier doit être un mini-panier avec des options de cadence d'abonnement, un checkout d'abonnement cadeau, un champ de code promo, une progression de livraison gratuite et un upsell de guide de préparation. Le checkout doit supporter l'achat invité, l'inscription à l'abonnement, les abonnements cadeaux, l'adresse de livraison, les méthodes de paiement et la confirmation avec l'estimation de livraison du premier torréfaction. Les comptes doivent inclure l'historique des commandes, le portail d'abonné pour sauter ou échanger des sacs, les favoris, les récompenses de parrainage et les points de fidélité. Ajoutez un quiz de café, un constructeur d'abonnements, des guides de préparation et une page de récompenses de parrainage. Le mobile doit faciliter le quiz et la gestion d'abonnement avec des cartes de torréfaction swipeables. Utilisez une esthétique artisanale chaleureuse avec des couleurs ton café, des textures rustiques et une photographie artisanale."
+      }
+    ]
+  },
+  "loginRequired": {
+    "title": "Authentification requise",
+    "description": "Veuillez vous connecter ou créer un compte pour accéder à cette page.",
+    "loginButton": "Se connecter"
+  },
+  "templates": {
+    "download": "Télécharger",
+    "editWithAi": "Modifier avec l'IA",
+    "cloningTitle": "Clonage du dépôt…",
+    "cloningDesc": "Récupération des fichiers depuis GitHub",
+    "preparingTitle": "Préparation du téléchargement…",
+    "preparingDesc": "Compression et enregistrement sur votre appareil",
+    "completedTitle": "Téléchargement terminé",
+    "completedDesc": "Fichier enregistré dans votre dossier de téléchargements",
+    "failedTitle": "Échec du téléchargement",
+    "failedDesc": "Une erreur s'est produite",
+    "abortedTitle": "Téléchargement annulé",
+    "abortedDesc": "Opération annulée par l'utilisateur",
+    "abort": "Annuler",
+    "dismiss": "Fermer"
+  },
+  "presets": {
+    "tpl_shop_now_title": "Shop Now",
+    "tpl_shop_now_desc": "Un site de vente de chaussures moderne avec catalogue de produits, panier et expérience de paiement.",
+    "tpl_home_control_title": "Home Control",
+    "tpl_home_control_desc": "Un tableau de bord pour la maison intelligente permettant de surveiller et de contrôler les appareils, la consommation d'énergie et l'état des pièces."
+  }
+}

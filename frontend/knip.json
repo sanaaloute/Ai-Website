@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "rules": {
+    "exports": "off",
+    "nsExports": "off",
+    "types": "off",
+    "nsTypes": "off",
+    "enumMembers": "off",
+    "namespaceMembers": "off",
+    "duplicates": "off"
+  },
+  "project": [
+    "app/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "hooks/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "utils/**/*.{ts,tsx}",
+    "config/**/*.{ts,tsx}",
+    "stores/**/*.{ts,tsx}",
+    "scripts/**/*.{ts,tsx,js}",
+    "select-edit-feature/**/*.{ts,tsx,js}"
+  ],
+  "ignore": [
+    "select-edit-feature/**/*.js"
+  ]
+}

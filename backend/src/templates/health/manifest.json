@@ -1,0 +1,11 @@
+{
+  "name": "Health",
+  "category": "health",
+  "description": "Minimal scaffold for Health projects",
+  "recommended_packages": [
+    "lucide-react",
+    "pocketbase",
+    "react",
+    "react-dom"
+  ]
+}
