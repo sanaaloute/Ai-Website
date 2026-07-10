@@ -1,5 +1,14 @@
 import createNextIntlPlugin from "next-intl/plugin";
 
+// Share the single repo-root `.env` with the backend/admin. Loaded before Next's
+// own env files so the root file is the common base; a per-app
+// `frontend/.env.local` can still override individual keys.
+try {
+  process.loadEnvFile("../.env");
+} catch {
+  // root .env is optional (e.g. CI injects env directly)
+}
+
 const withNextIntl = createNextIntlPlugin();
 
 /** @type {import('next').NextConfig} */

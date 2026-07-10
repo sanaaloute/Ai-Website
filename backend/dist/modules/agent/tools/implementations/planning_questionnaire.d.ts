@@ -12,29 +12,29 @@ declare const planningQuestionnaireSchema: z.ZodObject<{
         type: "text" | "radio" | "checkbox";
         question: string;
         id?: string | undefined;
-        required?: boolean | undefined;
         options?: string[] | undefined;
+        required?: boolean | undefined;
         placeholder?: string | undefined;
     }, {
         type: "text" | "radio" | "checkbox";
         question: string;
         id?: string | undefined;
-        required?: boolean | undefined;
         options?: string[] | undefined;
+        required?: boolean | undefined;
         placeholder?: string | undefined;
     }>, {
         type: "text" | "radio" | "checkbox";
         question: string;
         id?: string | undefined;
-        required?: boolean | undefined;
         options?: string[] | undefined;
+        required?: boolean | undefined;
         placeholder?: string | undefined;
     }, {
         type: "text" | "radio" | "checkbox";
         question: string;
         id?: string | undefined;
-        required?: boolean | undefined;
         options?: string[] | undefined;
+        required?: boolean | undefined;
         placeholder?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
@@ -42,8 +42,8 @@ declare const planningQuestionnaireSchema: z.ZodObject<{
         type: "text" | "radio" | "checkbox";
         question: string;
         id?: string | undefined;
-        required?: boolean | undefined;
         options?: string[] | undefined;
+        required?: boolean | undefined;
         placeholder?: string | undefined;
     }[];
 }, {
@@ -51,8 +51,8 @@ declare const planningQuestionnaireSchema: z.ZodObject<{
         type: "text" | "radio" | "checkbox";
         question: string;
         id?: string | undefined;
-        required?: boolean | undefined;
         options?: string[] | undefined;
+        required?: boolean | undefined;
         placeholder?: string | undefined;
     }[];
 }>;
@@ -71,29 +71,29 @@ export declare class PlanningQuestionnaireTool extends AgentTool {
             type: "text" | "radio" | "checkbox";
             question: string;
             id?: string | undefined;
-            required?: boolean | undefined;
             options?: string[] | undefined;
+            required?: boolean | undefined;
             placeholder?: string | undefined;
         }, {
             type: "text" | "radio" | "checkbox";
             question: string;
             id?: string | undefined;
-            required?: boolean | undefined;
             options?: string[] | undefined;
+            required?: boolean | undefined;
             placeholder?: string | undefined;
         }>, {
             type: "text" | "radio" | "checkbox";
             question: string;
             id?: string | undefined;
-            required?: boolean | undefined;
             options?: string[] | undefined;
+            required?: boolean | undefined;
             placeholder?: string | undefined;
         }, {
             type: "text" | "radio" | "checkbox";
             question: string;
             id?: string | undefined;
-            required?: boolean | undefined;
             options?: string[] | undefined;
+            required?: boolean | undefined;
             placeholder?: string | undefined;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
@@ -101,8 +101,8 @@ export declare class PlanningQuestionnaireTool extends AgentTool {
             type: "text" | "radio" | "checkbox";
             question: string;
             id?: string | undefined;
-            required?: boolean | undefined;
             options?: string[] | undefined;
+            required?: boolean | undefined;
             placeholder?: string | undefined;
         }[];
     }, {
@@ -110,8 +110,8 @@ export declare class PlanningQuestionnaireTool extends AgentTool {
             type: "text" | "radio" | "checkbox";
             question: string;
             id?: string | undefined;
-            required?: boolean | undefined;
             options?: string[] | undefined;
+            required?: boolean | undefined;
             placeholder?: string | undefined;
         }[];
     }>;

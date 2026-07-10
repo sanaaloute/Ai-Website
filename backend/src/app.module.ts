@@ -19,7 +19,10 @@ import { JobQueueModule } from './modules/job-queue/job-queue.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // Single source of truth: the repo-root `.env`. Loaded first so every app
+    // (backend / frontend / admin) shares one file. A per-app `.env` can still
+    // override for app-specific tweaks.
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../.env', '.env'] }),
     CoreModule,
     AgentModule,
     SandboxModule,

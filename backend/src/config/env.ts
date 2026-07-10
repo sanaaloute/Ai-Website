@@ -96,8 +96,12 @@ export function buildEnv(): Env {
   const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY', ['NEXT_PUBLIC_SUPABASE_ANON_KEY']) ?? '';
   const supabaseServiceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
   const e2bApiKey = requireEnv('E2B_API_KEY');
-  const stripeSecretKey = requireEnv('STRIPE_SECRET_KEY');
-  const stripeWebhookSecret = requireEnv('STRIPE_WEBHOOK_SECRET');
+  // Stripe is OPTIONAL: when the keys are absent the app boots with billing
+  // disabled (StripeService already stubs checkout/portal/webhook when
+  // unconfigured). Set STRIPE_SECRET_KEY (+ STRIPE_WEBHOOK_SECRET) to enable.
+  const stripeSecretKey = getEnv('STRIPE_SECRET_KEY') ?? '';
+  const stripeWebhookSecret = getEnv('STRIPE_WEBHOOK_SECRET') ?? '';
+  if (!stripeSecretKey) logger.warn('Stripe disabled: STRIPE_SECRET_KEY not set (billing off)');
 
   const redisUrl = requireEnv('REDIS_URL');
 

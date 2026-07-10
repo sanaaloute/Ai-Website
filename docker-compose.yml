@@ -16,7 +16,7 @@ services:
     image: lovecode-backend
     container_name: backend
     build:
-      context: ./backend-nestjs
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       # Bind to loopback only — host nginx is the single entry point.
@@ -55,7 +55,7 @@ services:
       args:
         # Public build-time variables are baked into the Next.js bundle.
         NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-}
-        NEXT_PUBLIC_LOVECODE_API_KEY_SITE_URL: ${NEXT_PUBLIC_LOVECODE_API_KEY_SITE_URL:-}
+        NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL: ${NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL:-}
     ports:
       # Bind to loopback only — host nginx proxies public traffic here.
       - "127.0.0.1:3000:3000"

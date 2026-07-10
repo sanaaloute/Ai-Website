@@ -111,12 +111,12 @@ export declare const frameworkDocsSchema: z.ZodObject<{
     query: z.ZodString;
     tokens: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    framework: "next" | "vite" | "react" | "prisma" | "pocketbase" | "nextjs" | "node" | "nodejs" | "playwright";
     query: string;
+    framework: "react" | "vite" | "next" | "nextjs" | "prisma" | "node" | "nodejs" | "pocketbase" | "playwright";
     tokens?: number | undefined;
 }, {
-    framework: "next" | "vite" | "react" | "prisma" | "pocketbase" | "nextjs" | "node" | "nodejs" | "playwright";
     query: string;
+    framework: "react" | "vite" | "next" | "nextjs" | "prisma" | "node" | "nodejs" | "pocketbase" | "playwright";
     tokens?: number | undefined;
 }>;
 export declare const singleFrameworkDocsSchema: (framework: string) => z.ZodObject<{

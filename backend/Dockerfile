@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM mcr.microsoft.com/playwright:v1.61.1-jammy AS base
 
 # Install dependencies (including dev deps needed for the build)

@@ -27,8 +27,10 @@ function buildEnv() {
     const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY', ['NEXT_PUBLIC_SUPABASE_ANON_KEY']) ?? '';
     const supabaseServiceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     const e2bApiKey = requireEnv('E2B_API_KEY');
-    const stripeSecretKey = requireEnv('STRIPE_SECRET_KEY');
-    const stripeWebhookSecret = requireEnv('STRIPE_WEBHOOK_SECRET');
+    const stripeSecretKey = getEnv('STRIPE_SECRET_KEY') ?? '';
+    const stripeWebhookSecret = getEnv('STRIPE_WEBHOOK_SECRET') ?? '';
+    if (!stripeSecretKey)
+        logger.warn('Stripe disabled: STRIPE_SECRET_KEY not set (billing off)');
     const redisUrl = requireEnv('REDIS_URL');
     const vercelToken = getEnv('VERCEL_TOKEN');
     const vercelTeamId = getEnv('VERCEL_TEAM_ID') ?? '';

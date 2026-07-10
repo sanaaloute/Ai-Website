@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM node:24-slim AS base
 
 # Install dependencies only when needed

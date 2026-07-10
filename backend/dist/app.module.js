@@ -29,7 +29,7 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            config_1.ConfigModule.forRoot({ isGlobal: true }),
+            config_1.ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../.env', '.env'] }),
             core_module_1.CoreModule,
             agent_module_1.AgentModule,
             sandbox_module_1.SandboxModule,
