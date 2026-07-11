@@ -24,9 +24,11 @@ CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 CERT_FULLCHAIN="$CERT_DIR/fullchain.pem"
 CERT_KEY="$CERT_DIR/privkey.pem"
 
-# Host nginx config location (Debian/Ubuntu sites-available/sites-enabled layout).
+# Host nginx config locations. Debian/Ubuntu sites-available/sites-enabled is the
+# default; install_host_config falls back to conf.d (nginx.org / RHEL layout).
 HOST_NGINX_AVAILABLE="/etc/nginx/sites-available/ai-website"
 HOST_NGINX_ENABLED="/etc/nginx/sites-enabled/ai-website"
+HOST_NGINX_CONFD="/etc/nginx/conf.d/ai-website.conf"
 
 # Repo sources installed on first boot (the host owns them afterwards).
 SRC_HTTP_CONF="$ROOT/nginx-host.http.conf"   # HTTP-only bootstrap (no cert needed)
@@ -58,7 +60,7 @@ letsencrypt_email() {
   fi
 }
 
-host_config_installed() { [[ -e "$HOST_NGINX_ENABLED" || -f "$HOST_NGINX_AVAILABLE" ]]; }
+host_config_installed() { [[ -e "$HOST_NGINX_ENABLED" || -f "$HOST_NGINX_AVAILABLE" || -f "$HOST_NGINX_CONFD" ]]; }
 
 # Install one of the repo host configs into sites-available and symlink it into
 # sites-enabled. mode: http | https. Non-fatal without sudo (host-managed).
@@ -71,9 +73,23 @@ install_host_config() {
   esac
   [[ -f "$src" ]] || die "Missing host nginx config: $src"
   need_sudo || return 0
-  log "Installing host nginx config ($mode) -> $HOST_NGINX_AVAILABLE"
-  sudo install -m 0644 "$src" "$HOST_NGINX_AVAILABLE"
-  sudo ln -sfn "$HOST_NGINX_AVAILABLE" "$HOST_NGINX_ENABLED"
+  if ! command -v nginx >/dev/null 2>&1; then
+    warn "nginx is not installed on the host. One-time setup, then re-run deploy:"
+    warn "  sudo apt update && sudo apt install -y nginx certbot"
+    warn "  sudo mkdir -p /var/www/certbot"
+    return 0
+  fi
+  # Layout: Debian/Ubuntu sites-enabled (preferred) vs conf.d (nginx.org / RHEL).
+  if [[ -d /etc/nginx/sites-available ]] || grep -qE 'include[[:space:]]+/etc/nginx/sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
+    sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+    log "Installing host nginx config ($mode) -> $HOST_NGINX_AVAILABLE"
+    sudo install -m 0644 "$src" "$HOST_NGINX_AVAILABLE"
+    sudo ln -sfn "$HOST_NGINX_AVAILABLE" "$HOST_NGINX_ENABLED"
+  else
+    sudo mkdir -p /etc/nginx/conf.d
+    log "Installing host nginx config ($mode) -> $HOST_NGINX_CONFD"
+    sudo install -m 0644 "$src" "$HOST_NGINX_CONFD"
+  fi
 }
 
 # Ensure a host nginx config exists so ACME + the site work. Host-managed after
