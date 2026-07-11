@@ -1,55 +1,74 @@
-# Nginx reverse proxy (Docker)
+# Nginx reverse proxy (host)
 
-This directory is mounted into the `nginx` service in `docker-compose.yml`.
-It is the single public entry point on ports 80/443 and routes to the app
-containers by Docker service name (no host nginx required).
+Nginx runs **on the host**, independently of Docker. The app containers
+(`frontend`, `backend`, `admin`) bind to `127.0.0.1` only; the host nginx is the
+single public entry point on ports 80/443 and proxies to them on localhost.
 
-- `conf.d/default.conf` — active HTTP config (port 80). Loaded automatically.
-- `conf.d/ssl.conf.template` — HTTPS config (port 443). Not loaded until renamed to `.conf`.
+Routing (host → localhost):
+- `ai-web-builder.com`, `www.ai-web-builder.com` → `127.0.0.1:3000` (frontend)
+- `/api/*`, `/health`, `/live`, `/ready` → `127.0.0.1:4000` (backend)
+- `admin.ai-web-builder.com` → `127.0.0.1:3001` (admin)
 
-Routing (service name → container):
-- `ai-web-builder.com`, `www.ai-web-builder.com` → `frontend:3000`
-- `ai-web-builder.com/api/*`, `/health`, `/live`, `/ready` → `backend:4000`
-- `admin.ai-web-builder.com` → `admin:3000`
+Files in this repo:
+- `nginx-host.conf` — full HTTPS config (80 → 443 redirect + 443). Requires a cert.
+- `nginx-host.http.conf` — HTTP-only bootstrap for first boot (no cert yet).
 
-## 1) Bring the stack up (site reachable on HTTP :80)
+## One-time host setup
 
 ```bash
-docker compose up -d --build
+sudo apt update && sudo apt install -y nginx certbot
+sudo mkdir -p /var/www/certbot
+```
+
+## 1) Bring the app stack up (no nginx container)
+
+```bash
+bash scripts/deploy.sh
+```
+
+On first boot the script installs `nginx-host.http.conf` to
+`/etc/nginx/sites-available/ai-website` (symlinked into `sites-enabled`) and
+reloads host nginx, so the site is reachable over HTTP on port 80:
+
+```bash
 curl -I http://localhost/nginx-health   # HTTP/1.1 200 OK
 ```
 
+If a host config already exists, the script leaves it untouched (host-managed).
+
 ## 2) Enable HTTPS (after DNS A records point to the instance)
 
-The deploy scripts configure nginx automatically based on whether certificates
-exist under `certbot/conf/live/ai-web-builder.com/`. Set `LETSENCRYPT_EMAIL` in
-`.env`, then run:
+Set `LETSENCRYPT_EMAIL` in `.env`, ensure port 80 is reachable, then:
 
 ```bash
-bash scripts/deploy.sh --request-cert
+sudo bash scripts/deploy.sh --request-cert
 ```
 
-The script brings nginx up in HTTP mode to answer the ACME challenge, obtains
-certificates for `ai-web-builder.com`, `www.ai-web-builder.com` and
-`admin.ai-web-builder.com`, then switches nginx to HTTPS mode (port 80 redirects
-to https; port 443 proxies the app). On later runs it auto-detects the existing
-certificates.
+The script ensures host nginx serves the ACME webroot, obtains certificates for
+`ai-web-builder.com`, `www.ai-web-builder.com` and `admin.ai-web-builder.com`
+via host certbot, installs the full `nginx-host.conf` (HTTPS), and reloads nginx.
+On later runs it auto-detects the existing certificate.
 
-Renewal (set up as a cron/timer):
+Renewal (certbot installs a systemd timer/cron automatically; reload nginx after
+renewal so it picks up the new cert):
 
 ```bash
-docker compose run --rm certbot renew
-docker compose exec nginx nginx -s reload
+sudo certbot renew
+sudo systemctl reload nginx
 ```
 
 Manual equivalent (without the script):
 
 ```bash
-docker compose run --rm certbot certonly --webroot \
+sudo certbot certonly --webroot \
   -w /var/www/certbot \
   -d ai-web-builder.com -d www.ai-web-builder.com -d admin.ai-web-builder.com \
   --email you@example.com --agree-tos --no-eff-email
-mv nginx/conf.d/default.conf nginx/conf.d/default.conf.off   # ssl.conf owns port 80
-cp nginx/conf.d/ssl.conf.template nginx/conf.d/ssl.conf
-docker compose restart nginx
+sudo install -m 0644 nginx-host.conf /etc/nginx/sites-available/ai-website
+sudo ln -sfn /etc/nginx/sites-available/ai-website /etc/nginx/sites-enabled/ai-website
+sudo nginx -t && sudo systemctl reload nginx
 ```
+
+> `scripts/deploy.sh` / `scripts/upgrade.sh` call `sudo systemctl reload nginx`
+> and `sudo certbot`. Run them with `sudo`, or grant the deploy user passwordless
+> sudo for `systemctl reload nginx`, `nginx -t`, and `certbot`.

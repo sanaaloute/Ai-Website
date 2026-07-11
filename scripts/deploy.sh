@@ -3,8 +3,11 @@
 #   1) docker compose down          (tear existing containers down)
 #   2) docker compose build         (build FRESH images)
 #   3) prisma migrate deploy        (run DB migrations, fail-fast)
-#   4) configure nginx (HTTP, or HTTPS with redirect if certs exist)
-#   5) docker compose up -d         (create and start all containers)
+#   4) configure host nginx (HTTP bootstrap, or HTTPS if certificates exist)
+#   5) docker compose up -d         (create and start the app containers)
+#
+# Nginx runs on the HOST (not in Docker) and proxies to the app containers on
+# 127.0.0.1 (frontend :3000, backend :4000, admin :3001).
 #
 # Prisma migrations also run automatically in the backend container entrypoint
 # (Dockerfile CMD: `npx prisma migrate deploy && node dist/main`); the explicit
@@ -59,15 +62,15 @@ MSG
 fi
 ok "Migrations applied."
 
-# If requested and no cert yet, boot nginx in HTTP mode to answer ACME, then
-# switch to HTTPS once the certificate exists.
+# If requested and no cert yet, ensure host nginx serves HTTP (to answer ACME),
+# obtain the certificate via host certbot, then switch the host config to HTTPS.
 if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
-  configure_nginx_mode
-  log "Starting nginx (HTTP) to answer the ACME challenge..."
-  docker compose up -d nginx
-  sleep 3
+  configure_nginx_mode            # installs the HTTP bootstrap if no config exists
+  reload_nginx                    # start/reload host nginx so the webroot is live
+  sleep 2
   if request_certs "$(letsencrypt_email)"; then
     ok "Certificates obtained."
+    enable_https_config           # install the full HTTPS host config
   else
     warn "Certbot failed — continuing in HTTP mode. Check DNS A records and that port 80 is reachable."
   fi

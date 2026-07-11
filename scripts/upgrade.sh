@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Update / upgrade an existing production deployment with minimal disruption.
 # Unlike deploy.sh this does NOT tear everything down: it (optionally) pulls the
-# latest code, rebuilds images, re-evaluates the nginx mode, and recreates only
+# latest code, rebuilds images, reloads host nginx, and recreates only
 # the services that changed. Prisma migrations run automatically via the backend
 # container entrypoint when it is recreated.
 #
@@ -35,13 +35,6 @@ done
 command -v docker >/dev/null 2>&1 || die "docker is not installed."
 docker compose version >/dev/null 2>&1 || die "the 'docker compose' plugin is not installed."
 
-# If a previous run left nginx in HTTPS mode, default.conf was moved aside.
-# Restore it now so a fast-forward git pull sees a clean tree; configure_nginx_mode
-# (below) puts the correct file back before nginx is reloaded.
-if [[ -f "$CONF_D/default.conf.off" && ! -f "$CONF_D/default.conf" ]]; then
-  mv -f "$CONF_D/default.conf.off" "$CONF_D/default.conf"
-fi
-
 if [[ "$GIT_PULL" -eq 1 && -d "$ROOT/.git" ]]; then
   if [[ -n "$(git -C "$ROOT" status --porcelain)" ]]; then
     warn "Working tree has local changes — skipping git pull (use --no-git-pull to silence)."
@@ -61,17 +54,20 @@ fi
 
 if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
   configure_nginx_mode
-  log "Starting nginx (HTTP) to answer the ACME challenge..."
-  docker compose up -d nginx
-  sleep 3
-  request_certs "$(letsencrypt_email)" || warn "Certbot failed — keeping the current nginx mode."
+  reload_nginx
+  sleep 2
+  if request_certs "$(letsencrypt_email)"; then
+    enable_https_config
+  else
+    warn "Certbot failed — keeping the current host nginx config."
+  fi
 fi
 
 log "Configuring nginx mode..."
 configure_nginx_mode
 
 log "Recreating changed services..."
-docker compose up -d
+docker compose up -d --remove-orphans
 
 reload_nginx
 wait_for_backend || warn "Backend health check failed — see logs above."
