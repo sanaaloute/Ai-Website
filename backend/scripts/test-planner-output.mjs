@@ -37,7 +37,7 @@ loadEnvFile(resolve(__dirname, '../../.env'));
 
 const AI_BASE_URL = (process.env.AI_BASE_URL || 'https://www.tokenfree.com/v1').replace(/\/+$/, '');
 const AI_API_KEY = process.env.AI_API_KEY || process.env.NEW_API_KEY || '';
-const MODEL = process.env.TEST_MODEL || 'gpt-5.4';
+const MODEL = process.env.TEST_MODEL || 'qwen-max';
 
 const userRequest = process.argv[2] || 'Create a personal portfolio website';
 

@@ -608,7 +608,7 @@ export class AiGatewayService {
   async validateApiKey(apiKey: string): Promise<{ valid: boolean; warning: string | null; authFailure: boolean }> {
     const e = env();
     // Try the configured default model first, then fall back through the approved provider models.
-    const models = Array.from(new Set([e.aiDefaultModel, e.aiReflectionModel, 'gpt-5.4', 'qwen-max', 'kimi-k2.5'].filter(Boolean)));
+    const models = Array.from(new Set([e.aiDefaultModel, e.aiReflectionModel, 'qwen-max', 'kimi-k2.5'].filter(Boolean)));
     const errors: string[] = [];
     const statuses: number[] = [];
     for (const [i, model] of models.entries()) {

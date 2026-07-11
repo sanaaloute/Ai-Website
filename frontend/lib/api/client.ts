@@ -9,7 +9,7 @@ import { backendApiUrl } from './backendConfig';
 import { safeFetchJson, safeFetchBlob, type SafeFetchResult } from './safeFetch';
 import { withAuthInit } from '@/lib/auth/token';
 
-export const DEFAULT_AI_MODEL = 'gpt-5.4';
+export const DEFAULT_AI_MODEL = 'qwen-max';
 
 // ─── Types ──────────────────────────────────────────────────────────────
 

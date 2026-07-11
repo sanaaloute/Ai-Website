@@ -141,7 +141,7 @@ export function buildEnv(): Env {
 
     aiBaseUrl: getEnv('AI_BASE_URL') ?? 'https://www.tokenfree.com/v1',
     aiApiKey: getEnv('AI_API_KEY', ['NEW_API_KEY']) ?? '',
-    aiDefaultModel: getEnv('AI_DEFAULT_MODEL') ?? 'gpt-5.4',
+    aiDefaultModel: getEnv('AI_DEFAULT_MODEL') ?? 'qwen-max',
     aiReflectionModel: getEnv('AI_REFLECTION_MODEL') ?? 'qwen-max',
 
     e2bApiKey,

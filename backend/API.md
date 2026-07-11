@@ -340,7 +340,7 @@ Run the LangGraph agent and stream progress events.
 ```json
 {
   "prompt": "Build a landing page for a SaaS product",
-  "model": "gpt-5.4",
+  "model": "qwen-max",
   "sandboxId": "sandbox-xxx",
   "chatHistory": [
     { "role": "user", "content": "..." }
@@ -394,7 +394,7 @@ Simple prompt-to-SSE chat proxy to the AI gateway.
 {
   "provider": "ai-website",
   "prompt": "Explain React hooks",
-  "model": "gpt-5.4"
+  "model": "qwen-max"
 }
 ```
 
@@ -429,7 +429,7 @@ Returns a structured search plan for visual/select edits.
     "routes": [],
     "componentTree": {}
   },
-  "model": "gpt-5.4"
+  "model": "qwen-max"
 }
 ```
 
@@ -469,7 +469,7 @@ Applies parsed AI output to the sandbox with streaming progress.
   "is_edit": false,
   "packages": ["framer-motion"],
   "sandboxId": "sandbox-xxx",
-  "model": "gpt-5.4",
+  "model": "qwen-max",
   "conversationState": {},
   "existingFiles": ["src/App.tsx"],
   "currentFiles": {}
