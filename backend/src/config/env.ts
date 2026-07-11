@@ -33,7 +33,6 @@ export interface Env {
   aiBaseUrl: string;
   aiApiKey: string;
   aiDefaultModel: string;
-  aiReflectionModel: string;
 
   e2bApiKey: string;
   sandboxProvider: string;
@@ -142,7 +141,6 @@ export function buildEnv(): Env {
     aiBaseUrl: getEnv('AI_BASE_URL') ?? 'https://www.tokenfree.com/v1',
     aiApiKey: getEnv('AI_API_KEY', ['NEW_API_KEY']) ?? '',
     aiDefaultModel: getEnv('AI_DEFAULT_MODEL') ?? 'qwen-max',
-    aiReflectionModel: getEnv('AI_REFLECTION_MODEL') ?? 'qwen-max',
 
     e2bApiKey,
     sandboxProvider: getEnv('SANDBOX_PROVIDER') ?? 'e2b',

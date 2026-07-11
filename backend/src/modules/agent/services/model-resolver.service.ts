@@ -71,7 +71,6 @@ export class ModelResolverService {
     const sequence = this.dedupe([
       ...rolePrimaries[role],
       e.aiDefaultModel,
-      e.aiReflectionModel,
       ...approvedFallbacks,
     ]).filter((model) => ALLOWED_MODELS.has(model));
 

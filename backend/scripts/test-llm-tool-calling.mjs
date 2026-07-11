@@ -52,7 +52,6 @@ const FORCE_TOOL = (process.env.TEST_FORCE_TOOL || 'false').toLowerCase() === 't
 
 const DEFAULT_MODELS = [
   process.env.AI_DEFAULT_MODEL,
-  process.env.AI_REFLECTION_MODEL,
 
   'qwen-max',
   'kimi-k2.5',
