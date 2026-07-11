@@ -1,4 +1,4 @@
-# LoveCode Backend API Documentation
+# AI-Website Backend API Documentation
 
 > Base URL: `http://localhost:4000` (development default) or your production host.
 
@@ -129,9 +129,9 @@ Update profile fields (partial update).
 
 ---
 
-### `GET /api/lovecode-api-key`
+### `GET /api/ai-website-api-key`
 
-Check whether the user has stored a LoveCode AI gateway API key.
+Check whether the user has stored a AI-Website AI gateway API key.
 
 | Attribute | Value |
 |-----------|-------|
@@ -148,9 +148,9 @@ Check whether the user has stored a LoveCode AI gateway API key.
 
 ---
 
-### `PUT /api/lovecode-api-key`
+### `PUT /api/ai-website-api-key`
 
-Save or update the user's LoveCode API key.
+Save or update the user's AI-Website API key.
 
 | Attribute | Value |
 |-----------|-------|
@@ -177,7 +177,7 @@ Save or update the user's LoveCode API key.
 
 ---
 
-### `DELETE /api/lovecode-api-key`
+### `DELETE /api/ai-website-api-key`
 
 Remove the stored API key.
 
@@ -292,9 +292,9 @@ Request a Supabase Auth password reset email.
 
 ## Agent & AI
 
-Most AI endpoints require a valid `lovecode_api_key` to be stored on the user profile (see `/api/lovecode-api-key`). If missing, they return `402 Payment Required` (mapped as `LoveCodeApiKeyException`).
+Most AI endpoints require a valid `ai_website_api_key` to be stored on the user profile (see `/api/ai-website-api-key`). If missing, they return `402 Payment Required` (mapped as `AiWebsiteApiKeyException`).
 
-Endpoints that require the LoveCode API key:
+Endpoints that require the AI-Website API key:
 
 - `POST /api/chat`
 - `POST /api/analyze-edit-intent`
@@ -316,7 +316,7 @@ Run the LangGraph agent and stream progress events.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Rate Limit** | 10/minute |
 | **Content-Type** | `application/json` |
 | **Response Type** | `text/event-stream` (SSE) |
@@ -370,14 +370,14 @@ Simple prompt-to-SSE chat proxy to the AI gateway.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Content-Type** | `application/json` |
 | **Response Type** | `text/event-stream` (SSE) |
 
 **Request Body**
 ```json
 {
-  "provider": "lovecode",
+  "provider": "ai-website",
   "prompt": "Explain React hooks",
   "model": "gpt-5.4"
 }
@@ -402,7 +402,7 @@ Returns a structured search plan for visual/select edits.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -485,7 +485,7 @@ Generate a standalone React component.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -517,7 +517,7 @@ Generate a complete page component.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -549,7 +549,7 @@ Generate design tokens JSON from a spec.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -585,7 +585,7 @@ Summarize a free-form prompt into a structured project spec.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -619,7 +619,7 @@ Produce a page/section blueprint from a spec.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Required |
+| **AI-Website API Key** | Required |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -653,7 +653,7 @@ Build a deterministic file plan from spec + blueprint.
 | Attribute | Value |
 |-----------|-------|
 | **Auth** | Required |
-| **LoveCode API Key** | Not required (uses gateway key) |
+| **AI-Website API Key** | Not required (uses gateway key) |
 | **Content-Type** | `application/json` |
 
 **Request Body**
@@ -1477,7 +1477,7 @@ Durable save: writes snapshot JSON, files table, and zip artifact.
   "sandboxId": "sandbox-xxx",
   "projectId": "uuid",
   "projectName": "My App",
-  "lovecodeProjectUuid": "uuid",
+  "aiWebsiteProjectUuid": "uuid",
   "fileStructure": "...",
   "structureContent": "...",
   "chat": [],
@@ -1780,7 +1780,7 @@ Push files to GitHub.
   "files": [
     { "path": "src/App.tsx", "content": "..." }
   ],
-  "lovecodeProjectId": "uuid"
+  "aiWebsiteProjectId": "uuid"
 }
 ```
 
@@ -2093,7 +2093,7 @@ Readiness probe. Checks Redis connectivity.
 | `200` | OK | Success |
 | `307` | Temporary Redirect | OAuth flows |
 | `401` | Unauthorized | Missing or invalid JWT/cookie |
-| `402` | Payment Required | Missing `lovecode_api_key` on AI endpoints |
+| `402` | Payment Required | Missing `ai_website_api_key` on AI endpoints |
 | `404` | Not Found | Resource does not exist |
 | `422` | Unprocessable Entity | Validation error (e.g., missing required field) |
 | `429` | Too Many Requests | Rate limit exceeded |

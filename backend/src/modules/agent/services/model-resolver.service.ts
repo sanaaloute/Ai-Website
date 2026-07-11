@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { env } from '@/config/env';
 
 /**
- * Models approved for use in the LoveCode agent runtime.
+ * Models approved for use in the AI-Website agent runtime.
  */
 const ALLOWED_MODELS = new Set([
   'gpt-5.4',

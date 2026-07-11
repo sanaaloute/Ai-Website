@@ -145,7 +145,7 @@ export class CookieService {
     this.clearCookieVariants(res, e.accessTokenCookieName, req);
     this.clearCookieVariants(res, e.refreshTokenCookieName, req);
     // Also purge legacy Supabase cookie names so an old token from a previous
-    // client implementation cannot shadow the new LoveCode session.
+    // client implementation cannot shadow the new AI-Website session.
     const legacyAccessNames = ['sb-access-token', 'supabase-auth-token', 'sb-refresh-token'];
     for (const name of legacyAccessNames) {
       this.clearCookieVariants(res, name, req);

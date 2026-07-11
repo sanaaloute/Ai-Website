@@ -1,12 +1,12 @@
-"""Visualize the LoveCode LangGraph agentic system graph.
+"""Visualize the AI-Website LangGraph agentic system graph.
 
 Usage:
     python show_agent_graph.py
 
 Outputs:
     - Console ASCII art diagram
-    - lovecode_agent_graph.mmd (Mermaid source)
-    - lovecode_agent_graph.png (PNG diagram)
+    - ai_website_agent_graph.mmd (Mermaid source)
+    - ai_website_agent_graph.png (PNG diagram)
 """
 
 import asyncio
@@ -32,30 +32,30 @@ async def main():
     drawable = graph.get_graph()
 
     print("=" * 80)
-    print("LOVECODE AGENTIC SYSTEM GRAPH — ASCII")
+    print("AI-WEBSITE AGENTIC SYSTEM GRAPH — ASCII")
     print("=" * 80)
     drawable.print_ascii()
 
     print("\n" + "=" * 80)
-    print("LOVECODE AGENTIC SYSTEM GRAPH — MERMAID")
+    print("AI-WEBSITE AGENTIC SYSTEM GRAPH — MERMAID")
     print("=" * 80)
     mermaid = drawable.draw_mermaid()
     print(mermaid)
 
     # Save Mermaid source
-    with open("lovecode_agent_graph.mmd", "w") as f:
+    with open("ai_website_agent_graph.mmd", "w") as f:
         f.write(mermaid)
-    print("\n[Saved] lovecode_agent_graph.mmd")
+    print("\n[Saved] ai_website_agent_graph.mmd")
 
     # Try PNG output
     try:
         png_bytes = drawable.draw_mermaid_png()
-        with open("lovecode_agent_graph.png", "wb") as f:
+        with open("ai_website_agent_graph.png", "wb") as f:
             f.write(png_bytes)
-        print("[Saved] lovecode_agent_graph.png")
+        print("[Saved] ai_website_agent_graph.png")
     except Exception as e:
         print(f"[PNG skipped] {e}")
-        print("You can render lovecode_agent_graph.mmd in any Mermaid viewer.")
+        print("You can render ai_website_agent_graph.mmd in any Mermaid viewer.")
 
     # Print structured summary
     print("\n" + "=" * 80)

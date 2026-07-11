@@ -1,6 +1,6 @@
-# Lovecode Admin Dashboard
+# AI-Website Admin Dashboard
 
-A premium, futuristic admin dashboard for the Lovecode AI app builder platform. Built with Next.js 16, TypeScript, Tailwind CSS v4, Recharts, Framer Motion, and TanStack Query.
+A premium, futuristic admin dashboard for the AI-Website AI app builder platform. Built with Next.js 16, TypeScript, Tailwind CSS v4, Recharts, Framer Motion, and TanStack Query.
 
 ## Features
 
@@ -158,4 +158,4 @@ Login, register, forgot-password, and reset-password pages are all wired to the 
 
 ## License
 
-Proprietary – Lovecode Team
+Proprietary – AI-Website Team

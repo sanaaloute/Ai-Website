@@ -18,7 +18,7 @@ export interface PocketBaseDeploymentFiles {
 
 export const DEFAULT_POCKETBASE_ADMIN_EMAIL = 'admin@ai-web-builder.com';
 // PocketBase requires passwords to be at least 8 characters.
-export const DEFAULT_POCKETBASE_ADMIN_PASSWORD = 'admin@lovecode';
+export const DEFAULT_POCKETBASE_ADMIN_PASSWORD = 'admin@aiwebsite';
 
 export interface RenderDeploymentOptions {
   projectName: string;

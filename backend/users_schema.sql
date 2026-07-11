@@ -1,4 +1,4 @@
--- User profile table used by LoveCode (mirrors/authors from Supabase Auth).
+-- User profile table used by AI-Website (mirrors/authors from Supabase Auth).
 -- Safe to run multiple times: it creates the table only if missing and adds
 -- columns only if they do not already exist.
 
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   location TEXT,
   role TEXT,
   bio TEXT,
-  lovecode_api_key TEXT,
+  ai_website_api_key TEXT,
   subscribed BOOLEAN DEFAULT false,
   subscription_type TEXT,
   status TEXT NOT NULL DEFAULT 'Active',
@@ -50,8 +50,8 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'bio') THEN
     ALTER TABLE public.users ADD COLUMN bio TEXT;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'lovecode_api_key') THEN
-    ALTER TABLE public.users ADD COLUMN lovecode_api_key TEXT;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'ai_website_api_key') THEN
+    ALTER TABLE public.users ADD COLUMN ai_website_api_key TEXT;
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users' AND column_name = 'subscribed') THEN
     ALTER TABLE public.users ADD COLUMN subscribed BOOLEAN DEFAULT false;

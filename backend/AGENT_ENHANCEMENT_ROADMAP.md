@@ -1,6 +1,6 @@
 # Agentic System Enhancement Roadmap
 
-This roadmap tracks the additions that will make the Lovecode agent generate more professional, beautiful, and bug-free complete websites (storefront + admin dashboard + database) in fewer iterations.
+This roadmap tracks the additions that will make the AI-Website agent generate more professional, beautiful, and bug-free complete websites (storefront + admin dashboard + database) in fewer iterations.
 
 > **Goal:** Move from "works most of the time" to a **self-correcting loop**: designer → planner → executor → type checker → visual/a11y/e2e reviewers → debugger → finalize.
 >

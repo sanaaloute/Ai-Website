@@ -8,7 +8,7 @@ export interface Note {
   updated: string;
 }
 
-const STORAGE_KEY = 'lovecode-notes';
+const STORAGE_KEY = 'ai-website-notes';
 
 function localList(): Note[] {
   try {

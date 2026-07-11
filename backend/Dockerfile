@@ -47,7 +47,7 @@ RUN mkdir -p /app/.agent_store && chown -R nestjs:nodejs /app/.agent_store
 RUN apt-get update \
     && apt-get install -y --no-install-recommends docker.io git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /var/lib/lovecode/sites && chown -R nestjs:nodejs /var/lib/lovecode
+RUN mkdir -p /var/lib/ai-website/sites && chown -R nestjs:nodejs /var/lib/ai-website
 
 USER nestjs
 

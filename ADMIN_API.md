@@ -1,4 +1,4 @@
-# LoveCode Admin API Documentation
+# AI-Website Admin API Documentation
 
 The admin API reference lives in the backend package:
 

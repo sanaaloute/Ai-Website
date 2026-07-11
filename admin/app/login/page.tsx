@@ -28,7 +28,7 @@ function LoginForm() {
   const [error, setError] = useState("");
 
   // Login fields
-  const [email, setEmail] = useState("admin@lovecode.ai");
+  const [email, setEmail] = useState("admin@ai-web-builder.com");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -217,7 +217,7 @@ function LoginForm() {
                     <Input
                       id="forgot-email"
                       type="email"
-                      placeholder="admin@lovecode.ai"
+                      placeholder="admin@ai-web-builder.com"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       className="pl-9"

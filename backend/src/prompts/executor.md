@@ -160,27 +160,27 @@ If `componentsToInstall` is provided, you MUST install those shadcn/ui component
 
 ## Preview Handshake (CRITICAL)
 
-The LoveCode workspace needs to know whether the preview actually rendered or crashed. Every generated app MUST implement this handshake:
+The AI-Website workspace needs to know whether the preview actually rendered or crashed. Every generated app MUST implement this handshake:
 
 1. In `src/main.tsx`, immediately after `ReactDOM.createRoot(...).render(...)`, set the ready flag and notify the parent window:
    ```ts
-   (window as any).__lovecodePreviewReady = true;
+   (window as any).__aiWebsitePreviewReady = true;
    if (window.parent !== window) {
-     window.parent.postMessage({ type: 'LOVECODE_PREVIEW_READY', ts: Date.now() }, '*');
+     window.parent.postMessage({ type: 'AI_WEBSITE_PREVIEW_READY', ts: Date.now() }, '*');
    }
    ```
 2. In `index.html`, include this inline script before `</body>` so a blank/crashed app is reported automatically:
    ```html
    <script>
-     window.__lovecodePreviewReady = false;
+     window.__aiWebsitePreviewReady = false;
      window.addEventListener('load', function () {
        setTimeout(function () {
-         if (window.__lovecodePreviewReady) return;
+         if (window.__aiWebsitePreviewReady) return;
          var root = document.getElementById('root');
          var isBlank = !root || root.childElementCount === 0;
          if (window.parent !== window) {
            window.parent.postMessage({
-             type: isBlank ? 'LOVECODE_PREVIEW_ERROR' : 'LOVECODE_PREVIEW_READY',
+             type: isBlank ? 'AI_WEBSITE_PREVIEW_ERROR' : 'AI_WEBSITE_PREVIEW_READY',
              text: isBlank ? 'Preview rendered a blank page. The React app may have crashed during startup.' : undefined,
              ts: Date.now(),
            }, '*');
@@ -194,7 +194,7 @@ Do NOT omit this handshake. Without it, the workspace cannot distinguish a worki
 
 ## Visual Selection (CRITICAL)
 
-The LoveCode workspace lets users click elements in the preview to edit them with AI. For this to work, EVERY rendered JSX element must carry stable `data-dyad-id` and `data-dyad-name` attributes.
+The AI-Website workspace lets users click elements in the preview to edit them with AI. For this to work, EVERY rendered JSX element must carry stable `data-dyad-id` and `data-dyad-name` attributes.
 
 1. Add `data-dyad-id` to every JSX element that represents a visible component, section, or meaningful UI element.
 2. The value MUST be in the format `relativePath:line` (column is optional). For example, if the element starts on line 14 of `src/components/sections/Hero.tsx`, use:

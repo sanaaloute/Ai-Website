@@ -1,4 +1,4 @@
-# LoveCode API Documentation
+# AI-Website API Documentation
 
 The main API reference lives in the backend package:
 

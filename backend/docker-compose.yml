@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: lovecode-backend-gateway
+    container_name: ai-website-backend-gateway
     ports:
       - "${PORT:-4000}:4000"
     env_file:

@@ -3,12 +3,12 @@ import { SupabaseService } from '@/lib/supabase.service';
 import { RequestWithUser } from '@/types';
 import { env } from '@/config/env';
 
-export class LoveCodeApiKeyException extends HttpException {
+export class AiWebsiteApiKeyException extends HttpException {
   constructor() {
     super(
       {
         success: false,
-        error: `Missing LoveCode API key. Get one at ${env().lovecodeApiKeySiteUrl}`,
+        error: `Missing AI-Website API key. Get one at ${env().aiWebsiteApiKeySiteUrl}`,
       },
       HttpStatus.PAYMENT_REQUIRED,
     );
@@ -28,7 +28,7 @@ export class ApiKeyGuard implements CanActivate {
 
     const { data, error } = await this.supabase.admin
       .from('users')
-      .select('lovecode_api_key')
+      .select('ai_website_api_key')
       .eq('id', userId)
       .single();
 
@@ -36,8 +36,8 @@ export class ApiKeyGuard implements CanActivate {
       throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    if (!data?.lovecode_api_key) {
-      throw new LoveCodeApiKeyException();
+    if (!data?.ai_website_api_key) {
+      throw new AiWebsiteApiKeyException();
     }
 
     return true;

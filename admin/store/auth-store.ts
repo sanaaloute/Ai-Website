@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => set({ isAuthenticated: false, user: null }),
     }),
     {
-      name: "lovecode-auth",
+      name: "ai-website-auth",
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hydrated = true;

@@ -101,10 +101,10 @@ export class IntegrationController {
       }
 
       // Persist tokens server-side so they survive cross-device sessions.
-      const lovecodeAccessCookie = this.parseCookie(req.headers.cookie ?? '', env().accessTokenCookieName);
-      if (lovecodeAccessCookie) {
+      const accessCookie = this.parseCookie(req.headers.cookie ?? '', env().accessTokenCookieName);
+      if (accessCookie) {
         try {
-          const { data: userData } = await this.supabase.admin.auth.getUser(lovecodeAccessCookie);
+          const { data: userData } = await this.supabase.admin.auth.getUser(accessCookie);
           if (userData.user) {
             await this.tokens.upsert(userData.user.id, GITHUB_PROVIDER, token.access_token, token.refresh_token);
           }
@@ -156,13 +156,13 @@ export class IntegrationController {
   @UseGuards(AuthGuard)
   async githubPush(
     @CurrentUser() user: User,
-    @Body() body: { repoName?: string; files?: Array<{ path: string; content: string }>; lovecodeProjectId?: string; aiWebsiteProjectId?: string },
+    @Body() body: { repoName?: string; files?: Array<{ path: string; content: string }>; aiWebsiteProjectId?: string },
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     if (!body.repoName || !body.files) throw new HttpException({ success: false, error: 'repoName and files required' }, HttpStatus.BAD_REQUEST);
 
-    const projectId = body.lovecodeProjectId || body.aiWebsiteProjectId;
+    const projectId = body.aiWebsiteProjectId;
 
     const { accessToken, refreshToken, loadedFromDb } = await this.resolveGithubTokens(
       user.id,
@@ -202,7 +202,7 @@ export class IntegrationController {
         .eq('id', projectId)
         .eq('user_id', user.id);
 
-      await this.projectService.upsertLovecodeJson(user.id, projectId, {
+      await this.projectService.upsertAiWebsiteJson(user.id, projectId, {
         deployment: { githubRepoUrl: result.repoUrl },
       });
     }
@@ -316,7 +316,7 @@ export class IntegrationController {
             .eq('id', body.projectId)
             .eq('user_id', user.id);
 
-          await this.projectService.upsertLovecodeJson(user.id, body.projectId, {
+          await this.projectService.upsertAiWebsiteJson(user.id, body.projectId, {
             project: { name: projectName },
             deployment: {
               platform: this.deploy.activeProvider,

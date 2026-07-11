@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Audit a generated LoveCode React app for integration/routing issues.
+ * Audit a generated AI-Website React app for integration/routing issues.
  * Run from the root of the generated project (where package.json lives).
  *
  * Example:
@@ -173,13 +173,13 @@ function main() {
   // 11. Preview handshake check
   const indexHtml = read(path.join(ROOT, 'index.html')) || '';
   const mainTsx = read(path.join(SRC, 'main.tsx')) || '';
-  if (!mainTsx.includes('LOVECODE_PREVIEW_READY') || !mainTsx.includes('window.parent.postMessage')) {
-    addIssue('src/main.tsx does not post LOVECODE_PREVIEW_READY to the parent window after mounting.');
+  if (!mainTsx.includes('AI_WEBSITE_PREVIEW_READY') || !mainTsx.includes('window.parent.postMessage')) {
+    addIssue('src/main.tsx does not post AI_WEBSITE_PREVIEW_READY to the parent window after mounting.');
   } else {
-    ok('src/main.tsx posts LOVECODE_PREVIEW_READY');
+    ok('src/main.tsx posts AI_WEBSITE_PREVIEW_READY');
   }
-  if (!indexHtml.includes('window.__lovecodePreviewReady = false') || !indexHtml.includes('LOVECODE_PREVIEW_ERROR')) {
-    addIssue('index.html is missing the blank-page safety script that reports LOVECODE_PREVIEW_ERROR.');
+  if (!indexHtml.includes('window.__aiWebsitePreviewReady = false') || !indexHtml.includes('AI_WEBSITE_PREVIEW_ERROR')) {
+    addIssue('index.html is missing the blank-page safety script that reports AI_WEBSITE_PREVIEW_ERROR.');
   } else {
     ok('index.html has blank-page safety script');
   }

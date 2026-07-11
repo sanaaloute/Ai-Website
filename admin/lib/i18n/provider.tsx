@@ -5,7 +5,7 @@ import { I18nContext } from "./context";
 import { Locale, DEFAULT_LOCALE, isValidLocale, isRTL } from "./config";
 import { dictionaries, Dictionary } from "./dictionaries";
 
-const STORAGE_KEY = "lovecode-locale";
+const STORAGE_KEY = "ai-website-locale";
 
 function getInitialLocale(): Locale {
   if (typeof window !== "undefined") {

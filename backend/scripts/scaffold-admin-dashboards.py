@@ -55,7 +55,7 @@ def icon_for(key: str) -> str:
 CONFIG = {
     "automobile": {
         "label": "Automotive",
-        "settings": {"siteName": "LoveCode Automotive", "tagline": "Find your next ride"},
+        "settings": {"siteName": "AI-Website Automotive", "tagline": "Find your next ride"},
         "primary": {
             "name": "listings",
             "singular": "Listing",
@@ -86,7 +86,7 @@ CONFIG = {
     },
     "blog": {
         "label": "Blog",
-        "settings": {"siteName": "LoveCode Blog", "tagline": "Stories and ideas"},
+        "settings": {"siteName": "AI-Website Blog", "tagline": "Stories and ideas"},
         "primary": {
             "name": "posts",
             "singular": "Post",
@@ -114,7 +114,7 @@ CONFIG = {
     },
     "education": {
         "label": "Education",
-        "settings": {"siteName": "LoveCode Learning", "tagline": "Expand your skills"},
+        "settings": {"siteName": "AI-Website Learning", "tagline": "Expand your skills"},
         "primary": {
             "name": "courses",
             "singular": "Course",
@@ -143,7 +143,7 @@ CONFIG = {
     },
     "fashion": {
         "label": "Fashion",
-        "settings": {"siteName": "LoveCode Fashion", "tagline": "Style made simple"},
+        "settings": {"siteName": "AI-Website Fashion", "tagline": "Style made simple"},
         "primary": {
             "name": "products",
             "singular": "Product",
@@ -172,7 +172,7 @@ CONFIG = {
     },
     "generic": {
         "label": "Site",
-        "settings": {"siteName": "LoveCode Site", "tagline": "Your next great site"},
+        "settings": {"siteName": "AI-Website Site", "tagline": "Your next great site"},
         "primary": {
             "name": "pages",
             "singular": "Page",
@@ -195,7 +195,7 @@ CONFIG = {
     },
     "health": {
         "label": "Health",
-        "settings": {"siteName": "LoveCode Health", "tagline": "Wellness at your fingertips"},
+        "settings": {"siteName": "AI-Website Health", "tagline": "Wellness at your fingertips"},
         "primary": {
             "name": "services",
             "singular": "Service",
@@ -224,7 +224,7 @@ CONFIG = {
     },
     "job_portal": {
         "label": "Jobs",
-        "settings": {"siteName": "LoveCode Jobs", "tagline": "Find your dream role"},
+        "settings": {"siteName": "AI-Website Jobs", "tagline": "Find your dream role"},
         "primary": {
             "name": "jobs",
             "singular": "Job",
@@ -253,7 +253,7 @@ CONFIG = {
     },
     "personal": {
         "label": "Personal",
-        "settings": {"siteName": "LoveCode Personal", "tagline": "Your personal corner"},
+        "settings": {"siteName": "AI-Website Personal", "tagline": "Your personal corner"},
         "primary": {
             "name": "entries",
             "singular": "Entry",
@@ -282,7 +282,7 @@ CONFIG = {
     },
     "portfolio": {
         "label": "Portfolio",
-        "settings": {"siteName": "LoveCode Portfolio", "tagline": "Selected work"},
+        "settings": {"siteName": "AI-Website Portfolio", "tagline": "Selected work"},
         "primary": {
             "name": "projects",
             "singular": "Project",
@@ -312,7 +312,7 @@ CONFIG = {
     },
     "real_estate": {
         "label": "Real Estate",
-        "settings": {"siteName": "LoveCode Real Estate", "tagline": "Find your place"},
+        "settings": {"siteName": "AI-Website Real Estate", "tagline": "Find your place"},
         "primary": {
             "name": "properties",
             "singular": "Property",
@@ -342,7 +342,7 @@ CONFIG = {
     },
     "restaurant": {
         "label": "Restaurant",
-        "settings": {"siteName": "LoveCode Restaurant", "tagline": "Reserve your table"},
+        "settings": {"siteName": "AI-Website Restaurant", "tagline": "Reserve your table"},
         "primary": {
             "name": "menu_items",
             "singular": "Menu Item",
@@ -371,7 +371,7 @@ CONFIG = {
     },
     "saas": {
         "label": "SaaS",
-        "settings": {"siteName": "LoveCode SaaS", "tagline": "Build faster"},
+        "settings": {"siteName": "AI-Website SaaS", "tagline": "Build faster"},
         "primary": {
             "name": "features",
             "singular": "Feature",
@@ -398,7 +398,7 @@ CONFIG = {
     },
     "travel": {
         "label": "Travel",
-        "settings": {"siteName": "LoveCode Travel", "tagline": "Explore the world"},
+        "settings": {"siteName": "AI-Website Travel", "tagline": "Explore the world"},
         "primary": {
             "name": "tours",
             "singular": "Tour",
@@ -854,7 +854,7 @@ def gen_settings(config: dict) -> str:
     settings = config["settings"]
     pairs = [f"  {k}: '{v}'," for k, v in settings.items()]
     defaults = "\n".join(pairs)
-    storage_key = f'lovecode_{config["primary"]["name"]}_settings'
+    storage_key = f'ai_website_{config["primary"]["name"]}_settings'
     return f'''import {{ useEffect, useState }} from 'react';
 import {{ Button }} from '@/components/ui/Button';
 import {{ Input, Textarea, PageHeader, AdminCard }} from '@/admin/components/ui';
@@ -941,7 +941,7 @@ export default function AdminSettings() {{
 
 def gen_settings_fixed(config: dict) -> str:
     label = config["label"]
-    site_name = config["settings"].get("siteName", f"LoveCode {label}")
+    site_name = config["settings"].get("siteName", f"AI-Website {label}")
     tagline = config["settings"].get("tagline", "")
     return f'''import {{ useEffect, useState }} from 'react';
 import {{ Button }} from '@/components/ui/Button';
@@ -959,7 +959,7 @@ const DEFAULT_SETTINGS: SiteSettings = {{
   footerText: '',
 }};
 
-const STORAGE_KEY = 'lovecode_{config["primary"]["name"]}_settings';
+const STORAGE_KEY = 'ai_website_{config["primary"]["name"]}_settings';
 
 function loadSettings(): SiteSettings {{
   try {{
@@ -1990,9 +1990,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
-(window as unknown as { __lovecodePreviewReady?: boolean }).__lovecodePreviewReady = true;
+(window as unknown as { __aiWebsitePreviewReady?: boolean }).__aiWebsitePreviewReady = true;
 if (window.parent !== window) {
-  window.parent.postMessage({ type: 'LOVECODE_PREVIEW_READY', ts: Date.now() }, '*');
+  window.parent.postMessage({ type: 'AI_WEBSITE_PREVIEW_READY', ts: Date.now() }, '*');
 }
 '''
 

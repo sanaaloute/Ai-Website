@@ -14,7 +14,7 @@ export class McpController {
 
   private createServer(): Server {
     const server = new Server(
-      { name: 'lovecode-docs', version: '1.0.0' },
+      { name: 'ai-website-docs', version: '1.0.0' },
       { capabilities: { tools: {} } },
     );
 

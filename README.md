@@ -1,11 +1,11 @@
-# LoveCode
+# AI-Website
 
-AI-native application builder. Users describe an app in natural language; LoveCode plans, generates, previews, and deploys a full-stack project inside E2B sandboxes.
+AI-native application builder. Users describe an app in natural language; AI-Website plans, generates, previews, and deploys a full-stack project inside E2B sandboxes.
 
 ## Monorepo
 
 ```
-lovecode-project/
+ai-website-project/
 ├── frontend/          # Next.js 16 user-facing app (builder, landing, projects, billing)
 ├── admin/             # Next.js 16 admin dashboard (users, subscriptions, generations)
 └── backend-nestjs/    # NestJS 11 API gateway (AI, sandboxes, jobs, billing, auth)

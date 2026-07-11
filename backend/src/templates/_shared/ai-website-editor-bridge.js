@@ -521,7 +521,7 @@ function onClick(e) {
   if (e.detail === 2 && clickedComponentId && state.element) {
     window.parent.postMessage(
       {
-        type: "lovecode-request-inline-text-edit",
+        type: "ai-website-request-inline-text-edit",
         componentId: clickedComponentId,
         runtimeId: clickedRuntimeId,
       },

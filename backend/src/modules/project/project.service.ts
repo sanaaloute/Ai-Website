@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { StorageService } from '@/lib/storage.service';
 
-export interface LovecodeDeploymentMetadata {
+export interface AiWebsiteDeploymentMetadata {
   platform?: string;
   githubRepoUrl?: string;
   vercelProjectId?: string;
@@ -11,19 +11,19 @@ export interface LovecodeDeploymentMetadata {
   pocketbaseAdminUrl?: string;
 }
 
-export interface LovecodeProjectMetadata {
+export interface AiWebsiteProjectMetadata {
   uuid?: string;
   name?: string;
   siteTitle?: string;
 }
 
-export interface UpsertLovecodeJsonOptions {
-  project?: LovecodeProjectMetadata;
-  deployment?: LovecodeDeploymentMetadata;
+export interface UpsertAiWebsiteJsonOptions {
+  project?: AiWebsiteProjectMetadata;
+  deployment?: AiWebsiteDeploymentMetadata;
   snapshot?: Record<string, unknown>;
 }
 
-interface LovecodeJson {
+interface AiWebsiteJson {
   project: {
     uuid: string;
     name: string;
@@ -48,25 +48,25 @@ export class ProjectService {
   constructor(private readonly storage: StorageService) {}
 
   /**
-   * Ensures `lovecode.json` exists in the stored project snapshot and file tree.
+   * Ensures `ai-website.json` exists in the stored project snapshot and file tree.
    * Preserves the existing project UUID and merges new project/deployment metadata.
    * Should be called after the project row is created/updated in Supabase.
    */
-  async upsertLovecodeJson(
+  async upsertAiWebsiteJson(
     userId: string,
     projectId: string,
-    options: UpsertLovecodeJsonOptions = {}
+    options: UpsertAiWebsiteJsonOptions = {}
   ): Promise<{ content: string; snapshot: Record<string, unknown> } | null> {
     const snapshot =
       options.snapshot ?? (await this.storage.downloadLatest(userId, projectId));
     const sandboxFiles =
       (snapshot?.sandboxFiles as Record<string, string> | undefined) ?? {};
 
-    let existing: LovecodeJson | undefined;
+    let existing: AiWebsiteJson | undefined;
     try {
-      const raw = sandboxFiles['lovecode.json'];
+      const raw = sandboxFiles['ai-website.json'];
       if (raw) {
-        existing = JSON.parse(raw) as LovecodeJson;
+        existing = JSON.parse(raw) as AiWebsiteJson;
       }
     } catch {
       // ignore parse errors
@@ -88,14 +88,14 @@ export class ProjectService {
       existing?.project?.siteTitle?.trim() ||
       projectName;
 
-    const mergedDeployment: LovecodeJson['deployment'] = {
+    const mergedDeployment: AiWebsiteJson['deployment'] = {
       platform: 'vercel',
-      note: 'Deployment info is stored in LoveCode cloud after first deploy',
+      note: 'Deployment info is stored in AI-Website cloud after first deploy',
       ...existing?.deployment,
       ...options?.deployment,
     };
 
-    const lovecode: LovecodeJson = {
+    const aiWebsite: AiWebsiteJson = {
       project: {
         uuid: projectUuid,
         name: projectName,
@@ -104,24 +104,24 @@ export class ProjectService {
       deployment: mergedDeployment,
     };
 
-    const content = JSON.stringify(lovecode, null, 2);
+    const content = JSON.stringify(aiWebsite, null, 2);
 
     const updatedSnapshot = {
       ...snapshot,
       sandboxFiles: {
         ...sandboxFiles,
-        'lovecode.json': content,
+        'ai-website.json': content,
       },
     };
 
     const [latestPath, filePath] = await Promise.all([
       this.storage.uploadLatest(userId, projectId, updatedSnapshot),
-      this.storage.uploadFile(userId, projectId, 'lovecode.json', content),
+      this.storage.uploadFile(userId, projectId, 'ai-website.json', content),
     ]);
 
     if (!latestPath || !filePath) {
       this.logger.warn(
-        `Failed to persist lovecode.json for project ${projectId}: latest=${latestPath}, file=${filePath}`
+        `Failed to persist ai-website.json for project ${projectId}: latest=${latestPath}, file=${filePath}`
       );
       return null;
     }
@@ -130,17 +130,17 @@ export class ProjectService {
   }
 
   /**
-   * Reads the existing `lovecode.json` from the stored project snapshot.
+   * Reads the existing `ai-website.json` from the stored project snapshot.
    * Returns the parsed content or null if the file is missing or malformed.
    */
-  async readLovecodeJson(userId: string, projectId: string): Promise<LovecodeJson | null> {
+  async readAiWebsiteJson(userId: string, projectId: string): Promise<AiWebsiteJson | null> {
     try {
       const snapshot = await this.storage.downloadLatest(userId, projectId);
       const sandboxFiles =
         (snapshot?.sandboxFiles as Record<string, string> | undefined) ?? {};
-      const raw = sandboxFiles['lovecode.json'];
+      const raw = sandboxFiles['ai-website.json'];
       if (!raw) return null;
-      return JSON.parse(raw) as LovecodeJson;
+      return JSON.parse(raw) as AiWebsiteJson;
     } catch {
       return null;
     }

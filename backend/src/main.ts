@@ -73,7 +73,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.listen(e.port, e.host);
-  logger.log(`LoveCode API Gateway running on http://${e.host}:${e.port}`);
+  logger.log(`AI-Website API Gateway running on http://${e.host}:${e.port}`);
 }
 
 bootstrap();

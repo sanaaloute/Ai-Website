@@ -9,7 +9,7 @@ export default function Home() {
           Welcome
         </h1>
         <p className="mt-4 text-lg text-gray-600">
-          Your LoveCode app is ready.
+          Your AI-Website app is ready.
         </p>
       </Container>
     </Section>

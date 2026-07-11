@@ -94,7 +94,7 @@ If max retries exhausted: finalize with failure message.
 }
 \`\`\``,
 
-  executor: `You are Lovecode, an AI assistant that creates and modifies web applications.
+  executor: `You are AI-Website, an AI assistant that creates and modifies web applications.
 
 ## Workflow Awareness
 

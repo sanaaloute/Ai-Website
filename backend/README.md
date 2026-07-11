@@ -1,6 +1,6 @@
-# LoveCode Backend Gateway
+# AI-Website Backend Gateway
 
-Standalone NestJS API gateway for the LoveCode project. Exposes the `/api/*` routes documented in `BACKEND_GATEWAY_CONFIG.md` and `API.md`.
+Standalone NestJS API gateway for the AI-Website project. Exposes the `/api/*` routes documented in `BACKEND_GATEWAY_CONFIG.md` and `API.md`.
 
 ## Quick start
 
@@ -54,7 +54,7 @@ Optional integrations become real SDK calls when configured:
 - Project Persistence: `/api/projects`, `/api/projects/save`, `/api/projects/open`, `/api/projects/restore-local`, `/api/create-zip`, `/api/download-repo`
 - Integrations: `/api/gitcc/gitlab/authorize`, `/api/gitcc/gitlab/callback`, `/api/gitcc/gitlab/status`, `/api/gitcc/push`, `/api/openhost/check-domain`, `/api/openhost/deploy`, `/api/openhost/deploy-pocketbase`, `/api/openhost/status`, `/api/integrations/user-supabase/*`
 - Billing: `/api/checkout`, `/api/billing/portal`, `/api/billing/sync-checkout-session`, `/api/stripe/webhook`
-- User / Account: `/api/profile`, `/api/lovecode-api-key`, `/api/conversation-state`
+- User / Account: `/api/profile`, `/api/ai-website-api-key`, `/api/conversation-state`
 - Auth: `/api/auth/session`, `/api/reset`
 - Utilities: `/api/screenshot`, `/api/search`
 
@@ -76,5 +76,5 @@ The E2B sandbox also sets up PocketBase automatically so the live preview includ
 ## Notes
 
 - Authentication uses `httpOnly` cookies (`lc_access_token`, `lc_refresh_token`, `lc_admin_token`). `Authorization: Bearer <token>` and legacy Supabase cookie names are still accepted as fallbacks.
-- AI endpoints require a stored LoveCode API key and return `402 Payment Required` when missing.
+- AI endpoints require a stored AI-Website API key and return `402 Payment Required` when missing.
 - SSE streams use raw response streaming with immediate flushing and disconnect handling.

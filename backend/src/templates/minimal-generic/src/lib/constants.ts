@@ -1,6 +1,6 @@
 export const siteConfig = {
-  name: 'LoveCode',
-  tagline: 'Built with LoveCode',
+  name: 'AI-Website',
+  tagline: 'Built with AI-Website',
 };
 
 export const footerSocial: { label: string; href: string }[] = [];

@@ -4,7 +4,7 @@
  * iframe into a single file that the backend injects into every template.
  *
  * Source: frontend/select-edit-feature/*.js
- * Output:  backend-nestjs/src/templates/_shared/ai-website-editor-bridge.js
+ * Output:  backend/src/templates/_shared/ai-website-editor-bridge.js
  *
  * Run from the frontend workspace root:
  *   npm run build:editor-bridge
@@ -18,7 +18,7 @@ const OUTPUT_FILE = path.resolve(
   __dirname,
   '..',
   '..',
-  'backend-nestjs',
+  'backend',
   'src',
   'templates',
   '_shared',

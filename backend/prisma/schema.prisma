@@ -15,7 +15,7 @@ model users {
   avatar_url          String?               @db.VarChar
   subscribed          Boolean?              @default(false)
   subscription_type   String?               @db.VarChar
-  lovecode_api_key    String?               @db.VarChar
+  aiWebsiteApiKey     String?               @map("ai_website_api_key") @db.VarChar
   created_at          DateTime              @default(now()) @db.Timestamp(6)
   updated_at          DateTime              @default(now()) @updatedAt @db.Timestamp(6)
   status              String                @default("Active") @db.VarChar

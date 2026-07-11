@@ -47,7 +47,7 @@ function makeHeaders() {
     Authorization: `Bearer ${AI_API_KEY}`,
   };
   if (AI_API_KEY) {
-    h['X-LoveCode-Gateway-Key'] = AI_API_KEY;
+    h['X-AI-Website-Gateway-Key'] = AI_API_KEY;
   }
   return h;
 }

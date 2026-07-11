@@ -61,7 +61,7 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       # Runtime-only variables (server components)
-      LOVECODE_API_KEY_SITE_URL: ${LOVECODE_API_KEY_SITE_URL:-}
+      AI_WEBSITE_API_KEY_SITE_URL: ${AI_WEBSITE_API_KEY_SITE_URL:-}
     depends_on:
       backend:
         condition: service_healthy

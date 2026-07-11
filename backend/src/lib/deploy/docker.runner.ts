@@ -122,7 +122,7 @@ export class DockerDeployRunner implements DeployProvider {
     const slug = this.sanitize(params.projectName);
     const domain = (params.customDomain || `${slug}.${env().deployBaseDomain}`).replace(/^https?:\/\//, '');
     const container = this.container(slug);
-    const image = `lovecode/site-${slug}:${Date.now()}`;
+    const image = `aiwebsite/site-${slug}:${Date.now()}`;
     const volume = `${container}-data`;
     const workspace = path.join(env().deployWorkspaceDir, slug);
     const tls = this.useTls(domain);
@@ -179,7 +179,7 @@ export class DockerDeployRunner implements DeployProvider {
 
       // 3) Build the image from the template's Dockerfile.
       const build = await docker(
-        ['build', '-t', image, '--label', 'lovecode.managed=true', '--label', `lovecode.site=${slug}`, workspace],
+        ['build', '-t', image, '--label', 'aiwebsite.managed=true', '--label', `aiwebsite.site=${slug}`, workspace],
         { timeoutMs: env().siteBuildTimeoutSeconds * 1000 },
       );
       if (build.code !== 0) {
@@ -278,9 +278,9 @@ export class DockerDeployRunner implements DeployProvider {
       '-v',
       `${volume}:/app/data`,
       '--label',
-      'lovecode.managed=true',
+      'aiwebsite.managed=true',
       '--label',
-      `lovecode.site=${slug}`,
+      `aiwebsite.site=${slug}`,
       '--label',
       'traefik.enable=true',
       '--label',

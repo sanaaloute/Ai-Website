@@ -237,19 +237,19 @@ export class TemplateService {
   }
 
   /**
-   * Injects shared files into a template: the LoveCode visual-editing bridge and
+   * Injects shared files into a template: the AI-Website visual-editing bridge and
    * deployment-ready Docker assets.
    *
    * Adds:
-   *  - public/lovecode-editor-bridge.js (the client-side selector + editor)
-   *  - a <script src="/lovecode-editor-bridge.js"></script> tag before </body> in index.html
+   *  - public/ai-website-editor-bridge.js (the client-side selector + editor)
+   *  - a <script src="/ai-website-editor-bridge.js"></script> tag before </body> in index.html
    *  - Dockerfile
    *  - docker-compose.yaml
    */
   private injectSharedFiles(files: Record<string, string>): Record<string, string> {
     const result = { ...files };
 
-    const bridgePath = path.join(this.templatesDir, '_shared', 'lovecode-editor-bridge.js');
+    const bridgePath = path.join(this.templatesDir, '_shared', 'ai-website-editor-bridge.js');
     let bridgeContent: string | null = null;
     try {
       bridgeContent = existsSync(bridgePath) ? readFileSync(bridgePath, 'utf-8') : null;
@@ -261,14 +261,14 @@ export class TemplateService {
 
     if (bridgeContent) {
       // Add the bridge as a static public asset.
-      result['public/lovecode-editor-bridge.js'] = bridgeContent;
+      result['public/ai-website-editor-bridge.js'] = bridgeContent;
 
       // Inject the script tag into index.html if it exists and has not already been injected.
       const indexHtml = result['index.html'];
-      if (indexHtml && !indexHtml.includes('lovecode-editor-bridge.js')) {
+      if (indexHtml && !indexHtml.includes('ai-website-editor-bridge.js')) {
         result['index.html'] = indexHtml.replace(
           '</body>',
-          '  <script src="/lovecode-editor-bridge.js"></script>\n  </body>'
+          '  <script src="/ai-website-editor-bridge.js"></script>\n  </body>'
         );
       }
     }

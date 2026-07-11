@@ -137,7 +137,7 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@lovecode.ai"
+                placeholder="admin@ai-web-builder.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-9"

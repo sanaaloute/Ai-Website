@@ -268,7 +268,7 @@ export class AgentService {
   private async fetchUserApiKey(userId: string): Promise<string | undefined> {
     try {
       const profile = await this.supabase.getProfile(userId);
-      const key = profile?.lovecode_api_key;
+      const key = profile?.ai_website_api_key;
       return typeof key === 'string' && key.length > 0 ? key : undefined;
     } catch (e) {
       this.logger.warn(

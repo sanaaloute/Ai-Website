@@ -259,7 +259,7 @@ export class VercelService {
   private sanitizeProjectName(name: string): string {
     const lowered = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
     const trimmed = lowered.replace(/^-+|-+$/g, '').slice(0, 100);
-    return trimmed || 'lovecode-app';
+    return trimmed || 'ai-website-app';
   }
 
   private ensureUrl(domain: string): string {

@@ -18,8 +18,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
-// Notify the LoveCode workspace that the preview has mounted successfully.
-(window as unknown as { __lovecodePreviewReady?: boolean }).__lovecodePreviewReady = true;
+// Notify the AI-Website workspace that the preview has mounted successfully.
+(window as unknown as { __aiWebsitePreviewReady?: boolean }).__aiWebsitePreviewReady = true;
 if (window.parent !== window) {
-  window.parent.postMessage({ type: 'LOVECODE_PREVIEW_READY', ts: Date.now() }, '*');
+  window.parent.postMessage({ type: 'AI_WEBSITE_PREVIEW_READY', ts: Date.now() }, '*');
 }

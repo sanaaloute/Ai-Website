@@ -1,9 +1,41 @@
-# HTTPS servers — NOT loaded by nginx (filename does not end in .conf).
-# Enable after obtaining certificates:
-#   cp nginx/conf.d/ssl.conf.template nginx/conf.d/ssl.conf
-#   docker compose restart nginx
-# Certificate paths must match what certbot wrote (see nginx/README.md).
+# HTTPS mode config — NOT loaded by nginx until renamed to ssl.conf.
+# scripts/deploy.sh enables this automatically once Let's Encrypt certificates
+# exist under certbot/conf/live/ai-web-builder.com/ (and disables default.conf).
+#
+# This file is SELF-CONTAINED for HTTPS mode:
+#   * port 80  -> serves ACME challenges and redirects everything else to https
+#   * port 443 -> full HTTPS proxy to the app containers
+# Because it owns port 80, default.conf must be disabled while this is active
+# (the deploy script does that for you). Certificate paths must match certbot.
 
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  ""      close;
+}
+
+# ── Port 80: ACME challenge + redirect to HTTPS ──────────────────────────────
+server {
+  listen 80;
+  server_name ai-web-builder.com www.ai-web-builder.com admin.ai-web-builder.com;
+
+  # Let's Encrypt HTTP-01 challenges (webroot) — keep reachable for renewals.
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+  }
+
+  # Container healthcheck must stay 200 over plain HTTP (not redirected).
+  location = /nginx-health {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+# ── Port 443: ai-web-builder.com / www ───────────────────────────────────────
 server {
   listen 443 ssl;
   http2 on;
@@ -27,44 +59,57 @@ server {
   proxy_buffers 8 256k;
   proxy_busy_buffers_size 256k;
 
-  location = /nginx-health { access_log off; return 200 "ok\n"; }
+  location = /nginx-health {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
 
   location ~ ^/(health|live|ready)$ {
-    proxy_pass http://backend:4000;
+    proxy_pass         http://backend:4000;
     proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
     access_log off;
   }
 
+  # Builder AI routes can exceed nginx's default 60s read timeout -> 504.
+  # SSE streams need buffering disabled so chunks reach the client immediately.
   location /api/ {
-    proxy_pass http://backend:4000;
+    proxy_pass         http://backend:4000;
     proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_buffering off;
-    proxy_read_timeout 900s;
+    proxy_set_header   Upgrade $http_upgrade;
+    proxy_set_header   Connection $connection_upgrade;
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+    proxy_buffering    off;
+    proxy_cache        off;
+    proxy_connect_timeout  75s;
+    proxy_send_timeout     900s;
+    proxy_read_timeout     900s;
     gzip off;
   }
 
+  # Frontend (Next.js).
   location / {
-    proxy_pass http://frontend:3000;
+    proxy_pass         http://frontend:3000;
     proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header   Upgrade $http_upgrade;
+    proxy_set_header   Connection $connection_upgrade;
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
   }
 }
 
+# ── Port 443: admin.ai-web-builder.com ───────────────────────────────────────
 server {
   listen 443 ssl;
   http2 on;
@@ -85,16 +130,21 @@ server {
   proxy_buffers 8 256k;
   proxy_busy_buffers_size 256k;
 
-  location = /nginx-health { access_log off; return 200 "ok\n"; }
+  location = /nginx-health {
+    access_log off;
+    add_header Content-Type text/plain;
+    return 200 "ok\n";
+  }
 
   location / {
-    proxy_pass http://admin:3000;
+    proxy_pass         http://admin:3000;
     proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection $connection_upgrade;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header   Upgrade $http_upgrade;
+    proxy_set_header   Connection $connection_upgrade;
+    proxy_set_header   Host $host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
   }
 }

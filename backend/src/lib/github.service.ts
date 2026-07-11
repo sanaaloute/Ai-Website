@@ -405,7 +405,7 @@ export class GithubService {
 
     // Create the commit.
     const commitBody: Record<string, unknown> = {
-      message: 'Update from LoveCode',
+      message: 'Update from AI-Website',
       tree: newTree.sha,
     };
     if (baseCommitSha) commitBody.parents = [baseCommitSha];
@@ -487,6 +487,6 @@ export class GithubService {
   private sanitizeRepoName(name: string): string {
     const trimmed = name.trim().replace(/\s+/g, '-');
     const safe = trimmed.replace(/[^A-Za-z0-9._-]/g, '-').replace(/-+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
-    return safe || 'lovecode-app';
+    return safe || 'ai-website-app';
   }
 }

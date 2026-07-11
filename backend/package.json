@@ -1,7 +1,7 @@
 {
-  "name": "lovecode-backend-gateway",
+  "name": "ai-website-backend-gateway",
   "version": "1.0.0",
-  "description": "LoveCode API Gateway (NestJS)",
+  "description": "AI-Website API Gateway (NestJS)",
   "private": true,
   "license": "MIT",
   "scripts": {

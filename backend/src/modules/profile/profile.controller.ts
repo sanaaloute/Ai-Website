@@ -76,11 +76,11 @@ export class ProfileController {
     return { ok };
   }
 
-  @Get('lovecode-api-key')
+  @Get('ai-website-api-key')
   @UseGuards(AuthGuard)
   async getApiKey(@CurrentUser() user: User) {
     const profile = await this.supabase.getProfile(user.id);
-    const key = (profile?.lovecode_api_key as string) ?? '';
+    const key = (profile?.ai_website_api_key as string) ?? '';
     return {
       ok: true,
       hasApiKey: !!key,
@@ -88,14 +88,14 @@ export class ProfileController {
     };
   }
 
-  @Put('lovecode-api-key')
+  @Put('ai-website-api-key')
   @UseGuards(AuthGuard)
   async saveApiKey(@CurrentUser() user: User, @Body() body: { api_key?: string; apiKey?: string }) {
     const apiKey = body.api_key ?? body.apiKey ?? '';
     if (!apiKey) throw new HttpException({ success: false, error: 'api_key is required' }, HttpStatus.BAD_REQUEST);
 
     const validation = await this.ai.validateApiKey(apiKey);
-    const { error } = await this.supabase.admin.from('users').update({ lovecode_api_key: apiKey }).eq('id', user.id);
+    const { error } = await this.supabase.admin.from('users').update({ ai_website_api_key: apiKey }).eq('id', user.id);
     if (error) throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
 
     return {
@@ -107,10 +107,10 @@ export class ProfileController {
     };
   }
 
-  @Delete('lovecode-api-key')
+  @Delete('ai-website-api-key')
   @UseGuards(AuthGuard)
   async deleteApiKey(@CurrentUser() user: User) {
-    const { error } = await this.supabase.admin.from('users').update({ lovecode_api_key: null }).eq('id', user.id);
+    const { error } = await this.supabase.admin.from('users').update({ ai_website_api_key: null }).eq('id', user.id);
     if (error) throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
     return { ok: true, hasApiKey: false, keyPreview: null };
   }

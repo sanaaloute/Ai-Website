@@ -1,4 +1,4 @@
-# LoveCode Admin API
+# AI-Website Admin API
 
 > Backend reference for the `admin` frontend. All routes are prefixed with `/api/admin`.
 

@@ -84,13 +84,13 @@ export class ProjectController {
       .eq('user_id', user.id);
     if (error) throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
 
-    const lovecodeResult = await this.projectService.upsertLovecodeJson(user.id, body.projectId, {
+    const aiWebsiteResult = await this.projectService.upsertAiWebsiteJson(user.id, body.projectId, {
       project: { name: trimmedName },
     });
 
-    if (!lovecodeResult) {
+    if (!aiWebsiteResult) {
       throw new HttpException(
-        { success: false, error: 'Failed to update lovecode.json during rename' },
+        { success: false, error: 'Failed to update ai-website.json during rename' },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -157,10 +157,10 @@ export class ProjectController {
       }
     }
 
-    // Generate/update the canonical lovecode.json in the stored snapshot.
+    // Generate/update the canonical ai-website.json in the stored snapshot.
     // Pass the snapshot we are about to upload so we don't re-download a
     // potentially stale latest.json from storage right after writing it.
-    const lovecodeResult = await this.projectService.upsertLovecodeJson(user.id, projectId, {
+    const aiWebsiteResult = await this.projectService.upsertAiWebsiteJson(user.id, projectId, {
       project: {
         uuid: projectId,
         name: projectName,
@@ -169,8 +169,8 @@ export class ProjectController {
       snapshot: { ...body, sandboxFiles },
     });
 
-    const updatedSnapshot = lovecodeResult?.snapshot ?? { ...body, sandboxFiles };
-    const lovecodeContent = lovecodeResult?.content;
+    const updatedSnapshot = aiWebsiteResult?.snapshot ?? { ...body, sandboxFiles };
+    const aiWebsiteContent = aiWebsiteResult?.content;
 
     const forbiddenPrefixes = ['node_modules/'];
     const filteredFiles: Record<string, string> = {};
@@ -179,8 +179,8 @@ export class ProjectController {
       if (forbiddenPrefixes.some((prefix) => path.startsWith(prefix))) continue;
       filteredFiles[path] = content;
     }
-    if (lovecodeContent) {
-      filteredFiles['lovecode.json'] = lovecodeContent;
+    if (aiWebsiteContent) {
+      filteredFiles['ai-website.json'] = aiWebsiteContent;
     }
 
     let uploaded = 0;

@@ -28,7 +28,7 @@ export interface Env {
   corsCredentials: boolean;
   appUrl: string;
   siteUrl: string;
-  lovecodeApiKeySiteUrl: string;
+  aiWebsiteApiKeySiteUrl: string;
 
   aiBaseUrl: string;
   aiApiKey: string;
@@ -137,7 +137,7 @@ export function buildEnv(): Env {
     corsCredentials: (getEnv('CORS_CREDENTIALS') ?? 'true') === 'true',
     appUrl: getEnv('APP_URL', ['NEXT_PUBLIC_APP_URL']) ?? 'http://localhost:3000',
     siteUrl: getEnv('SITE_URL', ['APP_URL', 'NEXT_PUBLIC_APP_URL']) ?? 'http://localhost:3000',
-    lovecodeApiKeySiteUrl: getEnv('LOVECODE_API_KEY_SITE_URL', ['NEXT_PUBLIC_LOVECODE_API_KEY_SITE_URL']) ?? 'https://api.gitcc.com/dashboard/overview',
+    aiWebsiteApiKeySiteUrl: getEnv('AI_WEBSITE_API_KEY_SITE_URL', ['NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL']) ?? 'https://api.gitcc.com/dashboard/overview',
 
     aiBaseUrl: getEnv('AI_BASE_URL') ?? 'https://api.gitcc.com/v1',
     aiApiKey: getEnv('AI_API_KEY', ['NEW_API_KEY']) ?? '',
@@ -167,8 +167,8 @@ export function buildEnv(): Env {
 
     deployProvider,
     deployBaseDomain: getEnv('DEPLOY_BASE_DOMAIN') ?? 'localhost',
-    deployWorkspaceDir: getEnv('DEPLOY_WORKSPACE_DIR') ?? '/var/lib/lovecode/sites',
-    siteNetwork: getEnv('SITE_NETWORK') ?? 'lovecode_web',
+    deployWorkspaceDir: getEnv('DEPLOY_WORKSPACE_DIR') ?? '/var/lib/ai-website/sites',
+    siteNetwork: getEnv('SITE_NETWORK') ?? 'aiwebsite_web',
     siteCpuLimit: getEnv('SITE_CPU_LIMIT') ?? '1.0',
     siteMemoryLimit: getEnv('SITE_MEMORY_LIMIT') ?? '512m',
     siteBuildTimeoutSeconds: parseInt(getEnv('SITE_BUILD_TIMEOUT_SECONDS') ?? '600', 10),

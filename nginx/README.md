@@ -21,25 +21,35 @@ curl -I http://localhost/nginx-health   # HTTP/1.1 200 OK
 
 ## 2) Enable HTTPS (after DNS A records point to the instance)
 
-Obtain certificates with the webroot plugin (the running nginx serves the challenge):
+The deploy scripts configure nginx automatically based on whether certificates
+exist under `certbot/conf/live/ai-web-builder.com/`. Set `LETSENCRYPT_EMAIL` in
+`.env`, then run:
+
+```bash
+bash scripts/deploy.sh --request-cert
+```
+
+The script brings nginx up in HTTP mode to answer the ACME challenge, obtains
+certificates for `ai-web-builder.com`, `www.ai-web-builder.com` and
+`admin.ai-web-builder.com`, then switches nginx to HTTPS mode (port 80 redirects
+to https; port 443 proxies the app). On later runs it auto-detects the existing
+certificates.
+
+Renewal (set up as a cron/timer):
+
+```bash
+docker compose run --rm certbot renew
+docker compose exec nginx nginx -s reload
+```
+
+Manual equivalent (without the script):
 
 ```bash
 docker compose run --rm certbot certonly --webroot \
   -w /var/www/certbot \
   -d ai-web-builder.com -d www.ai-web-builder.com -d admin.ai-web-builder.com \
   --email you@example.com --agree-tos --no-eff-email
-```
-
-Then load the HTTPS servers and restart nginx:
-
-```bash
+mv nginx/conf.d/default.conf nginx/conf.d/default.conf.off   # ssl.conf owns port 80
 cp nginx/conf.d/ssl.conf.template nginx/conf.d/ssl.conf
 docker compose restart nginx
-```
-
-Renewal:
-
-```bash
-docker compose run --rm certbot renew
-docker compose exec nginx nginx -s reload
 ```

@@ -10,7 +10,7 @@
  *
  * Environment variables:
  *   AI_BASE_URL        - gateway base URL (default: https://api.gitcc.com/v1)
- *   AI_API_KEY         - API key used for Authorization + X-LoveCode-Gateway-Key
+ *   AI_API_KEY         - API key used for Authorization + X-AI-Website-Gateway-Key
  *   TEST_MODELS        - comma-separated override list of models to test
  *   TEST_FORCE_TOOL    - "true" to send tool_choice: "required" (default: false)
  *   TIMEOUT_MS         - per-request timeout (default: 30000)
@@ -108,7 +108,7 @@ function makeHeaders() {
     Authorization: `Bearer ${AI_API_KEY}`,
   };
   if (AI_API_KEY) {
-    h['X-LoveCode-Gateway-Key'] = AI_API_KEY;
+    h['X-AI-Website-Gateway-Key'] = AI_API_KEY;
   }
   return h;
 }
