@@ -62,6 +62,8 @@ backend/alembic/versions/*.py
 .env.*.local
 .env.*.production
 .env.*.development
+.env.prod
+.env.production
 
 # --- Debug / Logs ---
 npm-debug.log*
