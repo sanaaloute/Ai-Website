@@ -175,6 +175,21 @@ Save or update the user's AI-Website API key.
 }
 ```
 
+The key is validated against the AI gateway before saving. Keys the gateway
+definitively rejects (401/403 on every model) are **not** persisted:
+
+**Response `400 Bad Request`**
+```json
+{
+  "success": false,
+  "error": "Invalid API key. Please check the key and try again."
+}
+```
+
+If validation cannot complete due to a transient gateway problem (5xx,
+timeouts, network), the key is still saved and `validated` is `false` with
+the details in `validationWarning`.
+
 ---
 
 ### `DELETE /api/ai-website-api-key`

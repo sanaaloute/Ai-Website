@@ -137,9 +137,9 @@ export function buildEnv(): Env {
     corsCredentials: (getEnv('CORS_CREDENTIALS') ?? 'true') === 'true',
     appUrl: getEnv('APP_URL', ['NEXT_PUBLIC_APP_URL']) ?? 'http://localhost:3000',
     siteUrl: getEnv('SITE_URL', ['APP_URL', 'NEXT_PUBLIC_APP_URL']) ?? 'http://localhost:3000',
-    aiWebsiteApiKeySiteUrl: getEnv('AI_WEBSITE_API_KEY_SITE_URL', ['NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL']) ?? 'https://api.gitcc.com/dashboard/overview',
+    aiWebsiteApiKeySiteUrl: getEnv('AI_WEBSITE_API_KEY_SITE_URL', ['NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL']) ?? 'https://www.tokenfree.com',
 
-    aiBaseUrl: getEnv('AI_BASE_URL') ?? 'https://api.gitcc.com/v1',
+    aiBaseUrl: getEnv('AI_BASE_URL') ?? 'https://www.tokenfree.com/v1',
     aiApiKey: getEnv('AI_API_KEY', ['NEW_API_KEY']) ?? '',
     aiDefaultModel: getEnv('AI_DEFAULT_MODEL') ?? 'gpt-5.4',
     aiReflectionModel: getEnv('AI_REFLECTION_MODEL') ?? 'qwen-max',

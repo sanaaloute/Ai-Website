@@ -91,10 +91,19 @@ export class ProfileController {
   @Put('ai-website-api-key')
   @UseGuards(AuthGuard)
   async saveApiKey(@CurrentUser() user: User, @Body() body: { api_key?: string; apiKey?: string }) {
-    const apiKey = body.api_key ?? body.apiKey ?? '';
+    const apiKey = String(body.api_key ?? body.apiKey ?? '').trim();
     if (!apiKey) throw new HttpException({ success: false, error: 'api_key is required' }, HttpStatus.BAD_REQUEST);
 
     const validation = await this.ai.validateApiKey(apiKey);
+    if (!validation.valid && validation.authFailure) {
+      // The gateway definitively rejected this key (401/403 on every model).
+      // Refuse to persist it — saving it would let users into a generation
+      // flow that fails on every request with "Invalid token".
+      throw new HttpException(
+        { success: false, error: 'Invalid API key. Please check the key and try again.' },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     const { error } = await this.supabase.admin.from('users').update({ ai_website_api_key: apiKey }).eq('id', user.id);
     if (error) throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
 

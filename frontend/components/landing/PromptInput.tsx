@@ -175,9 +175,21 @@ export default function PromptInput() {
       // Use the preflight promise if available; otherwise run auth + API-key
       // checks in parallel. This replaces the previous serial checks and cuts
       // the blocking time before navigation.
-      const { user, apiKey } = preflightRef.current
+      let { user, apiKey } = preflightRef.current
         ? await preflightRef.current
         : await preflightAuth();
+
+      // The preflight runs once at mount and can go stale — e.g. the user
+      // logs in or saves their API key after the landing page has loaded.
+      // Whenever the cached result would block submission, verify it with a
+      // fresh round-trip before opening any dialog, otherwise users with a
+      // saved key would still be told to get one.
+      if (!user || !apiKey.ok || !apiKey.hasApiKey) {
+        const fresh = await preflightAuth();
+        preflightRef.current = Promise.resolve(fresh);
+        user = fresh.user;
+        apiKey = fresh.apiKey;
+      }
 
       if (!user) {
         openLoginDialog();

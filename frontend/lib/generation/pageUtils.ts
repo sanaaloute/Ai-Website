@@ -179,8 +179,16 @@ export function classifyGatewayError(
     };
   }
 
-  // Invalid API key
-  if (c === 'invalid_api_key' || m.includes('invalid api key') || m.includes('incorrect api key')) {
+  // Invalid API key. The upstream gateway (new-api) reports a rejected key as
+  // "Invalid token" with HTTP 401, so match those spellings too — otherwise
+  // users just see a generic error instead of being asked to fix their key.
+  if (
+    c === 'invalid_api_key' ||
+    m.includes('invalid api key') ||
+    m.includes('incorrect api key') ||
+    m.includes('invalid token') ||
+    m.includes('http 401')
+  ) {
     return {
       type: 'invalid_api_key',
       userMessage: 'Invalid API key. Please check your API key and try again.',

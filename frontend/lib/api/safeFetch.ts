@@ -24,6 +24,26 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+/**
+ * Backend error responses are JSON objects like
+ * `{ "success": false, "error": "..." }`. Surface the human-readable message
+ * instead of the raw JSON string so dialogs can display it directly.
+ */
+function extractErrorBodyMessage(text: string, response: Response): string {
+  if (!text) return `HTTP ${response.status} ${response.statusText}`;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (parsed && typeof parsed === 'object') {
+      const body = parsed as Record<string, unknown>;
+      const message = body.error ?? body.message;
+      if (typeof message === 'string' && message) return message;
+    }
+  } catch {
+    // Not JSON — fall through to the raw body text.
+  }
+  return text;
+}
+
 function isAuthRefreshRequest(input: RequestInfo | URL): boolean {
   const url = typeof input === 'string' ? input : input.toString();
   return url.includes('/api/auth/refresh');
@@ -74,7 +94,7 @@ export async function safeFetchJson<T = unknown>(
           ok: false,
           status: response.status,
           statusText: response.statusText,
-          error: text || `HTTP ${response.status} ${response.statusText}`
+          error: extractErrorBodyMessage(text, response)
         };
         if (context) {
           console.warn(`[safeFetch] ${context} failed:`, error);
@@ -148,7 +168,7 @@ export async function safeFetchBlob(
           ok: false,
           status: response.status,
           statusText: response.statusText,
-          error: text || `HTTP ${response.status} ${response.statusText}`
+          error: extractErrorBodyMessage(text, response)
         };
         if (context) {
           console.warn(`[safeFetchBlob] ${context} failed:`, error);

@@ -7,4 +7,4 @@
 export const AI_WEBSITE_API_KEY_SITE_URL =
   process.env.NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL ||
   process.env.AI_WEBSITE_API_KEY_SITE_URL ||
-  "https://github.com";
+  "https://www.tokenfree.com";

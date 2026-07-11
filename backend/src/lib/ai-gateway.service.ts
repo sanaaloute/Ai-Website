@@ -605,11 +605,12 @@ export class AiGatewayService {
     }
   }
 
-  async validateApiKey(apiKey: string): Promise<{ valid: boolean; warning: string | null }> {
+  async validateApiKey(apiKey: string): Promise<{ valid: boolean; warning: string | null; authFailure: boolean }> {
     const e = env();
     // Try the configured default model first, then fall back through the approved provider models.
     const models = Array.from(new Set([e.aiDefaultModel, e.aiReflectionModel, 'gpt-5.4', 'qwen-max', 'kimi-k2.5'].filter(Boolean)));
     const errors: string[] = [];
+    const statuses: number[] = [];
     for (const [i, model] of models.entries()) {
       try {
         const res = await fetch(`${e.aiBaseUrl}/chat/completions`, {
@@ -618,7 +619,8 @@ export class AiGatewayService {
           signal: this.createAbortSignal(AiGatewayService.VALIDATION_LLM_TIMEOUT_MS),
           body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
         });
-        if (res.ok) return { valid: true, warning: null };
+        if (res.ok) return { valid: true, warning: null, authFailure: false };
+        statuses.push(res.status);
         const text = await res.text();
         errors.push(`${model}: ${res.status} ${text.slice(0, 120)}`);
         if (res.status === 503 || res.status === 429) {
@@ -628,7 +630,13 @@ export class AiGatewayService {
         errors.push(`${model}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
-    return { valid: false, warning: `AI gateway validation failed: ${errors.join('; ')}` };
+    // When every model rejected the key with 401/403 the key itself is
+    // definitively invalid. Anything else (5xx, timeouts, network errors) is
+    // treated as a transient gateway problem so callers can avoid blocking
+    // users during an upstream outage.
+    const authFailure =
+      statuses.length === models.length && statuses.every((s) => s === 401 || s === 403);
+    return { valid: false, warning: `AI gateway validation failed: ${errors.join('; ')}`, authFailure };
   }
 
   async analyzeEditIntent(

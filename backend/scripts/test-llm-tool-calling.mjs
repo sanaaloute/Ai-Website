@@ -9,7 +9,7 @@
  *   node scripts/test-llm-tool-calling.mjs
  *
  * Environment variables:
- *   AI_BASE_URL        - gateway base URL (default: https://api.gitcc.com/v1)
+ *   AI_BASE_URL        - gateway base URL (default: https://www.tokenfree.com/v1)
  *   AI_API_KEY         - API key used for Authorization + X-AI-Website-Gateway-Key
  *   TEST_MODELS        - comma-separated override list of models to test
  *   TEST_FORCE_TOOL    - "true" to send tool_choice: "required" (default: false)
@@ -45,7 +45,7 @@ function loadEnvFile(filePath) {
 // Load the project root .env relative to this script. Real env vars win.
 loadEnvFile(resolve(__dirname, '../../.env'));
 
-const AI_BASE_URL = (process.env.AI_BASE_URL || 'https://api.gitcc.com/v1').replace(/\/+$/, '');
+const AI_BASE_URL = (process.env.AI_BASE_URL || 'https://www.tokenfree.com/v1').replace(/\/+$/, '');
 const AI_API_KEY = process.env.AI_API_KEY || process.env.NEW_API_KEY || '';
 const TIMEOUT_MS = parseInt(process.env.TIMEOUT_MS || '30000', 10);
 const FORCE_TOOL = (process.env.TEST_FORCE_TOOL || 'false').toLowerCase() === 'true';
