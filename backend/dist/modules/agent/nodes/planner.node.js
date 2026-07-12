@@ -26,7 +26,7 @@ async function plannerNode(state, deps) {
     const intent = state.intent || 'edit';
     const scope = state.scope || promptString;
     const relevantFiles = state.relevantFiles ?? [];
-    const userApiKey = state.userApiKey;
+    const aiCredentials = state.aiCredentials;
     const systemPrompt = await deps.promptLoader.load('planner');
     const previousValidation = state.planErrors?.length || state.planWarnings?.length
         ? {
@@ -58,7 +58,7 @@ async function plannerNode(state, deps) {
         { role: 'user', content: (0, types_1.promptToString)((0, types_1.buildPromptContent)(`Analyzer output: ${context}`, prompt)) },
     ];
     try {
-        const loopResult = await (0, tools_1.runToolLoop)(deps, state, (ctx, docs) => (0, tools_1.buildPlanningToolSet)(ctx, docs), messages, 'planner', userApiKey, 10);
+        const loopResult = await (0, tools_1.runToolLoop)(deps, state, (ctx, docs) => (0, tools_1.buildPlanningToolSet)(ctx, docs), messages, 'planner', aiCredentials, 10);
         const resultText = loopResult.finalContent;
         let result = extractJson(resultText) || {};
         let steps = Array.isArray(result.steps) ? result.steps : [];

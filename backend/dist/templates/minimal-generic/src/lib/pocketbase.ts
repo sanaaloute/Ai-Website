@@ -174,7 +174,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     return await pb.collection('settings').getOne<StoreSettings>(SETTINGS_RECORD_ID);
   } catch (err) {
     const defaults: Partial<StoreSettings> = {
-      name: 'LoveCode Site',
+      name: 'AI-Website Site',
       tagline: 'Your next great site',
       footerText: '',
     };

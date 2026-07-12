@@ -95,7 +95,7 @@ export function validatePlan(steps: string[], newFiles: string[]): { errors: str
 }
 
 export async function preFlightValidatorNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
-  const userApiKey = state.userApiKey;
+  const aiCredentials = state.aiCredentials;
 
   const deterministic = validatePlan(state.planSteps ?? [], state.planNewFiles ?? []);
 
@@ -133,7 +133,7 @@ export async function preFlightValidatorNode(state: AgentState, deps: GraphDepen
     const resultText = await deps.aiGateway.chatCompletionsStream(
       messages,
       deps.modelResolver.resolveSequence('pre_flight_validator'),
-      userApiKey,
+      aiCredentials,
       async (token) => {
         await deps.emit({ type: 'token', data: { content: token } });
       },

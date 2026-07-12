@@ -27,7 +27,6 @@ export declare class IntegrationController {
             path: string;
             content: string;
         }>;
-        lovecodeProjectId?: string;
         aiWebsiteProjectId?: string;
     }, req: Request, res: Response): Promise<import("@/lib/github.service").PushResult>;
     githubDisconnect(user: User, res: Response): Promise<{

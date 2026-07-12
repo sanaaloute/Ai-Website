@@ -154,7 +154,7 @@ export async function executorNode(state: AgentState, deps: GraphDependencies): 
   const docTools = deps.agentMcpToolService?.getTools(context) ?? [];
   const tools = buildToolSet(context, docTools);
   const toolDefinitions = toolsToDefinitions(tools);
-  const userApiKey = state.userApiKey;
+  const aiCredentials = state.aiCredentials;
 
   const systemPrompt = await deps.promptLoader.load('executor');
   const ctx = buildExecutorContext(state);
@@ -221,7 +221,7 @@ export async function executorNode(state: AgentState, deps: GraphDependencies): 
         messages,
         toolDefinitions,
         deps.modelResolver.resolveSequence('executor'),
-        userApiKey,
+        aiCredentials,
         async (token) => {
           await deps.emit({ type: 'token', data: { content: token } });
         },

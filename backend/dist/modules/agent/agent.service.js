@@ -15,7 +15,7 @@ const common_1 = require("@nestjs/common");
 const crypto_1 = require("crypto");
 const e2b_service_1 = require("../../lib/e2b.service");
 const ai_gateway_service_1 = require("../../lib/ai-gateway.service");
-const supabase_service_1 = require("../../lib/supabase.service");
+const provider_keys_service_1 = require("../profile/provider-keys.service");
 const graph_1 = require("./graph");
 const prompt_loader_service_1 = require("./services/prompt-loader.service");
 const model_resolver_service_1 = require("./services/model-resolver.service");
@@ -24,10 +24,10 @@ const agent_persistence_service_1 = require("./services/agent-persistence.servic
 const database_seeder_service_1 = require("./services/database-seeder.service");
 const agent_mcp_tool_service_1 = require("./services/agent-mcp-tool.service");
 let AgentService = AgentService_1 = class AgentService {
-    constructor(aiGateway, e2b, supabase, promptLoader, modelResolver, templateService, persistence, databaseSeeder, agentMcpToolService) {
+    constructor(aiGateway, e2b, providerKeys, promptLoader, modelResolver, templateService, persistence, databaseSeeder, agentMcpToolService) {
         this.aiGateway = aiGateway;
         this.e2b = e2b;
-        this.supabase = supabase;
+        this.providerKeys = providerKeys;
         this.promptLoader = promptLoader;
         this.modelResolver = modelResolver;
         this.templateService = templateService;
@@ -38,14 +38,14 @@ let AgentService = AgentService_1 = class AgentService {
         this.graph = (0, graph_1.buildAgentGraph)(this.persistence);
     }
     async *stream(options, onEvent) {
-        const userApiKey = await this.fetchUserApiKey(options.userId);
+        const aiCredentials = await this.fetchUserCredentials(options.userId);
         const initialState = {
             prompt: options.prompt,
             sandboxId: options.sandboxId,
             projectId: options.projectId,
             userId: options.userId,
             chatHistory: options.chatHistory ?? [],
-            userApiKey,
+            aiCredentials,
             retryCount: 0,
             ...(options.resumeReview
                 ? {
@@ -212,15 +212,13 @@ let AgentService = AgentService_1 = class AgentService {
             }
         }
     }
-    async fetchUserApiKey(userId) {
+    async fetchUserCredentials(userId) {
         try {
-            const profile = await this.supabase.getProfile(userId);
-            const key = profile?.lovecode_api_key;
-            return typeof key === 'string' && key.length > 0 ? key : undefined;
+            return await this.providerKeys.resolveCredentials(userId);
         }
         catch (e) {
-            this.logger.warn(`Could not fetch user API key: ${e instanceof Error ? e.message : String(e)}`);
-            return undefined;
+            this.logger.warn(`Could not fetch user API credentials: ${e instanceof Error ? e.message : String(e)}`);
+            return [];
         }
     }
 };
@@ -229,7 +227,7 @@ exports.AgentService = AgentService = AgentService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [ai_gateway_service_1.AiGatewayService,
         e2b_service_1.E2BService,
-        supabase_service_1.SupabaseService,
+        provider_keys_service_1.ProviderKeysService,
         prompt_loader_service_1.PromptLoaderService,
         model_resolver_service_1.ModelResolverService,
         template_service_1.TemplateService,

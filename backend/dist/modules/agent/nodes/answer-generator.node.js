@@ -5,7 +5,7 @@ const tools_1 = require("../tools");
 const types_1 = require("../../../types");
 async function answerGeneratorNode(state, deps) {
     const tools = new tools_1.SandboxProvider(deps.e2b, state.sandboxId, state.projectId);
-    const userApiKey = state.userApiKey;
+    const aiCredentials = state.aiCredentials;
     const prompt = state.prompt;
     const promptString = (0, types_1.promptToString)(prompt);
     const relevantFiles = state.relevantFiles ?? [];
@@ -37,7 +37,7 @@ Rules:
         { role: 'user', content: (0, types_1.buildPromptContent)(context, prompt) },
     ];
     try {
-        const resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('answer_generator'), userApiKey, async (token) => {
+        const resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('answer_generator'), aiCredentials, async (token) => {
             await deps.emit({ type: 'token', data: { content: token } });
         });
         return {

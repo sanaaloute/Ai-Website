@@ -13,6 +13,7 @@ import {
   type SubscriptionPayload
 } from "./UserProfile.types";
 import AccountSection from "./AccountSection";
+import ProviderKeysSection from "./ProviderKeysSection";
 import SubscriptionSection from "./SubscriptionSection";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
 
@@ -287,7 +288,6 @@ export default function UserProfile() {
           phone={phone}
           setPhone={setPhone}
           avatarUrl={avatarUrl}
-          setAvatarUrl={setAvatarUrl}
           avatarRevision={avatarRevision}
           uploading={uploading}
           saving={saving}
@@ -302,6 +302,8 @@ export default function UserProfile() {
           portalLoading={portalLoading}
           onOpenBillingPortal={openBillingPortal}
         />
+
+        <ProviderKeysSection />
 
         <div className="mt-10 border-t border-white/10 pt-8">
           <button

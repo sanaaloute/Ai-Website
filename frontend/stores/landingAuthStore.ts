@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { LlmProviderInfo } from "@/lib/api/client";
 
 interface LandingAuthState {
   // Auth
@@ -24,6 +25,10 @@ interface LandingAuthState {
   apiKeyHasValue: boolean;
   apiKeyPreview: string | null;
   apiKeyEditing: boolean;
+  apiKeyProvider: string;
+  apiKeyProviders: LlmProviderInfo[];
+  apiKeyPreviews: Record<string, string>;
+  apiKeyActiveProvider: string | null;
 
   // Actions — auth / profile
   setIsAuthenticated: (v: boolean) => void;
@@ -46,6 +51,10 @@ interface LandingAuthState {
   setApiKeyHasValue: (v: boolean) => void;
   setApiKeyPreview: (v: string | null) => void;
   setApiKeyEditing: (v: boolean) => void;
+  setApiKeyProvider: (v: string) => void;
+  setApiKeyProviders: (v: LlmProviderInfo[]) => void;
+  setApiKeyPreviews: (v: Record<string, string>) => void;
+  setApiKeyActiveProvider: (v: string | null) => void;
 }
 
 export const useLandingAuthStore = create<LandingAuthState>((set) => ({
@@ -72,6 +81,10 @@ export const useLandingAuthStore = create<LandingAuthState>((set) => ({
   apiKeyHasValue: false,
   apiKeyPreview: null,
   apiKeyEditing: true,
+  apiKeyProvider: "tokenfree",
+  apiKeyProviders: [],
+  apiKeyPreviews: {},
+  apiKeyActiveProvider: null,
 
   // Auth / profile
   setIsAuthenticated: (v) => set({ isAuthenticated: v }),
@@ -108,4 +121,8 @@ export const useLandingAuthStore = create<LandingAuthState>((set) => ({
   setApiKeyHasValue: (v) => set({ apiKeyHasValue: v }),
   setApiKeyPreview: (v) => set({ apiKeyPreview: v }),
   setApiKeyEditing: (v) => set({ apiKeyEditing: v }),
+  setApiKeyProvider: (v) => set({ apiKeyProvider: v }),
+  setApiKeyProviders: (v) => set({ apiKeyProviders: v }),
+  setApiKeyPreviews: (v) => set({ apiKeyPreviews: v }),
+  setApiKeyActiveProvider: (v) => set({ apiKeyActiveProvider: v }),
 }));

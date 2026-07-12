@@ -21,7 +21,7 @@ const api_key_guard_1 = require("../../common/guards/api-key.guard");
 const user_decorator_1 = require("../../common/decorators/user.decorator");
 const ai_gateway_service_1 = require("../../lib/ai-gateway.service");
 const e2b_service_1 = require("../../lib/e2b.service");
-const supabase_service_1 = require("../../lib/supabase.service");
+const provider_keys_service_1 = require("../profile/provider-keys.service");
 const agent_service_1 = require("./agent.service");
 const model_resolver_service_1 = require("./services/model-resolver.service");
 const agent_job_service_1 = require("../job-queue/agent-job.service");
@@ -49,10 +49,10 @@ function sseDone(res) {
     }
 }
 let AgentController = AgentController_1 = class AgentController {
-    constructor(ai, e2b, supabase, agentService, modelResolver, agentJobService, rateLimitService, idempotency) {
+    constructor(ai, e2b, providerKeys, agentService, modelResolver, agentJobService, rateLimitService, idempotency) {
         this.ai = ai;
         this.e2b = e2b;
-        this.supabase = supabase;
+        this.providerKeys = providerKeys;
         this.agentService = agentService;
         this.modelResolver = modelResolver;
         this.agentJobService = agentJobService;
@@ -196,8 +196,8 @@ let AgentController = AgentController_1 = class AgentController {
                 res.end();
         });
         try {
-            const apiKey = await this.fetchUserApiKey(user.id);
-            const stream = await this.ai.chat(body.prompt, this.modelResolver.resolveSequence('chat'), apiKey);
+            const aiCredentials = await this.fetchUserCredentials(user.id);
+            const stream = await this.ai.chat(body.prompt, this.modelResolver.resolveSequence('chat'), aiCredentials);
             for await (const chunk of stream) {
                 sseWrite(res, chunk);
             }
@@ -321,43 +321,41 @@ let AgentController = AgentController_1 = class AgentController {
         }
     }
     async codeComponent(user, body) {
-        const apiKey = await this.fetchUserApiKey(user.id);
-        return this.ai.generateComponent(body.section, body.tokens, this.modelResolver.resolveSequence('code_component'), apiKey);
+        const aiCredentials = await this.fetchUserCredentials(user.id);
+        return this.ai.generateComponent(body.section, body.tokens, this.modelResolver.resolveSequence('code_component'), aiCredentials);
     }
     async codePage(user, body) {
-        const apiKey = await this.fetchUserApiKey(user.id);
-        return this.ai.generatePage(body.page, body.sections ?? [], this.modelResolver.resolveSequence('code_page'), apiKey);
+        const aiCredentials = await this.fetchUserCredentials(user.id);
+        return this.ai.generatePage(body.page, body.sections ?? [], this.modelResolver.resolveSequence('code_page'), aiCredentials);
     }
     async designTokens(user, body) {
-        const apiKey = await this.fetchUserApiKey(user.id);
-        return this.ai.designTokens(body.spec, this.modelResolver.resolveSequence('design_tokens'), apiKey);
+        const aiCredentials = await this.fetchUserCredentials(user.id);
+        return this.ai.designTokens(body.spec, this.modelResolver.resolveSequence('design_tokens'), aiCredentials);
     }
     async specSummarize(user, body) {
-        const apiKey = await this.fetchUserApiKey(user.id);
-        return this.ai.summarizeSpec(body.prompt, this.modelResolver.resolveSequence('spec_summarize'), apiKey);
+        const aiCredentials = await this.fetchUserCredentials(user.id);
+        return this.ai.summarizeSpec(body.prompt, this.modelResolver.resolveSequence('spec_summarize'), aiCredentials);
     }
     async uiUxBlueprint(user, body) {
-        const apiKey = await this.fetchUserApiKey(user.id);
-        return this.ai.uiUxBlueprint(body.spec, this.modelResolver.resolveSequence('spec_ui_ux_blueprint'), apiKey);
+        const aiCredentials = await this.fetchUserCredentials(user.id);
+        return this.ai.uiUxBlueprint(body.spec, this.modelResolver.resolveSequence('spec_ui_ux_blueprint'), aiCredentials);
     }
     async filePlan(user, body) {
-        const apiKey = await this.fetchUserApiKey(user.id);
-        return this.ai.filePlan(body.spec, body.blueprint, this.modelResolver.resolveSequence('file_plan'), apiKey);
+        const aiCredentials = await this.fetchUserCredentials(user.id);
+        return this.ai.filePlan(body.spec, body.blueprint, this.modelResolver.resolveSequence('file_plan'), aiCredentials);
     }
     async analyzeEditIntent(user, body) {
-        const apiKey = await this.fetchUserApiKey(user.id);
-        const searchPlan = await this.ai.analyzeEditIntent(body.prompt, body.manifest, this.modelResolver.resolveSequence('analyze_edit_intent'), apiKey);
+        const aiCredentials = await this.fetchUserCredentials(user.id);
+        const searchPlan = await this.ai.analyzeEditIntent(body.prompt, body.manifest, this.modelResolver.resolveSequence('analyze_edit_intent'), aiCredentials);
         return { success: true, search_plan: searchPlan };
     }
-    async fetchUserApiKey(userId) {
+    async fetchUserCredentials(userId) {
         try {
-            const profile = await this.supabase.getProfile(userId);
-            const key = profile?.lovecode_api_key;
-            return typeof key === 'string' && key.length > 0 ? key : undefined;
+            return await this.providerKeys.resolveCredentials(userId);
         }
         catch (e) {
-            this.logger.warn(`Could not fetch user API key: ${e instanceof Error ? e.message : String(e)}`);
-            return undefined;
+            this.logger.warn(`Could not fetch user API credentials: ${e instanceof Error ? e.message : String(e)}`);
+            return [];
         }
     }
     parseFiles(response) {
@@ -579,7 +577,7 @@ exports.AgentController = AgentController = AgentController_1 = __decorate([
     (0, common_1.Controller)('api'),
     __metadata("design:paramtypes", [ai_gateway_service_1.AiGatewayService,
         e2b_service_1.E2BService,
-        supabase_service_1.SupabaseService,
+        provider_keys_service_1.ProviderKeysService,
         agent_service_1.AgentService,
         model_resolver_service_1.ModelResolverService,
         agent_job_service_1.AgentJobService,

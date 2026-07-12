@@ -1,10 +1,10 @@
 import { User } from "../../types";
 import { SupabaseService } from "../../lib/supabase.service";
-import { AiGatewayService } from "../../lib/ai-gateway.service";
+import { ProviderKeysService } from './provider-keys.service';
 export declare class ProfileController {
     private readonly supabase;
-    private readonly ai;
-    constructor(supabase: SupabaseService, ai: AiGatewayService);
+    private readonly providerKeys;
+    constructor(supabase: SupabaseService, providerKeys: ProviderKeysService);
     getProfile(user: User): Promise<{
         profile: Record<string, unknown> | {
             id: string;
@@ -28,6 +28,42 @@ export declare class ProfileController {
     }>;
     updateProfile(user: User, body: Record<string, unknown>): Promise<{
         ok: boolean;
+    }>;
+    getLlmProviders(): {
+        ok: boolean;
+        providers: {
+            id: import("@/lib/llm-providers").ProviderId;
+            label: string;
+            keySiteUrl: string;
+            models: string[];
+        }[];
+    };
+    getProviderKeys(user: User): Promise<{
+        activeProvider: import("@/lib/llm-providers").ProviderId | null;
+        keys: import("./provider-keys.service").ProviderKeyView[];
+        ok: boolean;
+    }>;
+    saveProviderKey(user: User, provider: string, body: {
+        api_key?: string;
+        apiKey?: string;
+    }): Promise<{
+        ok: true;
+        keyPreview: string;
+        activeProvider: string | null;
+        validated: boolean;
+        validationWarning: string | null;
+        provider: import("@/lib/llm-providers").ProviderId;
+    }>;
+    deleteProviderKey(user: User, provider: string): Promise<{
+        ok: boolean;
+        provider: import("@/lib/llm-providers").ProviderId;
+        activeProvider: string | null;
+    }>;
+    setActiveProvider(user: User, body: {
+        provider?: string;
+    }): Promise<{
+        ok: true;
+        activeProvider: string;
     }>;
     getApiKey(user: User): Promise<{
         ok: boolean;

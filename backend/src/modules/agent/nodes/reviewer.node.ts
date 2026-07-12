@@ -21,7 +21,7 @@ function extractJson(text: string): Record<string, unknown> | null {
 
 export async function reviewerNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
   const tools = new SandboxProvider(deps.e2b, state.sandboxId, state.projectId);
-  const userApiKey = state.userApiKey;
+  const aiCredentials = state.aiCredentials;
 
   const filesWritten = state.filesWritten ?? [];
   if (!filesWritten.length) {
@@ -73,7 +73,7 @@ export async function reviewerNode(state: AgentState, deps: GraphDependencies): 
       (ctx, docs) => buildReadOnlyToolSet(ctx, docs),
       messages,
       'reviewer',
-      userApiKey,
+      aiCredentials,
       15,
     );
 

@@ -71,7 +71,7 @@ async function designerNode(state, deps) {
             type: 'status',
             data: { status: 'analyzing', message: 'Creating design system spec...' },
         });
-        const { finalContent } = await (0, tools_1.runToolLoop)(deps, state, (ctx, docsTools) => (0, tools_1.buildPlanningToolSet)(ctx, docsTools), messages, 'designer', state.userApiKey, 10);
+        const { finalContent } = await (0, tools_1.runToolLoop)(deps, state, (ctx, docsTools) => (0, tools_1.buildPlanningToolSet)(ctx, docsTools), messages, 'designer', state.aiCredentials, 10);
         const parsed = extractJson(finalContent);
         if (!parsed) {
             throw new Error('Designer returned invalid JSON; falling back to default spec.');

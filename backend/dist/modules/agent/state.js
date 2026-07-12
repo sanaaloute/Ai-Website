@@ -8,7 +8,7 @@ exports.AgentStateAnnotation = langgraph_1.Annotation.Root({
     projectId: (langgraph_1.Annotation),
     userId: (langgraph_1.Annotation),
     chatHistory: (0, langgraph_1.Annotation)(),
-    userApiKey: (langgraph_1.Annotation),
+    aiCredentials: (langgraph_1.Annotation),
     workflow: (langgraph_1.Annotation),
     websiteCategory: (langgraph_1.Annotation),
     websiteType: (langgraph_1.Annotation),

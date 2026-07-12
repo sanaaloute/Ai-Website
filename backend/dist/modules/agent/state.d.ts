@@ -1,4 +1,5 @@
 import { PromptContent } from "../../types";
+import { AiCredential } from "../../lib/llm-providers";
 export interface ChatMessage {
     role: string;
     content: string;
@@ -100,14 +101,14 @@ export declare const AgentStateAnnotation: import("@langchain/langgraph").Annota
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     chatHistory: import("@langchain/langgraph").LastValue<ChatMessage[]>;
-    userApiKey: {
-        (annotation: import("@langchain/langgraph").SingleReducer<string | undefined, string | undefined>): import("@langchain/langgraph").BaseChannel<string | undefined, string | import("@langchain/langgraph").OverwriteValue<string | undefined> | undefined, unknown>;
-        (): import("@langchain/langgraph").LastValue<string | undefined>;
+    aiCredentials: {
+        (annotation: import("@langchain/langgraph").SingleReducer<AiCredential[], AiCredential[]>): import("@langchain/langgraph").BaseChannel<AiCredential[], AiCredential[] | import("@langchain/langgraph").OverwriteValue<AiCredential[]>, unknown>;
+        (): import("@langchain/langgraph").LastValue<AiCredential[]>;
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     workflow: {
-        (annotation: import("@langchain/langgraph").SingleReducer<"debug" | "new_app" | "edit" | "chat" | "review_fix" | undefined, "debug" | "new_app" | "edit" | "chat" | "review_fix" | undefined>): import("@langchain/langgraph").BaseChannel<"debug" | "new_app" | "edit" | "chat" | "review_fix" | undefined, "debug" | "new_app" | "edit" | "chat" | "review_fix" | import("@langchain/langgraph").OverwriteValue<"debug" | "new_app" | "edit" | "chat" | "review_fix" | undefined> | undefined, unknown>;
-        (): import("@langchain/langgraph").LastValue<"debug" | "new_app" | "edit" | "chat" | "review_fix" | undefined>;
+        (annotation: import("@langchain/langgraph").SingleReducer<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined, "new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined>): import("@langchain/langgraph").BaseChannel<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined, "new_app" | "edit" | "debug" | "chat" | "review_fix" | import("@langchain/langgraph").OverwriteValue<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined> | undefined, unknown>;
+        (): import("@langchain/langgraph").LastValue<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined>;
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     websiteCategory: {

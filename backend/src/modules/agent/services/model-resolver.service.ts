@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { env } from '@/config/env';
+import { ProviderId, providerModels } from '@/lib/llm-providers';
 
 /**
- * Models approved for use in the AI-Website agent runtime.
+ * Models approved for use in the AI-Website agent runtime (legacy TokenFree
+ * gateway). Per-provider model allowlists live in `llm-providers.ts`.
  */
 const ALLOWED_MODELS = new Set([
   'qwen-max',
@@ -46,10 +48,21 @@ export class ModelResolverService {
   /**
    * Return the ordered list of models to try for a given node/agent role.
    * The first model is the role-specific preferred model; subsequent models are fallbacks.
+   *
+   * When `providerId` is given, the sequence is built from that provider's
+   * approved models (see `llm-providers.ts`): heavyweight roles prefer the
+   * most capable model, "fast" roles prefer the lightest one.
    */
-  resolveSequence(nodeType: string): string[] {
-    const e = env();
+  resolveSequence(nodeType: string, providerId?: ProviderId): string[] {
     const role = NODE_ROLE_MAP[nodeType] ?? 'reasoning';
+
+    if (providerId) {
+      const models = providerModels(providerId);
+      // Registry lists models biggest-first; fast roles want the lightest first.
+      return role === 'fast' ? [...models].reverse() : models;
+    }
+
+    const e = env();
 
     // Role-specific preferred primaries (restricted to the approved pair):
     // - Reasoning / planning / analysis / chat -> kimi-k2.5, then qwen-max
@@ -80,8 +93,8 @@ export class ModelResolverService {
   /**
    * Return only the primary model for a node/agent role.
    */
-  resolve(nodeType: string): string {
-    return this.resolveSequence(nodeType)[0] ?? env().aiDefaultModel;
+  resolve(nodeType: string, providerId?: ProviderId): string {
+    return this.resolveSequence(nodeType, providerId)[0] ?? env().aiDefaultModel;
   }
 
   /**

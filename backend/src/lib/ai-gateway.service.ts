@@ -3,6 +3,16 @@ import { env } from '@/config/env';
 import { SearchPlan, FilePlanEntry, PromptContent, normalizePromptContent, promptToString, buildPromptContent } from '@/types';
 import { ToolDefinition, ToolCall } from '@/modules/agent/tools/tool-definitions';
 import type { ToolExecutionResult } from '@/modules/agent/tools/tool-executor';
+import { AiCredential, AiKeyInput, ProviderId, getProvider } from '@/lib/llm-providers';
+
+/** A concrete request target: one provider + key + the models to try on it. */
+interface AiCandidate {
+  provider: ProviderId;
+  apiKey: string;
+  baseUrl: string;
+  extraHeaders?: Record<string, string>;
+  models: string[];
+}
 
 interface ExtractedChunk {
   code?: string;
@@ -86,23 +96,61 @@ export class AiGatewayService {
     return controller.signal;
   }
 
+  /**
+   * Normalize the (model, apiKey) pair into an ordered list of request
+   * candidates. When the caller passes several credentials (the user's
+   * providers, active first), each credential becomes a candidate and the
+   * retry loops fall through them in order — that is the cross-provider
+   * fallback. A plain string key (or no key) targets the legacy TokenFree
+   * gateway, preserving the previous behavior.
+   *
+   * The caller's model list is intersected with each provider's approved
+   * models; when nothing matches (e.g. TokenFree model names sent to an
+   * OpenAI candidate), the provider's own default models are used.
+   */
+  private normalizeCandidates(model: string | string[], apiKey?: AiKeyInput): AiCandidate[] {
+    const models = Array.isArray(model) ? model : [model];
+    const creds: AiCredential[] = !apiKey
+      ? []
+      : typeof apiKey === 'string'
+        ? [{ provider: 'tokenfree', apiKey }]
+        : Array.isArray(apiKey)
+          ? apiKey
+          : [apiKey];
+    if (creds.length === 0) creds.push({ provider: 'tokenfree', apiKey: '' });
+
+    return creds.map((cred) => {
+      const provider = getProvider(cred.provider);
+      const intersection = models.filter((m) => provider.models.includes(m));
+      return {
+        provider: cred.provider,
+        apiKey: cred.apiKey,
+        baseUrl: provider.baseUrl,
+        extraHeaders: provider.extraHeaders,
+        models: intersection.length > 0 ? intersection : provider.models,
+      };
+    });
+  }
+
   async *chat(
     prompt: PromptContent,
     model: string | string[],
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): AsyncGenerator<Record<string, unknown>> {
-    const models = Array.isArray(model) ? model : [model];
-    const e = env();
-    const url = `${e.aiBaseUrl}/chat/completions`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey ?? ''}`,
-      Accept: 'text/event-stream',
-    };
+    const candidates = this.normalizeCandidates(model, apiKey);
 
     const errors: string[] = [];
 
-    for (const [i, m] of models.entries()) {
+    for (const candidate of candidates) {
+      const url = `${candidate.baseUrl}/chat/completions`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${candidate.apiKey}`,
+        Accept: 'text/event-stream',
+        ...candidate.extraHeaders,
+      };
+
+      for (const [i, m] of candidate.models.entries()) {
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -117,7 +165,7 @@ export class AiGatewayService {
 
         if (!res.ok || !res.body) {
           const text = await res.text();
-          errors.push(`${m}: ${text.slice(0, 200)}`);
+          errors.push(`${candidate.provider}/${m}: ${text.slice(0, 200)}`);
           if (res.status === 503 || res.status === 429) {
             await this.sleep(500 * (i + 1));
           }
@@ -159,7 +207,8 @@ export class AiGatewayService {
         // Stream completed successfully; do not try fallback models.
         return;
       } catch (err) {
-        errors.push(`${m}: ${err instanceof Error ? err.message : String(err)}`);
+        errors.push(`${candidate.provider}/${m}: ${err instanceof Error ? err.message : String(err)}`);
+      }
       }
     }
 
@@ -169,19 +218,21 @@ export class AiGatewayService {
   async chatCompletions(
     messages: Array<{ role: string; content: string | unknown[] }>,
     model: string | string[],
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<string> {
-    const models = Array.isArray(model) ? model : [model];
-    const e = env();
-    const url = `${e.aiBaseUrl}/chat/completions`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey ?? ''}`,
-    };
+    const candidates = this.normalizeCandidates(model, apiKey);
 
     const errors: string[] = [];
 
-    for (const [i, m] of models.entries()) {
+    for (const candidate of candidates) {
+      const url = `${candidate.baseUrl}/chat/completions`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${candidate.apiKey}`,
+        ...candidate.extraHeaders,
+      };
+
+      for (const [i, m] of candidate.models.entries()) {
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -197,8 +248,8 @@ export class AiGatewayService {
 
         if (!res.ok) {
           const text = await res.text();
-          errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-          this.logger.warn(`chatCompletions model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+          errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+          this.logger.warn(`chatCompletions model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
           if (res.status === 503 || res.status === 429) {
             await this.sleep(500 * (i + 1));
           }
@@ -209,8 +260,9 @@ export class AiGatewayService {
         return this.extractContent(text) || text;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${m}: ${msg}`);
-        this.logger.warn(`chatCompletions model ${m} error: ${msg}`);
+        errors.push(`${candidate.provider}/${m}: ${msg}`);
+        this.logger.warn(`chatCompletions model ${candidate.provider}/${m} error: ${msg}`);
+      }
       }
     }
 
@@ -221,21 +273,23 @@ export class AiGatewayService {
   async chatCompletionsStream(
     messages: Array<{ role: string; content: string | unknown[] }>,
     model: string | string[],
-    apiKey?: string,
+    apiKey?: AiKeyInput,
     onToken?: (token: string) => void | Promise<void>,
   ): Promise<string> {
-    const models = Array.isArray(model) ? model : [model];
-    const e = env();
-    const url = `${e.aiBaseUrl}/chat/completions`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey ?? ''}`,
-      Accept: 'text/event-stream',
-    };
+    const candidates = this.normalizeCandidates(model, apiKey);
 
     const errors: string[] = [];
 
-    for (const [i, m] of models.entries()) {
+    for (const candidate of candidates) {
+      const url = `${candidate.baseUrl}/chat/completions`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${candidate.apiKey}`,
+        Accept: 'text/event-stream',
+        ...candidate.extraHeaders,
+      };
+
+      for (const [i, m] of candidate.models.entries()) {
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -250,8 +304,8 @@ export class AiGatewayService {
 
         if (!res.ok || !res.body) {
           const text = await res.text();
-          errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-          this.logger.warn(`chatCompletionsStream model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+          errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+          this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
           if (res.status === 503 || res.status === 429) {
             await this.sleep(500 * (i + 1));
           }
@@ -300,8 +354,9 @@ export class AiGatewayService {
         return fullText;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${m}: ${msg}`);
-        this.logger.warn(`chatCompletionsStream model ${m} error: ${msg}`);
+        errors.push(`${candidate.provider}/${m}: ${msg}`);
+        this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} error: ${msg}`);
+      }
       }
     }
 
@@ -313,23 +368,25 @@ export class AiGatewayService {
     messages: Array<{ role: string; content: string | null; tool_call_id?: string; name?: string; tool_calls?: ToolCall[] }>,
     tools: ToolDefinition[],
     model: string | string[],
-    apiKey?: string,
+    apiKey?: AiKeyInput,
     onToken?: (token: string) => void | Promise<void>,
     onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>,
     onFileStart?: (path: string) => void | Promise<void>,
   ): Promise<{ content: string | null; toolCalls: ToolCall[]; toolResults: ToolExecutionResult[] }> {
-    const models = Array.isArray(model) ? model : [model];
-    const e = env();
-    const url = `${e.aiBaseUrl}/chat/completions`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey ?? ''}`,
-      Accept: 'text/event-stream',
-    };
+    const candidates = this.normalizeCandidates(model, apiKey);
 
     const errors: string[] = [];
 
-    for (const [i, m] of models.entries()) {
+    for (const candidate of candidates) {
+      const url = `${candidate.baseUrl}/chat/completions`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${candidate.apiKey}`,
+        Accept: 'text/event-stream',
+        ...candidate.extraHeaders,
+      };
+
+      for (const [i, m] of candidate.models.entries()) {
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -346,8 +403,8 @@ export class AiGatewayService {
 
         if (!res.ok || !res.body) {
           const text = await res.text();
-          errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-          this.logger.warn(`chatCompletionsWithToolsStream model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+          errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+          this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
           if (res.status === 503 || res.status === 429) {
             await this.sleep(500 * (i + 1));
           }
@@ -516,8 +573,9 @@ export class AiGatewayService {
         return { content: content || null, toolCalls, toolResults };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${m}: ${msg}`);
-        this.logger.warn(`chatCompletionsWithToolsStream model ${m} error: ${msg}`);
+        errors.push(`${candidate.provider}/${m}: ${msg}`);
+        this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} error: ${msg}`);
+      }
       }
     }
 
@@ -529,19 +587,21 @@ export class AiGatewayService {
     messages: Array<{ role: string; content: string | null; tool_call_id?: string; name?: string; tool_calls?: ToolCall[] }>,
     tools: ToolDefinition[],
     model: string | string[],
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<{ content: string | null; toolCalls: ToolCall[] }> {
-    const models = Array.isArray(model) ? model : [model];
-    const e = env();
-    const url = `${e.aiBaseUrl}/chat/completions`;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey ?? ''}`,
-    };
+    const candidates = this.normalizeCandidates(model, apiKey);
 
     const errors: string[] = [];
 
-    for (const [i, m] of models.entries()) {
+    for (const candidate of candidates) {
+      const url = `${candidate.baseUrl}/chat/completions`;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${candidate.apiKey}`,
+        ...candidate.extraHeaders,
+      };
+
+      for (const [i, m] of candidate.models.entries()) {
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -559,8 +619,8 @@ export class AiGatewayService {
 
         if (!res.ok) {
           const text = await res.text();
-          errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-          this.logger.warn(`chatCompletionsWithTools model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+          errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+          this.logger.warn(`chatCompletionsWithTools model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
           if (res.status === 503 || res.status === 429) {
             await this.sleep(500 * (i + 1));
           }
@@ -576,8 +636,9 @@ export class AiGatewayService {
         return { content, toolCalls };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${m}: ${msg}`);
-        this.logger.warn(`chatCompletionsWithTools model ${m} error: ${msg}`);
+        errors.push(`${candidate.provider}/${m}: ${msg}`);
+        this.logger.warn(`chatCompletionsWithTools model ${candidate.provider}/${m} error: ${msg}`);
+      }
       }
     }
 
@@ -605,17 +666,19 @@ export class AiGatewayService {
     }
   }
 
-  async validateApiKey(apiKey: string): Promise<{ valid: boolean; warning: string | null; authFailure: boolean }> {
-    const e = env();
-    // Try the configured default model first, then fall back through the approved provider models.
-    const models = Array.from(new Set([e.aiDefaultModel, 'qwen-max', 'kimi-k2.5'].filter(Boolean)));
+  async validateApiKey(apiKey: string, providerId: ProviderId = 'tokenfree'): Promise<{ valid: boolean; warning: string | null; authFailure: boolean }> {
+    const provider = getProvider(providerId);
+    // Try the configured default model first (TokenFree only), then fall back through the provider's approved models.
+    const models = providerId === 'tokenfree'
+      ? Array.from(new Set([env().aiDefaultModel, ...provider.models].filter(Boolean)))
+      : provider.models;
     const errors: string[] = [];
     const statuses: number[] = [];
     for (const [i, model] of models.entries()) {
       try {
-        const res = await fetch(`${e.aiBaseUrl}/chat/completions`, {
+        const res = await fetch(`${provider.baseUrl}/chat/completions`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`, ...provider.extraHeaders },
           signal: this.createAbortSignal(AiGatewayService.VALIDATION_LLM_TIMEOUT_MS),
           body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
         });
@@ -643,7 +706,7 @@ export class AiGatewayService {
     prompt: PromptContent,
     manifest?: Record<string, unknown>,
     model: string | string[] = env().aiDefaultModel,
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<SearchPlan> {
     const system = `You are a code search planner. Given the user's edit request and an optional project manifest, produce a JSON search plan.
 
@@ -686,7 +749,7 @@ Output format (JSON only):
     section: Record<string, unknown>,
     tokens?: Record<string, unknown>,
     model: string | string[] = env().aiDefaultModel,
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<{ code: string }> {
     const system = `You are a React + TypeScript expert. Generate a single self-contained functional component using Tailwind CSS.
 Return only the code inside a TypeScript code block (tsx). No explanations.`;
@@ -700,7 +763,7 @@ Return only the code inside a TypeScript code block (tsx). No explanations.`;
     page: Record<string, unknown>,
     sections: Array<Record<string, unknown>>,
     model: string | string[] = env().aiDefaultModel,
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<{ code: string }> {
     const system = `You are a React + TypeScript expert. Generate a single Next.js/React page component that imports and renders the provided sections.
 Return only the code inside a TypeScript code block (tsx). No explanations.`;
@@ -713,7 +776,7 @@ Return only the code inside a TypeScript code block (tsx). No explanations.`;
   async designTokens(
     spec?: Record<string, unknown>,
     model: string | string[] = env().aiDefaultModel,
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<Record<string, unknown>> {
     const system = `You are a design-system expert. Given a brand spec, return a JSON design-tokens object with this shape:
 {
@@ -742,7 +805,7 @@ Return JSON only.`;
   async summarizeSpec(
     prompt: PromptContent,
     model: string | string[] = env().aiDefaultModel,
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<Record<string, unknown>> {
     const system = `You are a product manager. Summarize the user's website request into a JSON spec with this exact shape:
 {
@@ -779,7 +842,7 @@ Return JSON only.`;
   async uiUxBlueprint(
     spec?: Record<string, unknown>,
     model: string | string[] = env().aiDefaultModel,
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<Record<string, unknown>> {
     const system = `You are a UX architect. Given a project spec, return a JSON blueprint with this shape:
 {
@@ -807,7 +870,7 @@ Return JSON only.`;
     spec?: Record<string, unknown>,
     blueprint?: Record<string, unknown>,
     model: string | string[] = env().aiDefaultModel,
-    apiKey?: string,
+    apiKey?: AiKeyInput,
   ): Promise<{ files: FilePlanEntry[] }> {
     const system = `You are a software architect. Given a project spec and UI blueprint, produce a JSON file plan with this exact shape:
 {

@@ -1,5 +1,6 @@
 import { Annotation } from '@langchain/langgraph';
 import { PromptContent } from '@/types';
+import { AiCredential } from '@/lib/llm-providers';
 
 export interface ChatMessage {
   role: string;
@@ -98,7 +99,7 @@ export const AgentStateAnnotation = Annotation.Root({
   projectId: Annotation<string | undefined>,
   userId: Annotation<string | undefined>,
   chatHistory: Annotation<ChatMessage[]>(),
-  userApiKey: Annotation<string | undefined>,
+  aiCredentials: Annotation<AiCredential[]>,
 
   // Workflow & Category
   workflow: Annotation<'new_app' | 'edit' | 'debug' | 'chat' | 'review_fix' | undefined>,

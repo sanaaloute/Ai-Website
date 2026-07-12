@@ -134,7 +134,7 @@ async function executorNode(state, deps) {
     const docTools = deps.agentMcpToolService?.getTools(context) ?? [];
     const tools = (0, tools_1.buildToolSet)(context, docTools);
     const toolDefinitions = (0, tools_1.toolsToDefinitions)(tools);
-    const userApiKey = state.userApiKey;
+    const aiCredentials = state.aiCredentials;
     const systemPrompt = await deps.promptLoader.load('executor');
     const ctx = buildExecutorContext(state);
     const messages = [
@@ -188,7 +188,7 @@ async function executorNode(state, deps) {
         while (iteration < maxIterations) {
             iteration++;
             deps.logger.debug(`Executor iteration ${iteration}`);
-            const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence('executor'), userApiKey, async (token) => {
+            const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence('executor'), aiCredentials, async (token) => {
                 await deps.emit({ type: 'token', data: { content: token } });
             }, async (toolCall) => executeSingleToolCall(toolCall), async (path) => {
                 deps.logger.debug(`[executor file_start] ${path}`);

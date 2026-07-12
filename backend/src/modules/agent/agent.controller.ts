@@ -19,7 +19,8 @@ import { CurrentUser } from '@/common/decorators/user.decorator';
 import { User, PromptContent, PromptPart, TextPromptPart, ImagePromptPart } from '@/types';
 import { AiGatewayService } from '@/lib/ai-gateway.service';
 import { E2BService, FORBIDDEN_PATH_PREFIXES } from '@/lib/e2b.service';
-import { SupabaseService } from '@/lib/supabase.service';
+import { ProviderKeysService } from '@/modules/profile/provider-keys.service';
+import { AiCredential } from '@/lib/llm-providers';
 import { AgentService } from './agent.service';
 import { AgentEvent } from './state';
 import { ModelResolverService } from './services/model-resolver.service';
@@ -67,7 +68,7 @@ export class AgentController {
   constructor(
     private readonly ai: AiGatewayService,
     private readonly e2b: E2BService,
-    private readonly supabase: SupabaseService,
+    private readonly providerKeys: ProviderKeysService,
     private readonly agentService: AgentService,
     private readonly modelResolver: ModelResolverService,
     private readonly agentJobService: AgentJobService,
@@ -272,8 +273,8 @@ export class AgentController {
     });
 
     try {
-      const apiKey = await this.fetchUserApiKey(user.id);
-      const stream = await this.ai.chat(body.prompt, this.modelResolver.resolveSequence('chat'), apiKey);
+      const aiCredentials = await this.fetchUserCredentials(user.id);
+      const stream = await this.ai.chat(body.prompt, this.modelResolver.resolveSequence('chat'), aiCredentials);
       for await (const chunk of stream) {
         sseWrite(res, chunk);
       }
@@ -418,66 +419,64 @@ export class AgentController {
   @Post('code/component')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async codeComponent(@CurrentUser() user: User, @Body() body: CodeComponentDto) {
-    const apiKey = await this.fetchUserApiKey(user.id);
-    return this.ai.generateComponent(body.section, body.tokens, this.modelResolver.resolveSequence('code_component'), apiKey);
+    const aiCredentials = await this.fetchUserCredentials(user.id);
+    return this.ai.generateComponent(body.section, body.tokens, this.modelResolver.resolveSequence('code_component'), aiCredentials);
   }
 
   @Post('code/page')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async codePage(@CurrentUser() user: User, @Body() body: CodePageDto) {
-    const apiKey = await this.fetchUserApiKey(user.id);
-    return this.ai.generatePage(body.page, body.sections ?? [], this.modelResolver.resolveSequence('code_page'), apiKey);
+    const aiCredentials = await this.fetchUserCredentials(user.id);
+    return this.ai.generatePage(body.page, body.sections ?? [], this.modelResolver.resolveSequence('code_page'), aiCredentials);
   }
 
   @Post('design/tokens')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async designTokens(@CurrentUser() user: User, @Body() body: DesignTokensDto) {
-    const apiKey = await this.fetchUserApiKey(user.id);
-    return this.ai.designTokens(body.spec, this.modelResolver.resolveSequence('design_tokens'), apiKey);
+    const aiCredentials = await this.fetchUserCredentials(user.id);
+    return this.ai.designTokens(body.spec, this.modelResolver.resolveSequence('design_tokens'), aiCredentials);
   }
 
   @Post('spec/summarize')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async specSummarize(@CurrentUser() user: User, @Body() body: SummarizeSpecDto) {
-    const apiKey = await this.fetchUserApiKey(user.id);
-    return this.ai.summarizeSpec(body.prompt, this.modelResolver.resolveSequence('spec_summarize'), apiKey);
+    const aiCredentials = await this.fetchUserCredentials(user.id);
+    return this.ai.summarizeSpec(body.prompt, this.modelResolver.resolveSequence('spec_summarize'), aiCredentials);
   }
 
   @Post('spec/ui-ux-blueprint')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async uiUxBlueprint(@CurrentUser() user: User, @Body() body: UiUxBlueprintDto) {
-    const apiKey = await this.fetchUserApiKey(user.id);
-    return this.ai.uiUxBlueprint(body.spec, this.modelResolver.resolveSequence('spec_ui_ux_blueprint'), apiKey);
+    const aiCredentials = await this.fetchUserCredentials(user.id);
+    return this.ai.uiUxBlueprint(body.spec, this.modelResolver.resolveSequence('spec_ui_ux_blueprint'), aiCredentials);
   }
 
   @Post('project/file-plan')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async filePlan(@CurrentUser() user: User, @Body() body: FilePlanDto) {
-    const apiKey = await this.fetchUserApiKey(user.id);
-    return this.ai.filePlan(body.spec, body.blueprint, this.modelResolver.resolveSequence('file_plan'), apiKey);
+    const aiCredentials = await this.fetchUserCredentials(user.id);
+    return this.ai.filePlan(body.spec, body.blueprint, this.modelResolver.resolveSequence('file_plan'), aiCredentials);
   }
 
   @Post('analyze-edit-intent')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async analyzeEditIntent(@CurrentUser() user: User, @Body() body: AnalyzeEditIntentDto) {
-    const apiKey = await this.fetchUserApiKey(user.id);
+    const aiCredentials = await this.fetchUserCredentials(user.id);
     const searchPlan = await this.ai.analyzeEditIntent(
       body.prompt,
       body.manifest,
       this.modelResolver.resolveSequence('analyze_edit_intent'),
-      apiKey,
+      aiCredentials,
     );
     return { success: true, search_plan: searchPlan };
   }
 
-  private async fetchUserApiKey(userId: string): Promise<string | undefined> {
+  private async fetchUserCredentials(userId: string): Promise<AiCredential[]> {
     try {
-      const profile = await this.supabase.getProfile(userId);
-      const key = profile?.ai_website_api_key;
-      return typeof key === 'string' && key.length > 0 ? key : undefined;
+      return await this.providerKeys.resolveCredentials(userId);
     } catch (e) {
-      this.logger.warn(`Could not fetch user API key: ${e instanceof Error ? e.message : String(e)}`);
-      return undefined;
+      this.logger.warn(`Could not fetch user API credentials: ${e instanceof Error ? e.message : String(e)}`);
+      return [];
     }
   }
 

@@ -11,7 +11,6 @@ interface AccountSectionProps {
   phone: string;
   setPhone: (value: string) => void;
   avatarUrl: string;
-  setAvatarUrl: (value: string) => void;
   avatarRevision: number;
   uploading: boolean;
   saving: boolean;
@@ -27,7 +26,6 @@ export default function AccountSection({
   phone,
   setPhone,
   avatarUrl,
-  setAvatarUrl,
   avatarRevision,
   uploading,
   saving,
@@ -52,9 +50,14 @@ export default function AccountSection({
               <img
                 key={`${avatarUrl}-${avatarRevision}`}
                 src={
-                  avatarUrl.includes("?")
-                    ? `${avatarUrl}&v=${avatarRevision}`
-                    : `${avatarUrl}?v=${avatarRevision}`
+                  // data: URLs cannot carry a cache-busting query string
+                  // (the browser rejects them with ERR_INVALID_URL); the `key`
+                  // prop above already forces a re-render after re-upload.
+                  avatarUrl.startsWith("data:")
+                    ? avatarUrl
+                    : avatarUrl.includes("?")
+                      ? `${avatarUrl}&v=${avatarRevision}`
+                      : `${avatarUrl}?v=${avatarRevision}`
                 }
                 alt=""
                 className="h-full w-full object-cover"
@@ -145,28 +148,6 @@ export default function AccountSection({
             />
             <p className="mt-1 text-[10px] text-zinc-500">
               International format with country code, or leave blank.
-            </p>
-          </div>
-          <div>
-            <label
-              htmlFor="profile-avatar-url"
-              className="text-[11px] font-medium uppercase tracking-wide text-zinc-500"
-            >
-              Profile photo URL
-            </label>
-            <input
-              id="profile-avatar-url"
-              type="url"
-              inputMode="url"
-              autoComplete="photo"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://… (optional — use if upload is unavailable)"
-              className="mt-1 w-full rounded-xl border border-white/15 bg-background/70 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-glow-cyan/50 focus:outline-none"
-            />
-            <p className="mt-1 text-[10px] text-zinc-500">
-              Paste any https image URL, or leave empty and use Change photo
-              after the storage bucket exists.
             </p>
           </div>
         </div>

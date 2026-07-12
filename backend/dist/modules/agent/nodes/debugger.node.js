@@ -21,7 +21,7 @@ function extractJson(text) {
     }
 }
 async function debuggerNode(state, deps) {
-    const userApiKey = state.userApiKey;
+    const aiCredentials = state.aiCredentials;
     const systemPrompt = await deps.promptLoader.load('debugger');
     const debugErrors = state.debugRemainingErrors?.length ? state.debugRemainingErrors : [];
     const reviewIssues = state.reviewIssues?.length ? state.reviewIssues : [];
@@ -35,7 +35,7 @@ async function debuggerNode(state, deps) {
     let resultText = '';
     let loopResult;
     try {
-        loopResult = await (0, tools_1.runToolLoop)(deps, state, (ctx, docs) => (0, tools_1.buildDebugToolSet)(ctx, docs), messages, 'debugger', userApiKey, 5);
+        loopResult = await (0, tools_1.runToolLoop)(deps, state, (ctx, docs) => (0, tools_1.buildDebugToolSet)(ctx, docs), messages, 'debugger', aiCredentials, 5);
         resultText = loopResult.finalContent;
         result = extractJson(resultText) || {};
         if (!Object.keys(result).length) {

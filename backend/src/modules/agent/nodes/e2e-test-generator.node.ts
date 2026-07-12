@@ -73,7 +73,7 @@ export async function e2eTestGeneratorNode(state: AgentState, deps: GraphDepende
     const rawCode = await deps.aiGateway.chatCompletionsStream(
       messages,
       deps.modelResolver.resolveSequence('e2e_test_generator'),
-      state.userApiKey,
+      state.aiCredentials,
     );
 
     const testCode = extractCode(rawCode);

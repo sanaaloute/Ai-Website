@@ -1,28 +1,30 @@
 import { SearchPlan, FilePlanEntry, PromptContent } from "../types";
 import { ToolDefinition, ToolCall } from "../modules/agent/tools/tool-definitions";
 import type { ToolExecutionResult } from "../modules/agent/tools/tool-executor";
+import { AiKeyInput, ProviderId } from "./llm-providers";
 export declare class AiGatewayService {
     private readonly logger;
     private static readonly NON_STREAMING_LLM_TIMEOUT_MS;
     private static readonly VALIDATION_LLM_TIMEOUT_MS;
     private sleep;
     private createAbortSignal;
-    chat(prompt: PromptContent, model: string | string[], apiKey?: string): AsyncGenerator<Record<string, unknown>>;
+    private normalizeCandidates;
+    chat(prompt: PromptContent, model: string | string[], apiKey?: AiKeyInput): AsyncGenerator<Record<string, unknown>>;
     chatCompletions(messages: Array<{
         role: string;
         content: string | unknown[];
-    }>, model: string | string[], apiKey?: string): Promise<string>;
+    }>, model: string | string[], apiKey?: AiKeyInput): Promise<string>;
     chatCompletionsStream(messages: Array<{
         role: string;
         content: string | unknown[];
-    }>, model: string | string[], apiKey?: string, onToken?: (token: string) => void | Promise<void>): Promise<string>;
+    }>, model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string) => void | Promise<void>): Promise<string>;
     chatCompletionsWithToolsStream(messages: Array<{
         role: string;
         content: string | null;
         tool_call_id?: string;
         name?: string;
         tool_calls?: ToolCall[];
-    }>, tools: ToolDefinition[], model: string | string[], apiKey?: string, onToken?: (token: string) => void | Promise<void>, onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>, onFileStart?: (path: string) => void | Promise<void>): Promise<{
+    }>, tools: ToolDefinition[], model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string) => void | Promise<void>, onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>, onFileStart?: (path: string) => void | Promise<void>): Promise<{
         content: string | null;
         toolCalls: ToolCall[];
         toolResults: ToolExecutionResult[];
@@ -33,26 +35,27 @@ export declare class AiGatewayService {
         tool_call_id?: string;
         name?: string;
         tool_calls?: ToolCall[];
-    }>, tools: ToolDefinition[], model: string | string[], apiKey?: string): Promise<{
+    }>, tools: ToolDefinition[], model: string | string[], apiKey?: AiKeyInput): Promise<{
         content: string | null;
         toolCalls: ToolCall[];
     }>;
     proxyChatCompletions(body: Record<string, unknown>, apiKey: string): Promise<Response>;
-    validateApiKey(apiKey: string): Promise<{
+    validateApiKey(apiKey: string, providerId?: ProviderId): Promise<{
         valid: boolean;
         warning: string | null;
+        authFailure: boolean;
     }>;
-    analyzeEditIntent(prompt: PromptContent, manifest?: Record<string, unknown>, model?: string | string[], apiKey?: string): Promise<SearchPlan>;
-    generateComponent(section: Record<string, unknown>, tokens?: Record<string, unknown>, model?: string | string[], apiKey?: string): Promise<{
+    analyzeEditIntent(prompt: PromptContent, manifest?: Record<string, unknown>, model?: string | string[], apiKey?: AiKeyInput): Promise<SearchPlan>;
+    generateComponent(section: Record<string, unknown>, tokens?: Record<string, unknown>, model?: string | string[], apiKey?: AiKeyInput): Promise<{
         code: string;
     }>;
-    generatePage(page: Record<string, unknown>, sections: Array<Record<string, unknown>>, model?: string | string[], apiKey?: string): Promise<{
+    generatePage(page: Record<string, unknown>, sections: Array<Record<string, unknown>>, model?: string | string[], apiKey?: AiKeyInput): Promise<{
         code: string;
     }>;
-    designTokens(spec?: Record<string, unknown>, model?: string | string[], apiKey?: string): Promise<Record<string, unknown>>;
-    summarizeSpec(prompt: PromptContent, model?: string | string[], apiKey?: string): Promise<Record<string, unknown>>;
-    uiUxBlueprint(spec?: Record<string, unknown>, model?: string | string[], apiKey?: string): Promise<Record<string, unknown>>;
-    filePlan(spec?: Record<string, unknown>, blueprint?: Record<string, unknown>, model?: string | string[], apiKey?: string): Promise<{
+    designTokens(spec?: Record<string, unknown>, model?: string | string[], apiKey?: AiKeyInput): Promise<Record<string, unknown>>;
+    summarizeSpec(prompt: PromptContent, model?: string | string[], apiKey?: AiKeyInput): Promise<Record<string, unknown>>;
+    uiUxBlueprint(spec?: Record<string, unknown>, model?: string | string[], apiKey?: AiKeyInput): Promise<Record<string, unknown>>;
+    filePlan(spec?: Record<string, unknown>, blueprint?: Record<string, unknown>, model?: string | string[], apiKey?: AiKeyInput): Promise<{
         files: FilePlanEntry[];
     }>;
     private buildMessages;

@@ -8,6 +8,7 @@ import { CallbackStreamWriter } from './stream-writer';
 import { toolsToDefinitions } from './tool-definitions';
 import type { ToolCall } from './tool-definitions';
 import { executeToolCall } from './tool-executor';
+import type { AiCredential } from '@/lib/llm-providers';
 
 export interface ToolLoopMessage {
   role: string;
@@ -59,7 +60,7 @@ export async function runToolLoop(
   buildTools: (context: AgentContext, docsTools: StructuredTool[]) => StructuredTool[],
   messages: ToolLoopMessage[],
   nodeType: string,
-  userApiKey?: string,
+  aiCredentials?: AiCredential[],
   maxIterations = 10,
 ): Promise<ToolLoopResult> {
   const context = createAgentContext(state, deps);
@@ -86,7 +87,7 @@ export async function runToolLoop(
       messages,
       toolDefinitions,
       deps.modelResolver.resolveSequence(nodeType),
-      userApiKey,
+      aiCredentials,
       async (token) => {
         await deps.emit({ type: 'token', data: { content: token } });
       },

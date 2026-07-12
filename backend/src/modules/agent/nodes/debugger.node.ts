@@ -20,7 +20,7 @@ function extractJson(text: string): Record<string, unknown> | null {
 }
 
 export async function debuggerNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
-  const userApiKey = state.userApiKey;
+  const aiCredentials = state.aiCredentials;
 
   const systemPrompt = await deps.promptLoader.load('debugger');
   const debugErrors = state.debugRemainingErrors?.length ? state.debugRemainingErrors : [];
@@ -44,7 +44,7 @@ export async function debuggerNode(state: AgentState, deps: GraphDependencies): 
       (ctx, docs) => buildDebugToolSet(ctx, docs),
       messages,
       'debugger',
-      userApiKey,
+      aiCredentials,
       5,
     );
     resultText = loopResult!.finalContent;

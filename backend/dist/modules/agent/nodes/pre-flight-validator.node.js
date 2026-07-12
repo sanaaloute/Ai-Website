@@ -89,7 +89,7 @@ function validatePlan(steps, newFiles) {
     return { errors, warnings };
 }
 async function preFlightValidatorNode(state, deps) {
-    const userApiKey = state.userApiKey;
+    const aiCredentials = state.aiCredentials;
     const deterministic = validatePlan(state.planSteps ?? [], state.planNewFiles ?? []);
     if (!state.planSteps?.length) {
         return {
@@ -118,7 +118,7 @@ async function preFlightValidatorNode(state, deps) {
         { role: 'user', content: context },
     ];
     try {
-        const resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('pre_flight_validator'), userApiKey, async (token) => {
+        const resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('pre_flight_validator'), aiCredentials, async (token) => {
             await deps.emit({ type: 'token', data: { content: token } });
         });
         const result = extractJson(resultText) || {};

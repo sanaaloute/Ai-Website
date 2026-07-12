@@ -1,6 +1,6 @@
 import { E2BService } from "../../lib/e2b.service";
 import { AiGatewayService } from "../../lib/ai-gateway.service";
-import { SupabaseService } from "../../lib/supabase.service";
+import { ProviderKeysService } from "../profile/provider-keys.service";
 import { AgentEvent } from './state';
 import { PromptContent } from "../../types";
 import { PromptLoaderService } from './services/prompt-loader.service';
@@ -33,7 +33,7 @@ export interface StreamOptions {
 export declare class AgentService {
     private readonly aiGateway;
     private readonly e2b;
-    private readonly supabase;
+    private readonly providerKeys;
     private readonly promptLoader;
     private readonly modelResolver;
     private readonly templateService;
@@ -42,7 +42,7 @@ export declare class AgentService {
     private readonly agentMcpToolService;
     private readonly logger;
     private readonly graph;
-    constructor(aiGateway: AiGatewayService, e2b: E2BService, supabase: SupabaseService, promptLoader: PromptLoaderService, modelResolver: ModelResolverService, templateService: TemplateService, persistence: AgentPersistenceService, databaseSeeder: DatabaseSeederService, agentMcpToolService: AgentMcpToolService);
+    constructor(aiGateway: AiGatewayService, e2b: E2BService, providerKeys: ProviderKeysService, promptLoader: PromptLoaderService, modelResolver: ModelResolverService, templateService: TemplateService, persistence: AgentPersistenceService, databaseSeeder: DatabaseSeederService, agentMcpToolService: AgentMcpToolService);
     stream(options: StreamOptions, onEvent: (event: AgentEvent) => void | Promise<void>): AsyncGenerator<AgentEvent>;
-    private fetchUserApiKey;
+    private fetchUserCredentials;
 }

@@ -11,6 +11,7 @@ exports.AiGatewayService = void 0;
 const common_1 = require("@nestjs/common");
 const env_1 = require("../config/env");
 const types_1 = require("../types");
+const llm_providers_1 = require("./llm-providers");
 class CodeContentExtractor {
     constructor() {
         this.buffer = '';
@@ -68,436 +69,469 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
         controller.signal.addEventListener('abort', () => clearTimeout(timeout), { once: true });
         return controller.signal;
     }
-    async *chat(prompt, model, apiKey) {
+    normalizeCandidates(model, apiKey) {
         const models = Array.isArray(model) ? model : [model];
-        const e = (0, env_1.env)();
-        const url = `${e.aiBaseUrl}/chat/completions`;
-        const headers = {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey ?? ''}`,
-            Accept: 'text/event-stream',
-        };
+        const creds = !apiKey
+            ? []
+            : typeof apiKey === 'string'
+                ? [{ provider: 'tokenfree', apiKey }]
+                : Array.isArray(apiKey)
+                    ? apiKey
+                    : [apiKey];
+        if (creds.length === 0)
+            creds.push({ provider: 'tokenfree', apiKey: '' });
+        return creds.map((cred) => {
+            const provider = (0, llm_providers_1.getProvider)(cred.provider);
+            const intersection = models.filter((m) => provider.models.includes(m));
+            return {
+                provider: cred.provider,
+                apiKey: cred.apiKey,
+                baseUrl: provider.baseUrl,
+                extraHeaders: provider.extraHeaders,
+                models: intersection.length > 0 ? intersection : provider.models,
+            };
+        });
+    }
+    async *chat(prompt, model, apiKey) {
+        const candidates = this.normalizeCandidates(model, apiKey);
         const errors = [];
-        for (const [i, m] of models.entries()) {
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({
-                        model: m,
-                        messages: [{ role: 'user', content: (0, types_1.normalizePromptContent)(prompt) }],
-                        stream: true,
-                        temperature: 0.7,
-                    }),
-                });
-                if (!res.ok || !res.body) {
-                    const text = await res.text();
-                    errors.push(`${m}: ${text.slice(0, 200)}`);
-                    if (res.status === 503 || res.status === 429) {
-                        await this.sleep(500 * (i + 1));
+        for (const candidate of candidates) {
+            const url = `${candidate.baseUrl}/chat/completions`;
+            const headers = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${candidate.apiKey}`,
+                Accept: 'text/event-stream',
+                ...candidate.extraHeaders,
+            };
+            for (const [i, m] of candidate.models.entries()) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            model: m,
+                            messages: [{ role: 'user', content: (0, types_1.normalizePromptContent)(prompt) }],
+                            stream: true,
+                            temperature: 0.7,
+                        }),
+                    });
+                    if (!res.ok || !res.body) {
+                        const text = await res.text();
+                        errors.push(`${candidate.provider}/${m}: ${text.slice(0, 200)}`);
+                        if (res.status === 503 || res.status === 429) {
+                            await this.sleep(500 * (i + 1));
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done)
-                        break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() ?? '';
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (!trimmed || trimmed.startsWith(':'))
-                            continue;
-                        if (!trimmed.startsWith('data:'))
-                            continue;
-                        const data = trimmed.slice(5).trim();
-                        if (data === '[DONE]')
-                            return;
-                        try {
-                            const parsed = JSON.parse(data);
-                            const delta = parsed.choices?.[0]?.delta;
-                            const content = delta?.content;
-                            if (typeof content === 'string' && content.length > 0) {
-                                yield { content };
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done)
+                            break;
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() ?? '';
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed || trimmed.startsWith(':'))
+                                continue;
+                            if (!trimmed.startsWith('data:'))
+                                continue;
+                            const data = trimmed.slice(5).trim();
+                            if (data === '[DONE]')
+                                return;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const delta = parsed.choices?.[0]?.delta;
+                                const content = delta?.content;
+                                if (typeof content === 'string' && content.length > 0) {
+                                    yield { content };
+                                }
+                            }
+                            catch {
                             }
                         }
-                        catch {
-                        }
                     }
+                    return;
                 }
-                return;
-            }
-            catch (err) {
-                errors.push(`${m}: ${err instanceof Error ? err.message : String(err)}`);
+                catch (err) {
+                    errors.push(`${candidate.provider}/${m}: ${err instanceof Error ? err.message : String(err)}`);
+                }
             }
         }
         throw new Error(`All chat models failed: ${errors.join('; ')}`);
     }
     async chatCompletions(messages, model, apiKey) {
-        const models = Array.isArray(model) ? model : [model];
-        const e = (0, env_1.env)();
-        const url = `${e.aiBaseUrl}/chat/completions`;
-        const headers = {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey ?? ''}`,
-        };
+        const candidates = this.normalizeCandidates(model, apiKey);
         const errors = [];
-        for (const [i, m] of models.entries()) {
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    signal: this.createAbortSignal(AiGatewayService_1.NON_STREAMING_LLM_TIMEOUT_MS),
-                    body: JSON.stringify({
-                        model: m,
-                        messages,
-                        stream: false,
-                        temperature: 0.7,
-                    }),
-                });
-                if (!res.ok) {
-                    const text = await res.text();
-                    errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    this.logger.warn(`chatCompletions model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    if (res.status === 503 || res.status === 429) {
-                        await this.sleep(500 * (i + 1));
+        for (const candidate of candidates) {
+            const url = `${candidate.baseUrl}/chat/completions`;
+            const headers = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${candidate.apiKey}`,
+                ...candidate.extraHeaders,
+            };
+            for (const [i, m] of candidate.models.entries()) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers,
+                        signal: this.createAbortSignal(AiGatewayService_1.NON_STREAMING_LLM_TIMEOUT_MS),
+                        body: JSON.stringify({
+                            model: m,
+                            messages,
+                            stream: false,
+                            temperature: 0.7,
+                        }),
+                    });
+                    if (!res.ok) {
+                        const text = await res.text();
+                        errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        this.logger.warn(`chatCompletions model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        if (res.status === 503 || res.status === 429) {
+                            await this.sleep(500 * (i + 1));
+                        }
+                        continue;
                     }
-                    continue;
+                    const text = await res.text();
+                    return this.extractContent(text) || text;
                 }
-                const text = await res.text();
-                return this.extractContent(text) || text;
-            }
-            catch (err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                errors.push(`${m}: ${msg}`);
-                this.logger.warn(`chatCompletions model ${m} error: ${msg}`);
+                catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    errors.push(`${candidate.provider}/${m}: ${msg}`);
+                    this.logger.warn(`chatCompletions model ${candidate.provider}/${m} error: ${msg}`);
+                }
             }
         }
         this.logger.error(`All chatCompletions models failed: ${errors.join('; ')}`);
         throw new Error(`All models failed: ${errors.join('; ')}`);
     }
     async chatCompletionsStream(messages, model, apiKey, onToken) {
-        const models = Array.isArray(model) ? model : [model];
-        const e = (0, env_1.env)();
-        const url = `${e.aiBaseUrl}/chat/completions`;
-        const headers = {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey ?? ''}`,
-            Accept: 'text/event-stream',
-        };
+        const candidates = this.normalizeCandidates(model, apiKey);
         const errors = [];
-        for (const [i, m] of models.entries()) {
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({
-                        model: m,
-                        messages,
-                        stream: true,
-                        temperature: 0.7,
-                    }),
-                });
-                if (!res.ok || !res.body) {
-                    const text = await res.text();
-                    errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    this.logger.warn(`chatCompletionsStream model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    if (res.status === 503 || res.status === 429) {
-                        await this.sleep(500 * (i + 1));
+        for (const candidate of candidates) {
+            const url = `${candidate.baseUrl}/chat/completions`;
+            const headers = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${candidate.apiKey}`,
+                Accept: 'text/event-stream',
+                ...candidate.extraHeaders,
+            };
+            for (const [i, m] of candidate.models.entries()) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            model: m,
+                            messages,
+                            stream: true,
+                            temperature: 0.7,
+                        }),
+                    });
+                    if (!res.ok || !res.body) {
+                        const text = await res.text();
+                        errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        if (res.status === 503 || res.status === 429) {
+                            await this.sleep(500 * (i + 1));
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                let fullText = '';
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done)
-                        break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() ?? '';
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (!trimmed || trimmed.startsWith(':'))
-                            continue;
-                        if (!trimmed.startsWith('data:'))
-                            continue;
-                        const data = trimmed.slice(5).trim();
-                        if (data === '[DONE]')
-                            continue;
-                        try {
-                            const parsed = JSON.parse(data);
-                            const token = parsed.choices?.[0]?.delta?.content;
-                            if (typeof token === 'string') {
-                                fullText += token;
-                                if (onToken) {
-                                    try {
-                                        await onToken(token);
-                                    }
-                                    catch (tokenErr) {
-                                        this.logger.warn(`chatCompletionsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let fullText = '';
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done)
+                            break;
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() ?? '';
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed || trimmed.startsWith(':'))
+                                continue;
+                            if (!trimmed.startsWith('data:'))
+                                continue;
+                            const data = trimmed.slice(5).trim();
+                            if (data === '[DONE]')
+                                continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const token = parsed.choices?.[0]?.delta?.content;
+                                if (typeof token === 'string') {
+                                    fullText += token;
+                                    if (onToken) {
+                                        try {
+                                            await onToken(token);
+                                        }
+                                        catch (tokenErr) {
+                                            this.logger.warn(`chatCompletionsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
+                                        }
                                     }
                                 }
                             }
-                        }
-                        catch {
+                            catch {
+                            }
                         }
                     }
+                    return fullText;
                 }
-                return fullText;
-            }
-            catch (err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                errors.push(`${m}: ${msg}`);
-                this.logger.warn(`chatCompletionsStream model ${m} error: ${msg}`);
+                catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    errors.push(`${candidate.provider}/${m}: ${msg}`);
+                    this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} error: ${msg}`);
+                }
             }
         }
         this.logger.error(`All chatCompletionsStream models failed: ${errors.join('; ')}`);
         throw new Error(`All models failed: ${errors.join('; ')}`);
     }
     async chatCompletionsWithToolsStream(messages, tools, model, apiKey, onToken, onToolCall, onFileStart) {
-        const models = Array.isArray(model) ? model : [model];
-        const e = (0, env_1.env)();
-        const url = `${e.aiBaseUrl}/chat/completions`;
-        const headers = {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey ?? ''}`,
-            Accept: 'text/event-stream',
-        };
+        const candidates = this.normalizeCandidates(model, apiKey);
         const errors = [];
-        for (const [i, m] of models.entries()) {
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({
-                        model: m,
-                        messages,
-                        tools,
-                        tool_choice: 'auto',
-                        stream: true,
-                        temperature: 0.3,
-                    }),
-                });
-                if (!res.ok || !res.body) {
-                    const text = await res.text();
-                    errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    this.logger.warn(`chatCompletionsWithToolsStream model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    if (res.status === 503 || res.status === 429) {
-                        await this.sleep(500 * (i + 1));
+        for (const candidate of candidates) {
+            const url = `${candidate.baseUrl}/chat/completions`;
+            const headers = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${candidate.apiKey}`,
+                Accept: 'text/event-stream',
+                ...candidate.extraHeaders,
+            };
+            for (const [i, m] of candidate.models.entries()) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            model: m,
+                            messages,
+                            tools,
+                            tool_choice: 'auto',
+                            stream: true,
+                            temperature: 0.3,
+                        }),
+                    });
+                    if (!res.ok || !res.body) {
+                        const text = await res.text();
+                        errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        if (res.status === 503 || res.status === 429) {
+                            await this.sleep(500 * (i + 1));
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-                let content = '';
-                const toolCallsAccum = {};
-                const codeExtractors = {};
-                let currentToolIndex = -1;
-                let currentToolName = '';
-                const toolResults = [];
-                const codeWritingTools = new Set(['write_file', 'edit_file', 'search_replace']);
-                const finalizeToolCall = async (idx) => {
-                    const accum = toolCallsAccum[idx];
-                    if (!accum || !accum.id || accum.type !== 'function' || !accum.name) {
-                        return;
-                    }
-                    const toolCall = {
-                        id: accum.id,
-                        type: 'function',
-                        function: {
-                            name: accum.name,
-                            arguments: accum.arguments ?? '',
-                        },
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let content = '';
+                    const toolCallsAccum = {};
+                    const codeExtractors = {};
+                    let currentToolIndex = -1;
+                    let currentToolName = '';
+                    const toolResults = [];
+                    const codeWritingTools = new Set(['write_file', 'edit_file', 'search_replace']);
+                    const finalizeToolCall = async (idx) => {
+                        const accum = toolCallsAccum[idx];
+                        if (!accum || !accum.id || accum.type !== 'function' || !accum.name) {
+                            return;
+                        }
+                        const toolCall = {
+                            id: accum.id,
+                            type: 'function',
+                            function: {
+                                name: accum.name,
+                                arguments: accum.arguments ?? '',
+                            },
+                        };
+                        if (onToolCall) {
+                            try {
+                                const result = await onToolCall(toolCall);
+                                toolResults.push(result);
+                            }
+                            catch (err) {
+                                const msg = err instanceof Error ? err.message : String(err);
+                                this.logger.warn(`onToolCall error for ${toolCall.function.name}: ${msg}`);
+                                toolResults.push({
+                                    toolCallId: toolCall.id,
+                                    name: toolCall.function.name,
+                                    content: `Error: ${msg}`,
+                                    success: false,
+                                });
+                            }
+                        }
                     };
-                    if (onToolCall) {
-                        try {
-                            const result = await onToolCall(toolCall);
-                            toolResults.push(result);
-                        }
-                        catch (err) {
-                            const msg = err instanceof Error ? err.message : String(err);
-                            this.logger.warn(`onToolCall error for ${toolCall.function.name}: ${msg}`);
-                            toolResults.push({
-                                toolCallId: toolCall.id,
-                                name: toolCall.function.name,
-                                content: `Error: ${msg}`,
-                                success: false,
-                            });
-                        }
-                    }
-                };
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done)
-                        break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() ?? '';
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (!trimmed || trimmed.startsWith(':'))
-                            continue;
-                        if (!trimmed.startsWith('data:'))
-                            continue;
-                        const data = trimmed.slice(5).trim();
-                        if (data === '[DONE]')
-                            continue;
-                        try {
-                            const parsed = JSON.parse(data);
-                            const delta = parsed.choices?.[0]?.delta;
-                            if (typeof delta?.content === 'string') {
-                                content += delta.content;
-                                if (onToken) {
-                                    try {
-                                        await onToken(delta.content);
-                                    }
-                                    catch (tokenErr) {
-                                        this.logger.warn(`chatCompletionsWithToolsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done)
+                            break;
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() ?? '';
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed || trimmed.startsWith(':'))
+                                continue;
+                            if (!trimmed.startsWith('data:'))
+                                continue;
+                            const data = trimmed.slice(5).trim();
+                            if (data === '[DONE]')
+                                continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                const delta = parsed.choices?.[0]?.delta;
+                                if (typeof delta?.content === 'string') {
+                                    content += delta.content;
+                                    if (onToken) {
+                                        try {
+                                            await onToken(delta.content);
+                                        }
+                                        catch (tokenErr) {
+                                            this.logger.warn(`chatCompletionsWithToolsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
+                                        }
                                     }
                                 }
-                            }
-                            if (Array.isArray(delta?.tool_calls)) {
-                                for (const tc of delta.tool_calls) {
-                                    const idx = typeof tc.index === 'number' ? tc.index : 0;
-                                    if (idx !== currentToolIndex) {
-                                        if (currentToolIndex >= 0) {
-                                            await finalizeToolCall(currentToolIndex);
-                                        }
-                                        currentToolIndex = idx;
-                                        currentToolName = tc.function?.name || '';
-                                        if (!codeExtractors[idx]) {
-                                            codeExtractors[idx] = new CodeContentExtractor();
-                                        }
-                                    }
-                                    if (!toolCallsAccum[idx]) {
-                                        toolCallsAccum[idx] = {};
-                                    }
-                                    const accum = toolCallsAccum[idx];
-                                    if (tc.id)
-                                        accum.id = tc.id;
-                                    if (tc.type)
-                                        accum.type = tc.type;
-                                    if (tc.function?.name) {
-                                        accum.name = tc.function.name;
-                                        currentToolName = tc.function.name;
-                                    }
-                                    if (typeof tc.function?.arguments === 'string') {
-                                        if (codeWritingTools.has(currentToolName)) {
-                                            const extractor = codeExtractors[idx] ?? new CodeContentExtractor();
-                                            codeExtractors[idx] = extractor;
-                                            const { code: codeToken, path: filePath } = extractor.append(tc.function.arguments);
-                                            if (filePath && onFileStart) {
-                                                try {
-                                                    await onFileStart(filePath);
-                                                }
-                                                catch (startErr) {
-                                                    this.logger.warn(`chatCompletionsWithToolsStream onFileStart error: ${startErr instanceof Error ? startErr.message : String(startErr)}`);
-                                                }
+                                if (Array.isArray(delta?.tool_calls)) {
+                                    for (const tc of delta.tool_calls) {
+                                        const idx = typeof tc.index === 'number' ? tc.index : 0;
+                                        if (idx !== currentToolIndex) {
+                                            if (currentToolIndex >= 0) {
+                                                await finalizeToolCall(currentToolIndex);
                                             }
-                                            if (codeToken && onToken) {
-                                                try {
-                                                    const CHUNK_SIZE = 80;
-                                                    if (codeToken.length <= CHUNK_SIZE) {
-                                                        await onToken(codeToken);
+                                            currentToolIndex = idx;
+                                            currentToolName = tc.function?.name || '';
+                                            if (!codeExtractors[idx]) {
+                                                codeExtractors[idx] = new CodeContentExtractor();
+                                            }
+                                        }
+                                        if (!toolCallsAccum[idx]) {
+                                            toolCallsAccum[idx] = {};
+                                        }
+                                        const accum = toolCallsAccum[idx];
+                                        if (tc.id)
+                                            accum.id = tc.id;
+                                        if (tc.type)
+                                            accum.type = tc.type;
+                                        if (tc.function?.name) {
+                                            accum.name = tc.function.name;
+                                            currentToolName = tc.function.name;
+                                        }
+                                        if (typeof tc.function?.arguments === 'string') {
+                                            if (codeWritingTools.has(currentToolName)) {
+                                                const extractor = codeExtractors[idx] ?? new CodeContentExtractor();
+                                                codeExtractors[idx] = extractor;
+                                                const { code: codeToken, path: filePath } = extractor.append(tc.function.arguments);
+                                                if (filePath && onFileStart) {
+                                                    try {
+                                                        await onFileStart(filePath);
                                                     }
-                                                    else {
-                                                        for (let i = 0; i < codeToken.length; i += CHUNK_SIZE) {
-                                                            await onToken(codeToken.slice(i, i + CHUNK_SIZE));
-                                                            await this.sleep(0);
+                                                    catch (startErr) {
+                                                        this.logger.warn(`chatCompletionsWithToolsStream onFileStart error: ${startErr instanceof Error ? startErr.message : String(startErr)}`);
+                                                    }
+                                                }
+                                                if (codeToken && onToken) {
+                                                    try {
+                                                        const CHUNK_SIZE = 80;
+                                                        if (codeToken.length <= CHUNK_SIZE) {
+                                                            await onToken(codeToken);
+                                                        }
+                                                        else {
+                                                            for (let i = 0; i < codeToken.length; i += CHUNK_SIZE) {
+                                                                await onToken(codeToken.slice(i, i + CHUNK_SIZE));
+                                                                await this.sleep(0);
+                                                            }
                                                         }
                                                     }
-                                                }
-                                                catch (tokenErr) {
-                                                    this.logger.warn(`chatCompletionsWithToolsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
+                                                    catch (tokenErr) {
+                                                        this.logger.warn(`chatCompletionsWithToolsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
+                                                    }
                                                 }
                                             }
+                                            accum.arguments = (accum.arguments ?? '') + tc.function.arguments;
                                         }
-                                        accum.arguments = (accum.arguments ?? '') + tc.function.arguments;
                                     }
                                 }
                             }
-                        }
-                        catch {
+                            catch {
+                            }
                         }
                     }
+                    if (currentToolIndex >= 0) {
+                        await finalizeToolCall(currentToolIndex);
+                    }
+                    const toolCalls = Object.values(toolCallsAccum)
+                        .filter((tc) => tc.id && tc.type === 'function' && tc.name)
+                        .map((tc) => ({
+                        id: tc.id,
+                        type: 'function',
+                        function: {
+                            name: tc.name,
+                            arguments: tc.arguments ?? '',
+                        },
+                    }));
+                    return { content: content || null, toolCalls, toolResults };
                 }
-                if (currentToolIndex >= 0) {
-                    await finalizeToolCall(currentToolIndex);
+                catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    errors.push(`${candidate.provider}/${m}: ${msg}`);
+                    this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} error: ${msg}`);
                 }
-                const toolCalls = Object.values(toolCallsAccum)
-                    .filter((tc) => tc.id && tc.type === 'function' && tc.name)
-                    .map((tc) => ({
-                    id: tc.id,
-                    type: 'function',
-                    function: {
-                        name: tc.name,
-                        arguments: tc.arguments ?? '',
-                    },
-                }));
-                return { content: content || null, toolCalls, toolResults };
-            }
-            catch (err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                errors.push(`${m}: ${msg}`);
-                this.logger.warn(`chatCompletionsWithToolsStream model ${m} error: ${msg}`);
             }
         }
         this.logger.error(`All chatCompletionsWithToolsStream models failed: ${errors.join('; ')}`);
         throw new Error(`All models failed: ${errors.join('; ')}`);
     }
     async chatCompletionsWithTools(messages, tools, model, apiKey) {
-        const models = Array.isArray(model) ? model : [model];
-        const e = (0, env_1.env)();
-        const url = `${e.aiBaseUrl}/chat/completions`;
-        const headers = {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey ?? ''}`,
-        };
+        const candidates = this.normalizeCandidates(model, apiKey);
         const errors = [];
-        for (const [i, m] of models.entries()) {
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    signal: this.createAbortSignal(AiGatewayService_1.NON_STREAMING_LLM_TIMEOUT_MS),
-                    body: JSON.stringify({
-                        model: m,
-                        messages,
-                        tools,
-                        tool_choice: 'auto',
-                        stream: false,
-                        temperature: 0.3,
-                    }),
-                });
-                if (!res.ok) {
-                    const text = await res.text();
-                    errors.push(`${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    this.logger.warn(`chatCompletionsWithTools model ${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
-                    if (res.status === 503 || res.status === 429) {
-                        await this.sleep(500 * (i + 1));
+        for (const candidate of candidates) {
+            const url = `${candidate.baseUrl}/chat/completions`;
+            const headers = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${candidate.apiKey}`,
+                ...candidate.extraHeaders,
+            };
+            for (const [i, m] of candidate.models.entries()) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers,
+                        signal: this.createAbortSignal(AiGatewayService_1.NON_STREAMING_LLM_TIMEOUT_MS),
+                        body: JSON.stringify({
+                            model: m,
+                            messages,
+                            tools,
+                            tool_choice: 'auto',
+                            stream: false,
+                            temperature: 0.3,
+                        }),
+                    });
+                    if (!res.ok) {
+                        const text = await res.text();
+                        errors.push(`${candidate.provider}/${m}: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        this.logger.warn(`chatCompletionsWithTools model ${candidate.provider}/${m} failed: HTTP ${res.status} ${text.slice(0, 200)}`);
+                        if (res.status === 503 || res.status === 429) {
+                            await this.sleep(500 * (i + 1));
+                        }
+                        continue;
                     }
-                    continue;
+                    const data = await res.json();
+                    const message = data.choices?.[0]?.message;
+                    const content = message?.content ?? null;
+                    const toolCalls = Array.isArray(message?.tool_calls)
+                        ? message.tool_calls.filter((tc) => tc.type === 'function')
+                        : [];
+                    return { content, toolCalls };
                 }
-                const data = await res.json();
-                const message = data.choices?.[0]?.message;
-                const content = message?.content ?? null;
-                const toolCalls = Array.isArray(message?.tool_calls)
-                    ? message.tool_calls.filter((tc) => tc.type === 'function')
-                    : [];
-                return { content, toolCalls };
-            }
-            catch (err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                errors.push(`${m}: ${msg}`);
-                this.logger.warn(`chatCompletionsWithTools model ${m} error: ${msg}`);
+                catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    errors.push(`${candidate.provider}/${m}: ${msg}`);
+                    this.logger.warn(`chatCompletionsWithTools model ${candidate.provider}/${m} error: ${msg}`);
+                }
             }
         }
         this.logger.error(`All chatCompletionsWithTools models failed: ${errors.join('; ')}`);
@@ -522,20 +556,24 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
             return new Response(JSON.stringify({ error: 'AI gateway unavailable' }), { status: 503 });
         }
     }
-    async validateApiKey(apiKey) {
-        const e = (0, env_1.env)();
-        const models = Array.from(new Set([e.aiDefaultModel, e.aiReflectionModel, 'gpt-5.4', 'qwen-max', 'kimi-k2.5'].filter(Boolean)));
+    async validateApiKey(apiKey, providerId = 'tokenfree') {
+        const provider = (0, llm_providers_1.getProvider)(providerId);
+        const models = providerId === 'tokenfree'
+            ? Array.from(new Set([(0, env_1.env)().aiDefaultModel, ...provider.models].filter(Boolean)))
+            : provider.models;
         const errors = [];
+        const statuses = [];
         for (const [i, model] of models.entries()) {
             try {
-                const res = await fetch(`${e.aiBaseUrl}/chat/completions`, {
+                const res = await fetch(`${provider.baseUrl}/chat/completions`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`, ...provider.extraHeaders },
                     signal: this.createAbortSignal(AiGatewayService_1.VALIDATION_LLM_TIMEOUT_MS),
                     body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
                 });
                 if (res.ok)
-                    return { valid: true, warning: null };
+                    return { valid: true, warning: null, authFailure: false };
+                statuses.push(res.status);
                 const text = await res.text();
                 errors.push(`${model}: ${res.status} ${text.slice(0, 120)}`);
                 if (res.status === 503 || res.status === 429) {
@@ -546,7 +584,8 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
                 errors.push(`${model}: ${err instanceof Error ? err.message : String(err)}`);
             }
         }
-        return { valid: false, warning: `AI gateway validation failed: ${errors.join('; ')}` };
+        const authFailure = statuses.length === models.length && statuses.every((s) => s === 401 || s === 403);
+        return { valid: false, warning: `AI gateway validation failed: ${errors.join('; ')}`, authFailure };
     }
     async analyzeEditIntent(prompt, manifest, model = (0, env_1.env)().aiDefaultModel, apiKey) {
         const system = `You are a code search planner. Given the user's edit request and an optional project manifest, produce a JSON search plan.
@@ -648,7 +687,7 @@ Return JSON only.`;
         return {
             project_type: 'web_app',
             title: (0, types_1.promptToString)(prompt).slice(0, 40),
-            tagline: 'Generated by LoveCode',
+            tagline: 'Generated by AI-Website',
             target_audience: 'developers',
             core_features: ['landing page', 'contact form'],
             pages: [{ name: 'Home', route: '/' }],

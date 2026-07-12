@@ -9,22 +9,22 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApiKeyGuard = exports.LoveCodeApiKeyException = void 0;
+exports.ApiKeyGuard = exports.AiWebsiteApiKeyException = void 0;
 const common_1 = require("@nestjs/common");
-const supabase_service_1 = require("../../lib/supabase.service");
+const provider_keys_service_1 = require("../../modules/profile/provider-keys.service");
 const env_1 = require("../../config/env");
-class LoveCodeApiKeyException extends common_1.HttpException {
+class AiWebsiteApiKeyException extends common_1.HttpException {
     constructor() {
         super({
             success: false,
-            error: `Missing LoveCode API key. Get one at ${(0, env_1.env)().lovecodeApiKeySiteUrl}`,
+            error: `Missing AI provider API key. Add one in your profile or get a key at ${(0, env_1.env)().aiWebsiteApiKeySiteUrl}`,
         }, common_1.HttpStatus.PAYMENT_REQUIRED);
     }
 }
-exports.LoveCodeApiKeyException = LoveCodeApiKeyException;
+exports.AiWebsiteApiKeyException = AiWebsiteApiKeyException;
 let ApiKeyGuard = class ApiKeyGuard {
-    constructor(supabase) {
-        this.supabase = supabase;
+    constructor(providerKeys) {
+        this.providerKeys = providerKeys;
     }
     async canActivate(context) {
         const req = context.switchToHttp().getRequest();
@@ -32,16 +32,15 @@ let ApiKeyGuard = class ApiKeyGuard {
         if (!userId) {
             throw new common_1.HttpException({ success: false, error: 'Unauthorized' }, common_1.HttpStatus.UNAUTHORIZED);
         }
-        const { data, error } = await this.supabase.admin
-            .from('users')
-            .select('lovecode_api_key')
-            .eq('id', userId)
-            .single();
-        if (error) {
-            throw new common_1.HttpException({ success: false, error: error.message }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        let credentials;
+        try {
+            credentials = await this.providerKeys.resolveCredentials(userId);
         }
-        if (!data?.lovecode_api_key) {
-            throw new LoveCodeApiKeyException();
+        catch (e) {
+            throw new common_1.HttpException({ success: false, error: e instanceof Error ? e.message : String(e) }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        if (credentials.length === 0) {
+            throw new AiWebsiteApiKeyException();
         }
         return true;
     }
@@ -49,6 +48,6 @@ let ApiKeyGuard = class ApiKeyGuard {
 exports.ApiKeyGuard = ApiKeyGuard;
 exports.ApiKeyGuard = ApiKeyGuard = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [supabase_service_1.SupabaseService])
+    __metadata("design:paramtypes", [provider_keys_service_1.ProviderKeysService])
 ], ApiKeyGuard);
 //# sourceMappingURL=api-key.guard.js.map

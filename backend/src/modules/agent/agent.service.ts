@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { E2BService } from '@/lib/e2b.service';
 import { AiGatewayService } from '@/lib/ai-gateway.service';
-import { SupabaseService } from '@/lib/supabase.service';
+import { ProviderKeysService } from '@/modules/profile/provider-keys.service';
+import { AiCredential } from '@/lib/llm-providers';
 import { AgentState, AgentEvent } from './state';
 import { PromptContent } from '@/types';
 import { buildAgentGraph, GraphDependencies } from './graph';
@@ -36,7 +37,7 @@ export class AgentService {
   constructor(
     private readonly aiGateway: AiGatewayService,
     private readonly e2b: E2BService,
-    private readonly supabase: SupabaseService,
+    private readonly providerKeys: ProviderKeysService,
     private readonly promptLoader: PromptLoaderService,
     private readonly modelResolver: ModelResolverService,
     private readonly templateService: TemplateService,
@@ -51,7 +52,7 @@ export class AgentService {
     options: StreamOptions,
     onEvent: (event: AgentEvent) => void | Promise<void>,
   ): AsyncGenerator<AgentEvent> {
-    const userApiKey = await this.fetchUserApiKey(options.userId);
+    const aiCredentials = await this.fetchUserCredentials(options.userId);
 
     const initialState: AgentState = {
       prompt: options.prompt,
@@ -60,7 +61,7 @@ export class AgentService {
       projectId: options.projectId,
       userId: options.userId,
       chatHistory: options.chatHistory ?? [],
-      userApiKey,
+      aiCredentials,
       retryCount: 0,
 
       // When the user chooses to continue after the review retry loop hits the
@@ -265,16 +266,14 @@ export class AgentService {
     }
   }
 
-  private async fetchUserApiKey(userId: string): Promise<string | undefined> {
+  private async fetchUserCredentials(userId: string): Promise<AiCredential[]> {
     try {
-      const profile = await this.supabase.getProfile(userId);
-      const key = profile?.ai_website_api_key;
-      return typeof key === 'string' && key.length > 0 ? key : undefined;
+      return await this.providerKeys.resolveCredentials(userId);
     } catch (e) {
       this.logger.warn(
-        `Could not fetch user API key: ${e instanceof Error ? e.message : String(e)}`,
+        `Could not fetch user API credentials: ${e instanceof Error ? e.message : String(e)}`,
       );
-      return undefined;
+      return [];
     }
   }
 }

@@ -5,7 +5,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { KeyRound, X, Pencil, Trash2 } from "lucide-react";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
 import { AI_WEBSITE_API_KEY_SITE_URL } from "@/lib/ai/aiWebsiteApiKey";
-import { getAiWebsiteApiKey, updateAiWebsiteApiKey, deleteAiWebsiteApiKey } from "@/lib/api/client";
+import {
+  getLlmProviders,
+  getProviderKeys,
+  saveProviderKey,
+  deleteProviderKey,
+  type LlmProviderInfo,
+} from "@/lib/api/client";
+
+const FALLBACK_PROVIDERS: LlmProviderInfo[] = [
+  { id: "tokenfree", label: "TokenFree", keySiteUrl: AI_WEBSITE_API_KEY_SITE_URL, models: [] },
+  { id: "openai", label: "OpenAI", keySiteUrl: "https://platform.openai.com/api-keys", models: [] },
+  { id: "openrouter", label: "OpenRouter", keySiteUrl: "https://openrouter.ai/keys", models: [] },
+  { id: "groq", label: "Groq", keySiteUrl: "https://console.groq.com/keys", models: [] },
+  { id: "ollama_cloud", label: "Ollama Cloud", keySiteUrl: "https://ollama.com/settings/keys", models: [] },
+  { id: "kie_ai", label: "kie.ai", keySiteUrl: "https://kie.ai/api-key", models: [] },
+];
 
 export function ApiKeyDialog() {
   const store = useLandingAuthStore();
@@ -22,6 +37,10 @@ export function ApiKeyDialog() {
     apiKeyHasValue,
     apiKeyPreview,
     apiKeyEditing,
+    apiKeyProvider,
+    apiKeyProviders,
+    apiKeyPreviews,
+    apiKeyActiveProvider,
     closeApiKeyDialog,
     setApiKeyInput,
     setApiKeyError,
@@ -31,30 +50,51 @@ export function ApiKeyDialog() {
     setApiKeyHasValue,
     setApiKeyPreview,
     setApiKeyEditing,
+    setApiKeyProvider,
+    setApiKeyProviders,
+    setApiKeyPreviews,
+    setApiKeyActiveProvider,
   } = store;
 
-  // Load API key state when dialog opens
+  const providers = apiKeyProviders.length > 0 ? apiKeyProviders : FALLBACK_PROVIDERS;
+  const currentProvider =
+    providers.find((p) => p.id === apiKeyProvider) ?? providers[0];
+
+  // Load providers + saved keys when the dialog opens
   useEffect(() => {
     if (!apiKeyDialogOpen) return;
     let cancelled = false;
     setApiKeyLoading(true);
-    getAiWebsiteApiKey()
-      .then((result) => {
+    Promise.all([getLlmProviders(), getProviderKeys()])
+      .then(([providersResult, keysResult]) => {
         if (cancelled) return;
-        if (!result.ok) {
+        if (providersResult.ok && providersResult.data.providers?.length) {
+          setApiKeyProviders(providersResult.data.providers);
+        }
+        if (!keysResult.ok) {
           setApiKeyHasValue(false);
           setApiKeyPreview(null);
           setApiKeyEditing(true);
-          if (result.status === 401) {
+          if (keysResult.status === 401) {
             setApiKeyError("Please log in first to save your API key.");
           } else {
-            setApiKeyError(result.error || "Could not load API key state.");
+            setApiKeyError(keysResult.error || "Could not load API key state.");
           }
           return;
         }
-        const has = Boolean(result.data.hasApiKey);
+        const previews: Record<string, string> = {};
+        for (const k of keysResult.data.keys ?? []) {
+          previews[k.provider] = k.keyPreview;
+        }
+        setApiKeyPreviews(previews);
+        setApiKeyActiveProvider(keysResult.data.activeProvider ?? null);
+
+        // Select the active provider (fall back to the current selection).
+        const selected = keysResult.data.activeProvider ?? apiKeyProvider;
+        setApiKeyProvider(selected);
+        const has = Boolean(previews[selected]);
         setApiKeyHasValue(has);
-        setApiKeyPreview(null);
+        setApiKeyPreview(previews[selected] ?? null);
         setApiKeyEditing(!has);
       })
       .catch(() => {
@@ -70,14 +110,29 @@ export function ApiKeyDialog() {
     return () => {
       cancelled = true;
     };
-  }, [
-    apiKeyDialogOpen,
-    setApiKeyLoading,
-    setApiKeyHasValue,
-    setApiKeyPreview,
-    setApiKeyEditing,
-    setApiKeyError,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKeyDialogOpen]);
+
+  const selectProvider = useCallback(
+    (providerId: string) => {
+      setApiKeyProvider(providerId);
+      const has = Boolean(apiKeyPreviews[providerId]);
+      setApiKeyHasValue(has);
+      setApiKeyPreview(apiKeyPreviews[providerId] ?? null);
+      setApiKeyInput("");
+      setApiKeyError(null);
+      setApiKeyEditing(!has);
+    },
+    [
+      apiKeyPreviews,
+      setApiKeyProvider,
+      setApiKeyHasValue,
+      setApiKeyPreview,
+      setApiKeyInput,
+      setApiKeyError,
+      setApiKeyEditing,
+    ],
+  );
 
   const saveKey = useCallback(async () => {
     const key = apiKeyInput.trim();
@@ -88,7 +143,7 @@ export function ApiKeyDialog() {
     setApiKeySaving(true);
     setApiKeyError(null);
     try {
-      const result = await updateAiWebsiteApiKey(key);
+      const result = await saveProviderKey(apiKeyProvider, key);
       if (!result.ok) {
         setApiKeyError(result.error || "Could not save API key.");
         return;
@@ -97,8 +152,11 @@ export function ApiKeyDialog() {
         setApiKeyError("Could not save API key.");
         return;
       }
+      const preview = result.data.keyPreview;
+      setApiKeyPreviews({ ...apiKeyPreviews, [apiKeyProvider]: preview });
+      setApiKeyActiveProvider(result.data.activeProvider ?? null);
       setApiKeyHasValue(true);
-      setApiKeyPreview(null);
+      setApiKeyPreview(preview);
       setApiKeyInput("");
       setApiKeyEditing(false);
     } catch {
@@ -108,8 +166,12 @@ export function ApiKeyDialog() {
     }
   }, [
     apiKeyInput,
+    apiKeyProvider,
+    apiKeyPreviews,
     setApiKeySaving,
     setApiKeyError,
+    setApiKeyPreviews,
+    setApiKeyActiveProvider,
     setApiKeyHasValue,
     setApiKeyPreview,
     setApiKeyInput,
@@ -120,7 +182,7 @@ export function ApiKeyDialog() {
     setApiKeyDeleting(true);
     setApiKeyError(null);
     try {
-      const result = await deleteAiWebsiteApiKey();
+      const result = await deleteProviderKey(apiKeyProvider);
       if (!result.ok) {
         setApiKeyError(result.error || "Could not delete API key.");
         return;
@@ -129,6 +191,10 @@ export function ApiKeyDialog() {
         setApiKeyError("Could not delete API key.");
         return;
       }
+      const next = { ...apiKeyPreviews };
+      delete next[apiKeyProvider];
+      setApiKeyPreviews(next);
+      setApiKeyActiveProvider(result.data.activeProvider ?? null);
       setApiKeyHasValue(false);
       setApiKeyPreview(null);
       setApiKeyInput("");
@@ -139,8 +205,12 @@ export function ApiKeyDialog() {
       setApiKeyDeleting(false);
     }
   }, [
+    apiKeyProvider,
+    apiKeyPreviews,
     setApiKeyDeleting,
     setApiKeyError,
+    setApiKeyPreviews,
+    setApiKeyActiveProvider,
     setApiKeyHasValue,
     setApiKeyPreview,
     setApiKeyInput,
@@ -169,18 +239,42 @@ export function ApiKeyDialog() {
             <div className="mb-4 pr-10">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-background-soft/70 px-3 py-1 text-xs text-zinc-300">
                 <KeyRound size={14} className="text-glow-cyan" />
-                GitHub API Provider
+                AI Provider
               </div>
               <h3 className="mt-3 text-lg font-semibold text-white">
                 Set your API key
               </h3>
               <p className="mt-1 text-sm text-zinc-400">
                 {apiKeyDialogDescription ??
-                  "Add your GitHub API key to enable GitHub API Provider models."}
+                  "Add an API key for your preferred LLM provider to enable AI generation."}
               </p>
             </div>
 
             <div className="space-y-2">
+              <label
+                htmlFor="shared-api-key-provider"
+                className="text-sm font-medium text-zinc-200"
+              >
+                Provider
+              </label>
+              <select
+                id="shared-api-key-provider"
+                value={apiKeyProvider}
+                onChange={(e) => selectProvider(e.target.value)}
+                disabled={apiKeyLoading || apiKeySaving || apiKeyDeleting}
+                className="h-11 w-full rounded-xl border border-white/15 bg-background-soft/70 px-3 text-sm text-white outline-none focus:border-glow-cyan/60 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-background text-white">
+                    {p.label}
+                    {apiKeyPreviews[p.id] ? " (key saved)" : ""}
+                    {apiKeyActiveProvider === p.id ? " — active" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-3 space-y-2">
               <label
                 htmlFor="shared-api-key-input"
                 className="text-sm font-medium text-zinc-200"
@@ -196,7 +290,7 @@ export function ApiKeyDialog() {
                   placeholder={
                     apiKeyHasValue && !apiKeyEditing
                       ? (apiKeyPreview ?? "Saved key")
-                      : "Paste your GitHub API key"
+                      : `Paste your ${currentProvider?.label ?? "provider"} API key`
                   }
                   disabled={
                     apiKeyLoading ||
@@ -262,7 +356,7 @@ export function ApiKeyDialog() {
                 {apiKeySaving ? "Saving..." : "Save API Key"}
               </button>
               <a
-                href={AI_WEBSITE_API_KEY_SITE_URL}
+                href={currentProvider?.keySiteUrl ?? AI_WEBSITE_API_KEY_SITE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-background-soft/70 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-glow-cyan/60 hover:text-white"

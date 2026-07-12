@@ -81,7 +81,7 @@ export async function designerNode(state: AgentState, deps: GraphDependencies): 
       (ctx, docsTools) => buildPlanningToolSet(ctx, docsTools),
       messages,
       'designer',
-      state.userApiKey,
+      state.aiCredentials,
       10,
     );
 

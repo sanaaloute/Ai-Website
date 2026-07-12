@@ -5,7 +5,7 @@ import { promptToString, buildPromptContent } from '@/types';
 
 export async function answerGeneratorNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
   const tools = new SandboxProvider(deps.e2b, state.sandboxId, state.projectId);
-  const userApiKey = state.userApiKey;
+  const aiCredentials = state.aiCredentials;
 
   const prompt = state.prompt;
   const promptString = promptToString(prompt);
@@ -45,7 +45,7 @@ Rules:
     const resultText = await deps.aiGateway.chatCompletionsStream(
       messages,
       deps.modelResolver.resolveSequence('answer_generator'),
-      userApiKey,
+      aiCredentials,
       async (token) => {
         await deps.emit({ type: 'token', data: { content: token } });
       },

@@ -611,6 +611,53 @@ export async function deleteAiWebsiteApiKey() {
   return apiDelete<{ ok: boolean; hasApiKey: boolean; keyPreview: string | null }>('/ai-website-api-key', undefined, 'deleteAiWebsiteApiKey');
 }
 
+// ─── LLM provider keys ──────────────────────────────────────────────────
+
+export interface LlmProviderInfo {
+  id: string;
+  label: string;
+  keySiteUrl: string;
+  models: string[];
+}
+
+export interface ProviderKeyView {
+  provider: string;
+  keyPreview: string;
+}
+
+export interface ProviderKeysState {
+  ok: boolean;
+  activeProvider: string | null;
+  keys: ProviderKeyView[];
+}
+
+export async function getLlmProviders() {
+  return apiGet<{ ok: boolean; providers: LlmProviderInfo[] }>('/llm-providers', 'getLlmProviders');
+}
+
+export async function getProviderKeys() {
+  return apiGet<ProviderKeysState>('/provider-keys', 'getProviderKeys');
+}
+
+export async function saveProviderKey(provider: string, apiKey: string) {
+  return apiPut<{
+    ok: boolean;
+    provider: string;
+    keyPreview: string;
+    activeProvider: string | null;
+    validated: boolean;
+    validationWarning: string | null;
+  }>(`/provider-keys/${provider}`, { api_key: apiKey }, 'saveProviderKey');
+}
+
+export async function deleteProviderKey(provider: string) {
+  return apiDelete<{ ok: boolean; provider: string; activeProvider: string | null }>(`/provider-keys/${provider}`, undefined, 'deleteProviderKey');
+}
+
+export async function setActiveProvider(provider: string) {
+  return apiPut<{ ok: boolean; activeProvider: string }>('/provider-keys-active', { provider }, 'setActiveProvider');
+}
+
 export async function requestPasswordReset(body: {
   email: string;
   redirectTo?: string;

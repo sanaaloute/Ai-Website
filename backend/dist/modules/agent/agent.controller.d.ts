@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { User } from "../../types";
 import { AiGatewayService } from "../../lib/ai-gateway.service";
 import { E2BService } from "../../lib/e2b.service";
-import { SupabaseService } from "../../lib/supabase.service";
+import { ProviderKeysService } from "../profile/provider-keys.service";
 import { AgentService } from './agent.service';
 import { ModelResolverService } from './services/model-resolver.service';
 import { AgentJobService, AgentSessionData } from "../job-queue/agent-job.service";
@@ -12,14 +12,14 @@ import { ChatDto, AnalyzeEditIntentDto, CodeComponentDto, CodePageDto, DesignTok
 export declare class AgentController {
     private readonly ai;
     private readonly e2b;
-    private readonly supabase;
+    private readonly providerKeys;
     private readonly agentService;
     private readonly modelResolver;
     private readonly agentJobService;
     private readonly rateLimitService;
     private readonly idempotency;
     private readonly logger;
-    constructor(ai: AiGatewayService, e2b: E2BService, supabase: SupabaseService, agentService: AgentService, modelResolver: ModelResolverService, agentJobService: AgentJobService, rateLimitService: RateLimitService, idempotency: IdempotencyService);
+    constructor(ai: AiGatewayService, e2b: E2BService, providerKeys: ProviderKeysService, agentService: AgentService, modelResolver: ModelResolverService, agentJobService: AgentJobService, rateLimitService: RateLimitService, idempotency: IdempotencyService);
     createAgentSession(user: User, body: Record<string, unknown>): Promise<{
         success: boolean;
         sessionId: string;
@@ -62,7 +62,7 @@ export declare class AgentController {
         success: boolean;
         search_plan: import("@/types").SearchPlan;
     }>;
-    private fetchUserApiKey;
+    private fetchUserCredentials;
     private parseFiles;
     private validateResumeReview;
     private validatePrompt;

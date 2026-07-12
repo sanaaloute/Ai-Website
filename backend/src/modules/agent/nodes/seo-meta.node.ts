@@ -11,7 +11,7 @@ async function generateMetaDescription(state: AgentState, deps: GraphDependencie
     const raw = await deps.aiGateway.chatCompletionsStream(
       [{ role: 'user', content: prompt }],
       deps.modelResolver.resolveSequence('seo_meta'),
-      state.userApiKey,
+      state.aiCredentials,
     );
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) {

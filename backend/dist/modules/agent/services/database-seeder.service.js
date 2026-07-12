@@ -337,7 +337,7 @@ let DatabaseSeederService = DatabaseSeederService_1 = class DatabaseSeederServic
                 return [
                     {
                         name: brand,
-                        tagline: `A ${category} site built with LoveCode`,
+                        tagline: `A ${category} site built with AI-Website`,
                         currency: 'USD',
                         footerText: `© ${new Date().getFullYear()} ${brand}. All rights reserved.`,
                     },

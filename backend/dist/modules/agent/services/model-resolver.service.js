@@ -9,8 +9,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ModelResolverService = void 0;
 const common_1 = require("@nestjs/common");
 const env_1 = require("../../../config/env");
+const llm_providers_1 = require("../../../lib/llm-providers");
 const ALLOWED_MODELS = new Set([
-    'gpt-5.4',
     'qwen-max',
     'kimi-k2.5',
 ]);
@@ -44,30 +44,32 @@ const NODE_ROLE_MAP = {
     schema_evolution: 'reasoning',
 };
 let ModelResolverService = class ModelResolverService {
-    resolveSequence(nodeType) {
-        const e = (0, env_1.env)();
+    resolveSequence(nodeType, providerId) {
         const role = NODE_ROLE_MAP[nodeType] ?? 'reasoning';
+        if (providerId) {
+            const models = (0, llm_providers_1.providerModels)(providerId);
+            return role === 'fast' ? [...models].reverse() : models;
+        }
+        const e = (0, env_1.env)();
         const rolePrimaries = {
-            reasoning: ['gpt-5.4', 'qwen-max', 'kimi-k2.5'],
-            code: ['kimi-k2.5', 'gpt-5.4', 'qwen-max'],
-            review: ['gpt-5.4', 'kimi-k2.5', 'qwen-max'],
-            fast: ['qwen-max', 'gpt-5.4', 'kimi-k2.5'],
+            reasoning: ['kimi-k2.5', 'qwen-max'],
+            code: ['kimi-k2.5', 'qwen-max'],
+            review: ['kimi-k2.5', 'qwen-max'],
+            fast: ['qwen-max', 'kimi-k2.5'],
         };
         const approvedFallbacks = [
-            'gpt-5.4',
             'kimi-k2.5',
             'qwen-max',
         ];
         const sequence = this.dedupe([
             ...rolePrimaries[role],
             e.aiDefaultModel,
-            e.aiReflectionModel,
             ...approvedFallbacks,
         ]).filter((model) => ALLOWED_MODELS.has(model));
         return sequence;
     }
-    resolve(nodeType) {
-        return this.resolveSequence(nodeType)[0] ?? (0, env_1.env)().aiDefaultModel;
+    resolve(nodeType, providerId) {
+        return this.resolveSequence(nodeType, providerId)[0] ?? (0, env_1.env)().aiDefaultModel;
     }
     isAllowedModel(model) {
         return !!model && ALLOWED_MODELS.has(model);

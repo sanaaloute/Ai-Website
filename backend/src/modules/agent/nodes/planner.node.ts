@@ -25,7 +25,7 @@ export async function plannerNode(state: AgentState, deps: GraphDependencies): P
   const intent = state.intent || 'edit';
   const scope = state.scope || promptString;
   const relevantFiles = state.relevantFiles ?? [];
-  const userApiKey = state.userApiKey;
+  const aiCredentials = state.aiCredentials;
 
   const systemPrompt = await deps.promptLoader.load('planner');
 
@@ -69,7 +69,7 @@ export async function plannerNode(state: AgentState, deps: GraphDependencies): P
       (ctx, docs) => buildPlanningToolSet(ctx, docs),
       messages,
       'planner',
-      userApiKey,
+      aiCredentials,
       10,
     );
 

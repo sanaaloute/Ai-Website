@@ -17,10 +17,11 @@ import { SandboxStateService } from './sandbox-state.service';
 import { IdempotencyService } from './idempotency.service';
 import { CookieService } from './cookie.service';
 import { PrismaService } from './prisma.service';
+import { ProviderKeysService } from '@/modules/profile/provider-keys.service';
 
 @Global()
 @Module({
-  providers: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService],
-  exports: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService],
+  providers: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService, ProviderKeysService],
+  exports: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService, ProviderKeysService],
 })
 export class CoreModule {}

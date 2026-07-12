@@ -66,7 +66,7 @@ export async function componentSelectorNode(state: AgentState, deps: GraphDepend
       (ctx, docsTools) => buildPlanningToolSet(ctx, docsTools),
       messages,
       'component_selector',
-      state.userApiKey,
+      state.aiCredentials,
       8,
     );
 

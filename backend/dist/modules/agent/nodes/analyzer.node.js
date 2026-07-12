@@ -49,7 +49,7 @@ async function analyzerNode(state, deps) {
     const prompt = state.prompt;
     const promptString = (0, types_1.promptToString)(prompt);
     const history = state.chatHistory ?? [];
-    const userApiKey = state.userApiKey;
+    const aiCredentials = state.aiCredentials;
     const systemPrompt = await deps.promptLoader.load('analyze');
     let memoryContext = '';
     try {
@@ -86,7 +86,7 @@ async function analyzerNode(state, deps) {
     let parseError = null;
     let resultText = '';
     try {
-        resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('analyzer'), userApiKey, async (token) => {
+        resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('analyzer'), aiCredentials, async (token) => {
             await deps.emit({ type: 'token', data: { content: token } });
         });
         const parsed = extractJson(resultText);

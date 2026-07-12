@@ -18,11 +18,12 @@ const auth_guard_1 = require("../../common/guards/auth.guard");
 const optional_auth_guard_1 = require("../../common/guards/optional-auth.guard");
 const user_decorator_1 = require("../../common/decorators/user.decorator");
 const supabase_service_1 = require("../../lib/supabase.service");
-const ai_gateway_service_1 = require("../../lib/ai-gateway.service");
+const provider_keys_service_1 = require("./provider-keys.service");
+const llm_providers_1 = require("../../lib/llm-providers");
 let ProfileController = class ProfileController {
-    constructor(supabase, ai) {
+    constructor(supabase, providerKeys) {
         this.supabase = supabase;
-        this.ai = ai;
+        this.providerKeys = providerKeys;
     }
     async getProfile(user) {
         const profile = (await this.supabase.getProfile(user.id)) ?? {
@@ -68,35 +69,79 @@ let ProfileController = class ProfileController {
         const ok = await this.supabase.updateProfile(user.id, patch);
         return { ok };
     }
-    async getApiKey(user) {
-        const profile = await this.supabase.getProfile(user.id);
-        const key = profile?.lovecode_api_key ?? '';
+    getLlmProviders() {
         return {
             ok: true,
-            hasApiKey: !!key,
-            keyPreview: key ? `${key.slice(0, 5)}...${key.slice(-4)}` : null,
+            providers: (0, llm_providers_1.listProviders)().map((p) => ({
+                id: p.id,
+                label: p.label,
+                keySiteUrl: p.keySiteUrl,
+                models: p.models,
+            })),
+        };
+    }
+    async getProviderKeys(user) {
+        const state = await this.providerKeys.listKeys(user.id);
+        return { ok: true, ...state };
+    }
+    async saveProviderKey(user, provider, body) {
+        if (!(0, llm_providers_1.isProviderId)(provider)) {
+            throw new common_1.HttpException({ success: false, error: `Unknown provider: ${provider}` }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        const apiKey = String(body.api_key ?? body.apiKey ?? '').trim();
+        if (!apiKey)
+            throw new common_1.HttpException({ success: false, error: 'api_key is required' }, common_1.HttpStatus.BAD_REQUEST);
+        const result = await this.providerKeys.saveKey(user.id, provider, apiKey);
+        if (!result.ok) {
+            throw new common_1.HttpException({ success: false, error: result.error }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        return { provider, ...result };
+    }
+    async deleteProviderKey(user, provider) {
+        if (!(0, llm_providers_1.isProviderId)(provider)) {
+            throw new common_1.HttpException({ success: false, error: `Unknown provider: ${provider}` }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        const { activeProvider } = await this.providerKeys.deleteKey(user.id, provider);
+        return { ok: true, provider, activeProvider };
+    }
+    async setActiveProvider(user, body) {
+        const provider = String(body.provider ?? '').trim();
+        if (!(0, llm_providers_1.isProviderId)(provider)) {
+            throw new common_1.HttpException({ success: false, error: `Unknown provider: ${provider}` }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        const result = await this.providerKeys.setActiveProvider(user.id, provider);
+        if (!result.ok) {
+            throw new common_1.HttpException({ success: false, error: result.error }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        return result;
+    }
+    async getApiKey(user) {
+        const state = await this.providerKeys.listKeys(user.id);
+        const tokenfree = state.keys.find((k) => k.provider === 'tokenfree');
+        return {
+            ok: true,
+            hasApiKey: !!tokenfree,
+            keyPreview: tokenfree?.keyPreview ?? null,
         };
     }
     async saveApiKey(user, body) {
-        const apiKey = body.api_key ?? body.apiKey ?? '';
+        const apiKey = String(body.api_key ?? body.apiKey ?? '').trim();
         if (!apiKey)
             throw new common_1.HttpException({ success: false, error: 'api_key is required' }, common_1.HttpStatus.BAD_REQUEST);
-        const validation = await this.ai.validateApiKey(apiKey);
-        const { error } = await this.supabase.admin.from('users').update({ lovecode_api_key: apiKey }).eq('id', user.id);
-        if (error)
-            throw new common_1.HttpException({ success: false, error: error.message }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        const result = await this.providerKeys.saveKey(user.id, 'tokenfree', apiKey);
+        if (!result.ok) {
+            throw new common_1.HttpException({ success: false, error: result.error }, common_1.HttpStatus.BAD_REQUEST);
+        }
         return {
             ok: true,
             hasApiKey: true,
-            keyPreview: `${apiKey.slice(0, 5)}...${apiKey.slice(-4)}`,
-            validated: validation.valid,
-            validationWarning: validation.warning,
+            keyPreview: result.keyPreview,
+            validated: result.validated,
+            validationWarning: result.validationWarning,
         };
     }
     async deleteApiKey(user) {
-        const { error } = await this.supabase.admin.from('users').update({ lovecode_api_key: null }).eq('id', user.id);
-        if (error)
-            throw new common_1.HttpException({ success: false, error: error.message }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        await this.providerKeys.deleteKey(user.id, 'tokenfree');
         return { ok: true, hasApiKey: false, keyPreview: null };
     }
     getConversationState(user, state) {
@@ -128,7 +173,50 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProfileController.prototype, "updateProfile", null);
 __decorate([
-    (0, common_1.Get)('lovecode-api-key'),
+    (0, common_1.Get)('llm-providers'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ProfileController.prototype, "getLlmProviders", null);
+__decorate([
+    (0, common_1.Get)('provider-keys'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ProfileController.prototype, "getProviderKeys", null);
+__decorate([
+    (0, common_1.Put)('provider-keys/:provider'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('provider')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], ProfileController.prototype, "saveProviderKey", null);
+__decorate([
+    (0, common_1.Delete)('provider-keys/:provider'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('provider')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], ProfileController.prototype, "deleteProviderKey", null);
+__decorate([
+    (0, common_1.Put)('provider-keys-active'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], ProfileController.prototype, "setActiveProvider", null);
+__decorate([
+    (0, common_1.Get)('ai-website-api-key'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     __param(0, (0, user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -136,7 +224,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProfileController.prototype, "getApiKey", null);
 __decorate([
-    (0, common_1.Put)('lovecode-api-key'),
+    (0, common_1.Put)('ai-website-api-key'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     __param(0, (0, user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
@@ -145,7 +233,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ProfileController.prototype, "saveApiKey", null);
 __decorate([
-    (0, common_1.Delete)('lovecode-api-key'),
+    (0, common_1.Delete)('ai-website-api-key'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     __param(0, (0, user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
@@ -181,6 +269,6 @@ __decorate([
 exports.ProfileController = ProfileController = __decorate([
     (0, common_1.Controller)('api'),
     __metadata("design:paramtypes", [supabase_service_1.SupabaseService,
-        ai_gateway_service_1.AiGatewayService])
+        provider_keys_service_1.ProviderKeysService])
 ], ProfileController);
 //# sourceMappingURL=profile.controller.js.map

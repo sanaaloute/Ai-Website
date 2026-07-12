@@ -58,7 +58,7 @@ export async function analyzerNode(state: AgentState, deps: GraphDependencies): 
   const prompt = state.prompt;
   const promptString = promptToString(prompt);
   const history = state.chatHistory ?? [];
-  const userApiKey = state.userApiKey;
+  const aiCredentials = state.aiCredentials;
 
   const systemPrompt = await deps.promptLoader.load('analyze');
 
@@ -102,7 +102,7 @@ export async function analyzerNode(state: AgentState, deps: GraphDependencies): 
     resultText = await deps.aiGateway.chatCompletionsStream(
       messages,
       deps.modelResolver.resolveSequence('analyzer'),
-      userApiKey,
+      aiCredentials,
       async (token) => {
         await deps.emit({ type: 'token', data: { content: token } });
       },

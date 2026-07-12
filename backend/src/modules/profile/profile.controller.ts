@@ -6,6 +6,7 @@ import {
   Delete,
   Post,
   Body,
+  Param,
   UseGuards,
   Query,
   HttpStatus,
@@ -16,13 +17,14 @@ import { OptionalAuthGuard } from '@/common/guards/optional-auth.guard';
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { User } from '@/types';
 import { SupabaseService } from '@/lib/supabase.service';
-import { AiGatewayService } from '@/lib/ai-gateway.service';
+import { ProviderKeysService } from './provider-keys.service';
+import { isProviderId, listProviders } from '@/lib/llm-providers';
 
 @Controller('api')
 export class ProfileController {
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly ai: AiGatewayService,
+    private readonly providerKeys: ProviderKeysService,
   ) {}
 
   @Get('profile')
@@ -76,15 +78,80 @@ export class ProfileController {
     return { ok };
   }
 
+  @Get('llm-providers')
+  @UseGuards(AuthGuard)
+  getLlmProviders() {
+    return {
+      ok: true,
+      providers: listProviders().map((p) => ({
+        id: p.id,
+        label: p.label,
+        keySiteUrl: p.keySiteUrl,
+        models: p.models,
+      })),
+    };
+  }
+
+  @Get('provider-keys')
+  @UseGuards(AuthGuard)
+  async getProviderKeys(@CurrentUser() user: User) {
+    const state = await this.providerKeys.listKeys(user.id);
+    return { ok: true, ...state };
+  }
+
+  @Put('provider-keys/:provider')
+  @UseGuards(AuthGuard)
+  async saveProviderKey(
+    @CurrentUser() user: User,
+    @Param('provider') provider: string,
+    @Body() body: { api_key?: string; apiKey?: string },
+  ) {
+    if (!isProviderId(provider)) {
+      throw new HttpException({ success: false, error: `Unknown provider: ${provider}` }, HttpStatus.BAD_REQUEST);
+    }
+    const apiKey = String(body.api_key ?? body.apiKey ?? '').trim();
+    if (!apiKey) throw new HttpException({ success: false, error: 'api_key is required' }, HttpStatus.BAD_REQUEST);
+
+    const result = await this.providerKeys.saveKey(user.id, provider, apiKey);
+    if (!result.ok) {
+      throw new HttpException({ success: false, error: result.error }, HttpStatus.BAD_REQUEST);
+    }
+    return { provider, ...result };
+  }
+
+  @Delete('provider-keys/:provider')
+  @UseGuards(AuthGuard)
+  async deleteProviderKey(@CurrentUser() user: User, @Param('provider') provider: string) {
+    if (!isProviderId(provider)) {
+      throw new HttpException({ success: false, error: `Unknown provider: ${provider}` }, HttpStatus.BAD_REQUEST);
+    }
+    const { activeProvider } = await this.providerKeys.deleteKey(user.id, provider);
+    return { ok: true, provider, activeProvider };
+  }
+
+  @Put('provider-keys-active')
+  @UseGuards(AuthGuard)
+  async setActiveProvider(@CurrentUser() user: User, @Body() body: { provider?: string }) {
+    const provider = String(body.provider ?? '').trim();
+    if (!isProviderId(provider)) {
+      throw new HttpException({ success: false, error: `Unknown provider: ${provider}` }, HttpStatus.BAD_REQUEST);
+    }
+    const result = await this.providerKeys.setActiveProvider(user.id, provider);
+    if (!result.ok) {
+      throw new HttpException({ success: false, error: result.error }, HttpStatus.BAD_REQUEST);
+    }
+    return result;
+  }
+
   @Get('ai-website-api-key')
   @UseGuards(AuthGuard)
   async getApiKey(@CurrentUser() user: User) {
-    const profile = await this.supabase.getProfile(user.id);
-    const key = (profile?.ai_website_api_key as string) ?? '';
+    const state = await this.providerKeys.listKeys(user.id);
+    const tokenfree = state.keys.find((k) => k.provider === 'tokenfree');
     return {
       ok: true,
-      hasApiKey: !!key,
-      keyPreview: key ? `${key.slice(0, 5)}...${key.slice(-4)}` : null,
+      hasApiKey: !!tokenfree,
+      keyPreview: tokenfree?.keyPreview ?? null,
     };
   }
 
@@ -94,33 +161,23 @@ export class ProfileController {
     const apiKey = String(body.api_key ?? body.apiKey ?? '').trim();
     if (!apiKey) throw new HttpException({ success: false, error: 'api_key is required' }, HttpStatus.BAD_REQUEST);
 
-    const validation = await this.ai.validateApiKey(apiKey);
-    if (!validation.valid && validation.authFailure) {
-      // The gateway definitively rejected this key (401/403 on every model).
-      // Refuse to persist it — saving it would let users into a generation
-      // flow that fails on every request with "Invalid token".
-      throw new HttpException(
-        { success: false, error: 'Invalid API key. Please check the key and try again.' },
-        HttpStatus.BAD_REQUEST,
-      );
+    const result = await this.providerKeys.saveKey(user.id, 'tokenfree', apiKey);
+    if (!result.ok) {
+      throw new HttpException({ success: false, error: result.error }, HttpStatus.BAD_REQUEST);
     }
-    const { error } = await this.supabase.admin.from('users').update({ ai_website_api_key: apiKey }).eq('id', user.id);
-    if (error) throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
-
     return {
       ok: true,
       hasApiKey: true,
-      keyPreview: `${apiKey.slice(0, 5)}...${apiKey.slice(-4)}`,
-      validated: validation.valid,
-      validationWarning: validation.warning,
+      keyPreview: result.keyPreview,
+      validated: result.validated,
+      validationWarning: result.validationWarning,
     };
   }
 
   @Delete('ai-website-api-key')
   @UseGuards(AuthGuard)
   async deleteApiKey(@CurrentUser() user: User) {
-    const { error } = await this.supabase.admin.from('users').update({ ai_website_api_key: null }).eq('id', user.id);
-    if (error) throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
+    await this.providerKeys.deleteKey(user.id, 'tokenfree');
     return { ok: true, hasApiKey: false, keyPreview: null };
   }
 

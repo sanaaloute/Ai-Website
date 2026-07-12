@@ -32,7 +32,7 @@ function createAgentContext(state, deps) {
         chatId: state.sandboxId,
     };
 }
-async function runToolLoop(deps, state, buildTools, messages, nodeType, userApiKey, maxIterations = 10) {
+async function runToolLoop(deps, state, buildTools, messages, nodeType, aiCredentials, maxIterations = 10) {
     const context = createAgentContext(state, deps);
     const docTools = deps.agentMcpToolService?.getTools(context) ?? [];
     const tools = buildTools(context, docTools);
@@ -48,7 +48,7 @@ async function runToolLoop(deps, state, buildTools, messages, nodeType, userApiK
     while (iteration < maxIterations) {
         iteration++;
         deps.logger.debug(`[${nodeType}] tool loop iteration ${iteration}`);
-        const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence(nodeType), userApiKey, async (token) => {
+        const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence(nodeType), aiCredentials, async (token) => {
             await deps.emit({ type: 'token', data: { content: token } });
         }, async (toolCall) => executeSingleToolCall(toolCall), async (path) => {
             await deps.emit({ type: 'file_start', data: { path } });

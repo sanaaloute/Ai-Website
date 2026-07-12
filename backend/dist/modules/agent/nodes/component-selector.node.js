@@ -56,7 +56,7 @@ async function componentSelectorNode(state, deps) {
             type: 'status',
             data: { status: 'analyzing', message: 'Selecting shadcn/ui components...' },
         });
-        const { finalContent } = await (0, tools_1.runToolLoop)(deps, state, (ctx, docsTools) => (0, tools_1.buildPlanningToolSet)(ctx, docsTools), messages, 'component_selector', state.userApiKey, 8);
+        const { finalContent } = await (0, tools_1.runToolLoop)(deps, state, (ctx, docsTools) => (0, tools_1.buildPlanningToolSet)(ctx, docsTools), messages, 'component_selector', state.aiCredentials, 8);
         const parsed = extractJson(finalContent);
         const components = Array.isArray(parsed?.componentsToInstall)
             ? parsed?.componentsToInstall

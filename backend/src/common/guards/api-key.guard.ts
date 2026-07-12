@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { SupabaseService } from '@/lib/supabase.service';
+import { ProviderKeysService } from '@/modules/profile/provider-keys.service';
 import { RequestWithUser } from '@/types';
 import { env } from '@/config/env';
 
@@ -8,7 +8,7 @@ export class AiWebsiteApiKeyException extends HttpException {
     super(
       {
         success: false,
-        error: `Missing AI-Website API key. Get one at ${env().aiWebsiteApiKeySiteUrl}`,
+        error: `Missing AI provider API key. Add one in your profile or get a key at ${env().aiWebsiteApiKeySiteUrl}`,
       },
       HttpStatus.PAYMENT_REQUIRED,
     );
@@ -17,7 +17,7 @@ export class AiWebsiteApiKeyException extends HttpException {
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(private readonly providerKeys: ProviderKeysService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<RequestWithUser>();
@@ -26,17 +26,17 @@ export class ApiKeyGuard implements CanActivate {
       throw new HttpException({ success: false, error: 'Unauthorized' }, HttpStatus.UNAUTHORIZED);
     }
 
-    const { data, error } = await this.supabase.admin
-      .from('users')
-      .select('ai_website_api_key')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      throw new HttpException({ success: false, error: error.message }, HttpStatus.INTERNAL_SERVER_ERROR);
+    let credentials;
+    try {
+      credentials = await this.providerKeys.resolveCredentials(userId);
+    } catch (e) {
+      throw new HttpException(
+        { success: false, error: e instanceof Error ? e.message : String(e) },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
-    if (!data?.ai_website_api_key) {
+    if (credentials.length === 0) {
       throw new AiWebsiteApiKeyException();
     }
 
