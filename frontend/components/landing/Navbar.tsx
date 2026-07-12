@@ -9,6 +9,7 @@ import LoginSection from "@/components/landing/LoginSection";
 import LanguageSwitcher from "@/components/landing/LanguageSwitcher";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
 import { ApiKeyDialog } from "@/components/shared/ApiKeyDialog";
+import { UpgradeDialog } from "@/components/shared/UpgradeDialog";
 import { useLandingAuth } from "@/hooks/useLandingAuth";
 import { Link } from "@/i18n/navigation";
 
@@ -270,6 +271,7 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
       </AnimatePresence>
 
       <ApiKeyDialog />
+      <UpgradeDialog />
     </>
   );
 }

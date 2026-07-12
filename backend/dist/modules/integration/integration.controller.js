@@ -24,6 +24,7 @@ const e2b_service_1 = require("../../lib/e2b.service");
 const idempotency_service_1 = require("../../lib/idempotency.service");
 const supabase_service_1 = require("../../lib/supabase.service");
 const project_service_1 = require("../project/project.service");
+const entitlements_service_1 = require("../billing/entitlements.service");
 const env_1 = require("../../config/env");
 const OAUTH_STATE_COOKIE = 'github_oauth_state';
 const OAUTH_NEXT_COOKIE = 'github_oauth_next';
@@ -31,7 +32,7 @@ const GITHUB_ACCESS_COOKIE = 'github_access';
 const GITHUB_REFRESH_COOKIE = 'github_refresh';
 const GITHUB_PROVIDER = 'github';
 let IntegrationController = IntegrationController_1 = class IntegrationController {
-    constructor(github, deploy, tokens, e2b, supabase, idempotency, projectService) {
+    constructor(github, deploy, tokens, e2b, supabase, idempotency, projectService, entitlements) {
         this.github = github;
         this.deploy = deploy;
         this.tokens = tokens;
@@ -39,6 +40,7 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
         this.supabase = supabase;
         this.idempotency = idempotency;
         this.projectService = projectService;
+        this.entitlements = entitlements;
         this.logger = new common_1.Logger(IntegrationController_1.name);
     }
     cookieOptions(domain) {
@@ -82,10 +84,10 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
                     maxAge: 1000 * 60 * 60 * 24 * 30,
                 });
             }
-            const lovecodeAccessCookie = this.parseCookie(req.headers.cookie ?? '', (0, env_1.env)().accessTokenCookieName);
-            if (lovecodeAccessCookie) {
+            const accessCookie = this.parseCookie(req.headers.cookie ?? '', (0, env_1.env)().accessTokenCookieName);
+            if (accessCookie) {
                 try {
-                    const { data: userData } = await this.supabase.admin.auth.getUser(lovecodeAccessCookie);
+                    const { data: userData } = await this.supabase.admin.auth.getUser(accessCookie);
                     if (userData.user) {
                         await this.tokens.upsert(userData.user.id, GITHUB_PROVIDER, token.access_token, token.refresh_token);
                     }
@@ -124,7 +126,8 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
     async githubPush(user, body, req, res) {
         if (!body.repoName || !body.files)
             throw new common_1.HttpException({ success: false, error: 'repoName and files required' }, common_1.HttpStatus.BAD_REQUEST);
-        const projectId = body.lovecodeProjectId || body.aiWebsiteProjectId;
+        await this.entitlements.assertFeature(user.id, 'github_push');
+        const projectId = body.aiWebsiteProjectId;
         const { accessToken, refreshToken, loadedFromDb } = await this.resolveGithubTokens(user.id, req.headers.cookie ?? '');
         if (!accessToken) {
             throw new common_1.HttpException({ success: false, error: 'GitHub not connected' }, common_1.HttpStatus.UNAUTHORIZED);
@@ -150,7 +153,7 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
                 .update({ github_repo_url: result.repoUrl })
                 .eq('id', projectId)
                 .eq('user_id', user.id);
-            await this.projectService.upsertLovecodeJson(user.id, projectId, {
+            await this.projectService.upsertAiWebsiteJson(user.id, projectId, {
                 deployment: { githubRepoUrl: result.repoUrl },
             });
         }
@@ -172,6 +175,10 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
     async deploySite(user, body, req, res) {
         if (!body.repoUrl || !body.projectName) {
             throw new common_1.HttpException({ success: false, error: 'repoUrl and projectName required' }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        await this.entitlements.assertFeature(user.id, 'deploy');
+        if (body.customDomain) {
+            await this.entitlements.assertFeature(user.id, 'custom_domain');
         }
         const repoUrl = body.repoUrl;
         const projectName = body.projectName;
@@ -223,7 +230,7 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
                 })
                     .eq('id', body.projectId)
                     .eq('user_id', user.id);
-                await this.projectService.upsertLovecodeJson(user.id, body.projectId, {
+                await this.projectService.upsertAiWebsiteJson(user.id, body.projectId, {
                     project: { name: projectName },
                     deployment: {
                         platform: this.deploy.activeProvider,
@@ -243,10 +250,11 @@ let IntegrationController = IntegrationController_1 = class IntegrationControlle
         }
         return this.deploy.status(deploymentUuid, appUuid);
     }
-    async connectUserSupabase(sandboxId, body) {
+    async connectUserSupabase(user, sandboxId, body) {
         if (!sandboxId || !body.supabaseUrl) {
             throw new common_1.HttpException({ success: false, error: 'sandboxId and supabaseUrl required' }, common_1.HttpStatus.BAD_REQUEST);
         }
+        await this.entitlements.assertFeature(user.id, 'db_integration');
         const envContent = `VITE_SUPABASE_URL=${body.supabaseUrl}\nVITE_SUPABASE_ANON_KEY=${body.supabaseAnonKey ?? ''}\n`;
         await this.e2b.writeFile(sandboxId, '.env', envContent);
         return { success: true, message: 'Connected' };
@@ -369,10 +377,11 @@ __decorate([
 __decorate([
     (0, common_1.Post)('integrations/user-supabase/connect'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
-    __param(0, (0, common_1.Query)('sandboxId')),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('sandboxId')),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], IntegrationController.prototype, "connectUserSupabase", null);
 __decorate([
@@ -399,6 +408,7 @@ exports.IntegrationController = IntegrationController = IntegrationController_1 
         e2b_service_1.E2BService,
         supabase_service_1.SupabaseService,
         idempotency_service_1.IdempotencyService,
-        project_service_1.ProjectService])
+        project_service_1.ProjectService,
+        entitlements_service_1.EntitlementsService])
 ], IntegrationController);
 //# sourceMappingURL=integration.controller.js.map

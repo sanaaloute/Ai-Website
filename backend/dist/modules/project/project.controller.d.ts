@@ -5,14 +5,16 @@ import { IdempotencyService } from "../../lib/idempotency.service";
 import { SupabaseService } from "../../lib/supabase.service";
 import { E2BService } from "../../lib/e2b.service";
 import { ProjectService } from "./project.service";
+import { EntitlementsService } from "../billing/entitlements.service";
 export declare class ProjectController {
     private readonly storage;
     private readonly supabase;
     private readonly e2b;
     private readonly idempotency;
     private readonly projectService;
+    private readonly entitlements;
     private readonly logger;
-    constructor(storage: StorageService, supabase: SupabaseService, e2b: E2BService, idempotency: IdempotencyService, projectService: ProjectService);
+    constructor(storage: StorageService, supabase: SupabaseService, e2b: E2BService, idempotency: IdempotencyService, projectService: ProjectService, entitlements: EntitlementsService);
     listProjects(user: User): Promise<{
         success: boolean;
         projects: ProjectSummary[];

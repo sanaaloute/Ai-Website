@@ -13,12 +13,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SandboxLifecycleService = void 0;
 const common_1 = require("@nestjs/common");
 const e2b_service_1 = require("../../lib/e2b.service");
+const entitlements_service_1 = require("../billing/entitlements.service");
 const CHECK_INTERVAL_MS = 30 * 1000;
 const RENEWAL_WINDOW_MS = 10 * 60 * 1000;
 const DEAD_THRESHOLD_MS = 10 * 60 * 1000;
 let SandboxLifecycleService = SandboxLifecycleService_1 = class SandboxLifecycleService {
-    constructor(e2b) {
+    constructor(e2b, entitlements) {
         this.e2b = e2b;
+        this.entitlements = entitlements;
         this.logger = new common_1.Logger(SandboxLifecycleService_1.name);
         this.interval = null;
     }
@@ -38,7 +40,7 @@ let SandboxLifecycleService = SandboxLifecycleService_1 = class SandboxLifecycle
             return;
         const now = Date.now();
         const entries = await this.e2b.getSandboxInfos();
-        for (const { sandboxId, endAt: endAtStr, renewing } of entries) {
+        for (const { sandboxId, endAt: endAtStr, renewing, userId } of entries) {
             if (renewing)
                 continue;
             const endAt = new Date(endAtStr).getTime();
@@ -48,6 +50,18 @@ let SandboxLifecycleService = SandboxLifecycleService_1 = class SandboxLifecycle
                     this.logger.warn(`Sandbox ${sandboxId} expired ${-expiresIn}ms ago; purging from tracking`);
                     await this.e2b.removeSandboxInfo(sandboxId);
                     continue;
+                }
+                if (userId) {
+                    try {
+                        const remaining = await this.entitlements.sandboxSecondsRemaining(userId);
+                        if (remaining <= 0) {
+                            this.logger.warn(`Sandbox ${sandboxId} not renewed: monthly sandbox hours exhausted for user ${userId}`);
+                            continue;
+                        }
+                    }
+                    catch (e) {
+                        this.logger.warn(`Could not check sandbox quota for ${sandboxId}: ${e instanceof Error ? e.message : String(e)}`);
+                    }
                 }
                 this.logger.log(`Auto-renewing sandbox ${sandboxId} (expires in ${expiresIn}ms)`);
                 await this.e2b.setRenewing(sandboxId, true);
@@ -79,6 +93,7 @@ let SandboxLifecycleService = SandboxLifecycleService_1 = class SandboxLifecycle
 exports.SandboxLifecycleService = SandboxLifecycleService;
 exports.SandboxLifecycleService = SandboxLifecycleService = SandboxLifecycleService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [e2b_service_1.E2BService])
+    __metadata("design:paramtypes", [e2b_service_1.E2BService,
+        entitlements_service_1.EntitlementsService])
 ], SandboxLifecycleService);
 //# sourceMappingURL=sandbox-lifecycle.service.js.map

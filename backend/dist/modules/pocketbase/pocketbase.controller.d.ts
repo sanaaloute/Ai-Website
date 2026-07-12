@@ -1,6 +1,7 @@
 import { User } from "../../types";
 import { E2BService } from "../../lib/e2b.service";
 import { PocketbaseService } from "../../lib/pocketbase.service";
+import { EntitlementsService } from "../billing/entitlements.service";
 declare class PrepareDeployDto {
     projectName: string;
     domain: string;
@@ -9,7 +10,8 @@ declare class PrepareDeployDto {
 export declare class PocketbaseController {
     private readonly pocketbase;
     private readonly e2b;
-    constructor(pocketbase: PocketbaseService, e2b: E2BService);
+    private readonly entitlements;
+    constructor(pocketbase: PocketbaseService, e2b: E2BService, entitlements: EntitlementsService);
     getTemplate(_user: User, category?: string): Promise<{
         success: boolean;
         category: string;
@@ -18,7 +20,7 @@ export declare class PocketbaseController {
         files: import("@/lib/pocketbase.service").PocketBaseTemplateFile[];
         fileCount: number;
     }>;
-    prepareDeploy(_user: User, body: PrepareDeployDto): Promise<{
+    prepareDeploy(user: User, body: PrepareDeployDto): Promise<{
         success: boolean;
         frontendUrl: string;
         pocketbaseUrl: string;

@@ -7,7 +7,8 @@ import { getErrorMessage, type JsonEnvelope } from '@/lib/generation/pageUtils';
 import { mapSandboxFilesToGenerationFiles } from '@/hooks/useCloudPersistence';
 import { setLastCreatedSandbox } from '@/lib/sandbox/sandboxClientSession';
 import { replaceGenerationSearchParams } from '@/lib/generation/urlUtils';
-import { listSandboxes, resetConversationState, createSandbox as apiCreateSandbox } from '@/lib/api/client';
+import { listSandboxes, resetConversationState, createSandbox as apiCreateSandbox, extractPlanLimitError } from '@/lib/api/client';
+import { useEntitlementsStore } from '@/stores/entitlementsStore';
 
 /** Module-level guard: prevent sandbox creation more than once per 60s window.
  *  This stops race conditions where multiple hooks/tabs trigger creation. */
@@ -292,6 +293,10 @@ export function useSandboxCreation(deps: UseSandboxCreationDeps) {
         });
         console.log('[createSandbox] apiCreateSandbox returned', result.ok);
         if (!result.ok) {
+          const planLimit = extractPlanLimitError(result);
+          if (planLimit) {
+            useEntitlementsStore.getState().openUpgradeDialog(planLimit);
+          }
           throw new Error(result.error || 'Failed to create sandbox.');
         }
         const data = result.data;

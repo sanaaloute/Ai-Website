@@ -8,6 +8,7 @@ import { GenerationHeader } from '@/components/generation/GenerationHeader';
 import GenerationChatSidebar from '@/components/generation/GenerationChatSidebar';
 import { GenerationRightPanel } from '@/components/generation/GenerationRightPanel';
 import GenerationDialogOverlays from '@/components/generation/GenerationDialogOverlays';
+import { UpgradeDialog } from '@/components/shared/UpgradeDialog';
 import { ResizableGenerationWorkspace } from '@/components/generation/ResizableGenerationWorkspace';
 import { useGenerationPage } from '@/hooks/useGenerationPage';
 import { useSandboxInitialization } from '@/hooks/useSandboxInitialization';
@@ -421,6 +422,8 @@ function AISandboxPage() {
         />
 
         <GenerationDialogOverlays workspace={dialogOverlaysWorkspace} />
+
+        <UpgradeDialog />
       </div>
     </HeaderProvider>
   );

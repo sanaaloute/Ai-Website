@@ -18,12 +18,14 @@ const auth_guard_1 = require("../../common/guards/auth.guard");
 const user_decorator_1 = require("../../common/decorators/user.decorator");
 const e2b_service_1 = require("../../lib/e2b.service");
 const pocketbase_service_1 = require("../../lib/pocketbase.service");
+const entitlements_service_1 = require("../billing/entitlements.service");
 class PrepareDeployDto {
 }
 let PocketbaseController = class PocketbaseController {
-    constructor(pocketbase, e2b) {
+    constructor(pocketbase, e2b, entitlements) {
         this.pocketbase = pocketbase;
         this.e2b = e2b;
+        this.entitlements = entitlements;
     }
     async getTemplate(_user, category) {
         const resolvedCategory = category || 'ecommerce';
@@ -41,10 +43,11 @@ let PocketbaseController = class PocketbaseController {
             fileCount: files.length,
         };
     }
-    async prepareDeploy(_user, body) {
+    async prepareDeploy(user, body) {
         if (!body.projectName || !body.domain) {
             throw new common_1.HttpException({ success: false, error: 'projectName and domain are required' }, common_1.HttpStatus.BAD_REQUEST);
         }
+        await this.entitlements.assertFeature(user.id, 'db_integration');
         const deployment = await this.pocketbase.renderDeploymentFiles({
             projectName: body.projectName,
             domain: body.domain,
@@ -116,6 +119,7 @@ __decorate([
 exports.PocketbaseController = PocketbaseController = __decorate([
     (0, common_1.Controller)('api/pocketbase'),
     __metadata("design:paramtypes", [pocketbase_service_1.PocketbaseService,
-        e2b_service_1.E2BService])
+        e2b_service_1.E2BService,
+        entitlements_service_1.EntitlementsService])
 ], PocketbaseController);
 //# sourceMappingURL=pocketbase.controller.js.map

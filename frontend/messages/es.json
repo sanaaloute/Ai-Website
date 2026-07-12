@@ -61,57 +61,72 @@
   },
   "pricing": {
     "overline": "Precios",
-    "subheading": "Empieza gratis, actualiza cuando estés listo para lanzar. Sin tarifas ocultas, cancela cuando quieras.",
-    "starter": {
-      "name": "Inicial",
-      "description": "Perfecto para aficionados y proyectos paralelos.",
-      "price": "$0",
-      "period": "para siempre",
-      "cta": "Empezar",
-      "features": [
-        "3 proyectos",
-        "Desarrollo local",
-        "Plantillas de la comunidad",
-        "Modelos IA estándar",
-        "Integración con GitHub"
-      ]
-    },
-    "pro": {
-      "name": "Pro",
-      "description": "Para creadores que lanzan apps en producción.",
-      "price": "$19",
-      "period": "/mes",
-      "cta": "Actualizar a Pro",
-      "badge": "Más popular",
-      "features": [
-        "Proyectos ilimitados",
-        "Desarrollo local + Cloud",
-        "Enrutamiento IA prioritario",
-        "Acceso a modelos avanzados",
-        "Despliegues en un clic",
-        "Dominios personalizados",
-        "Soporte por email"
-      ]
-    },
-    "team": {
-      "name": "Equipo",
-      "description": "Colabora y escala con tu equipo.",
-      "price": "$49",
-      "period": "/usuario /mes",
-      "cta": "Contactar a ventas",
-      "features": [
-        "Todo en Pro",
-        "Espacios de trabajo compartidos",
-        "Acceso basado en roles",
-        "SSO y SAML",
-        "Registros de auditoría",
-        "Soporte dedicado",
-        "SLA personalizado"
-      ]
-    },
-    "trustNoCard": "No se requiere tarjeta de crédito para Inicial",
-    "trustCancel": "Cancela en cualquier momento",
-    "trustRefund": "Garantía de reembolso de 14 días"
+    "subheading": "Empieza gratis y mejora tu plan cuando estés listo para publicar. Sin cargos ocultos, cancela cuando quieras.",
+    "monthly": "Mensual",
+    "yearly": "Anual",
+    "yearlyBadge": "2 meses gratis",
+    "perMonth": "/mes",
+    "perYear": "/año",
+    "currentPlan": "Plan actual",
+    "choosePlan": "Elegir {plan}",
+    "signInToUpgrade": "Inicia sesión para mejorar tu plan",
+    "checkoutUnavailable": "El pago aún no está configurado",
+    "mostPopular": "Más popular",
+    "trustNoCard": "No se requiere tarjeta para la prueba",
+    "trustCancel": "Cancela cuando quieras",
+    "trustRefund": "Garantía de reembolso de 14 días",
+    "plans": {
+      "trial": {
+        "name": "Prueba",
+        "description": "Prueba el generador con una cuota mensual gratuita.",
+        "cta": "Empezar gratis",
+        "features": [
+          "3 generaciones al mes",
+          "1 hora de sandbox al mes",
+          "1 proyecto guardado",
+          "Edición visual"
+        ]
+      },
+      "basic": {
+        "name": "Básico",
+        "description": "Para aficionados que crean algunos sitios al mes.",
+        "cta": "Elegir Básico",
+        "features": [
+          "10 generaciones al mes",
+          "5 horas de sandbox al mes",
+          "3 proyectos guardados",
+          "Edición visual"
+        ]
+      },
+      "standard": {
+        "name": "Estándar",
+        "description": "Para creadores que publican aplicaciones en producción.",
+        "cta": "Elegir Estándar",
+        "features": [
+          "50 generaciones al mes",
+          "30 horas de sandbox al mes",
+          "Proyectos guardados ilimitados",
+          "Edición visual",
+          "Edición con IA",
+          "Descargar ZIP",
+          "Subir a GitHub"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "Creación ilimitada con el stack de despliegue completo.",
+        "cta": "Elegir Pro",
+        "features": [
+          "Generaciones ilimitadas",
+          "100 horas de sandbox al mes",
+          "Proyectos guardados ilimitados",
+          "Todo lo incluido en Estándar",
+          "Integración de base de datos",
+          "Despliegue con un clic",
+          "Dominio personalizado"
+        ]
+      }
+    }
   },
   "download": {
     "overline": "Aplicación de escritorio",

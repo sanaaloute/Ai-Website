@@ -3,6 +3,7 @@ export interface SandboxInfo {
     createdAt: string;
     endAt: string;
     renewing?: boolean;
+    userId?: string;
 }
 export interface PocketbaseInfo {
     url: string;

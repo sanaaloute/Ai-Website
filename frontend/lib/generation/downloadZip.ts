@@ -4,6 +4,7 @@ import type { ChatMessage } from '@/hooks/useWorkspaceChat';
 import { createZipRaw } from '@/lib/api/client';
 import { getErrorMessage } from '@/lib/generation/pageUtils';
 import { assertCurrentSandboxIdStrict } from '@/lib/sandbox/sandboxClientSession';
+import { useEntitlementsStore } from '@/stores/entitlementsStore';
 
 export interface DownloadZipDeps {
   sandboxData: SandboxData | null;
@@ -59,7 +60,21 @@ export async function downloadZip(deps: DownloadZipDeps): Promise<void> {
     });
 
     if (!response.ok) {
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+        feature?: 'ai_editing' | 'zip_download' | 'github_push' | 'db_integration' | 'deploy' | 'custom_domain' | null;
+        requiredPlan?: 'basic' | 'standard' | 'pro';
+        message?: string;
+      };
+      if (data?.code === 'PLAN_LIMIT' && data.requiredPlan) {
+        useEntitlementsStore.getState().openUpgradeDialog({
+          feature: data.feature ?? null,
+          quota: null,
+          requiredPlan: data.requiredPlan,
+          message: data.message || data.error || 'This action requires a higher plan.',
+        });
+      }
       throw new Error(data?.error || `ZIP request failed (${response.status})`);
     }
 

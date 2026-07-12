@@ -1,7 +1,8 @@
 import { useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import type { AgentStreamEvent, Todo, QuestionnaireQuestion, PlanData } from '@/lib/agent/types';
-import { agentStream, subscribeAgentStream, getSandboxFile, restoreSandboxSnapshot, cancelAgentJob } from '@/lib/api/client';
+import { agentStream, extractPlanLimitError, subscribeAgentStream, getSandboxFile, restoreSandboxSnapshot, cancelAgentJob } from '@/lib/api/client';
+import { useEntitlementsStore } from '@/stores/entitlementsStore';
 
 export interface AgentStreamState {
   status: string;
@@ -138,6 +139,10 @@ export function useAgentStream(options: UseAgentStreamOptions) {
         );
 
         if (!enqueueResult.ok) {
+          const planLimit = extractPlanLimitError(enqueueResult);
+          if (planLimit) {
+            useEntitlementsStore.getState().openUpgradeDialog(planLimit);
+          }
           throw new Error(enqueueResult.error || `Failed to start generation: ${enqueueResult.status}`);
         }
 

@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { downloadZip as _downloadZip } from '@/lib/generation/downloadZip';
-import { deployToVercel, getVercelStatus, getSandboxFiles, preparePocketbaseDeploy, pushToGithub, runCommand } from '@/lib/api/client';
+import { deployToVercel, extractPlanLimitError, getVercelStatus, getSandboxFiles, preparePocketbaseDeploy, pushToGithub, runCommand } from '@/lib/api/client';
 import { backendApiUrl } from '@/lib/api/backendConfig';
 import { normalizeGithubRepoUrl } from '@/lib/github';
+import { useEntitlementsStore } from '@/stores/entitlementsStore';
 import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import { assertCurrentSandboxIdStrict } from '@/lib/sandbox/sandboxClientSession';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
@@ -321,6 +322,10 @@ export function useIntegrations(deps: IntegrationsDeps) {
           projectId: currentSessionProjectId || undefined,
         });
         if (!result.ok) {
+          const planLimit = extractPlanLimitError(result);
+          if (planLimit) {
+            useEntitlementsStore.getState().openUpgradeDialog(planLimit);
+          }
           const cleanError = result.error || `Deploy failed (${result.status})`;
           setVercelDeployResult({ type: 'error', message: cleanError });
           setVercelDeployCard({
@@ -772,6 +777,10 @@ export function useIntegrations(deps: IntegrationsDeps) {
           pushController.signal
         );
         if (!result.ok) {
+          const planLimit = extractPlanLimitError(result);
+          if (planLimit) {
+            useEntitlementsStore.getState().openUpgradeDialog(planLimit);
+          }
           const cleanError = result.error || `Push failed (${result.status})`;
           if (/session expired|reconnect/i.test(cleanError)) {
             const next = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';

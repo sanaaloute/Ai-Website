@@ -61,57 +61,72 @@
   },
   "pricing": {
     "overline": "Tarifs",
-    "subheading": "Commencez gratuitement, passez à la vitesse supérieure quand vous êtes prêt à livrer. Aucun frais caché, annulez à tout moment.",
-    "starter": {
-      "name": "Starter",
-      "description": "Parfait pour les passionnés et les projets annexes.",
-      "price": "0 €",
-      "period": "pour toujours",
-      "cta": "Commencer",
-      "features": [
-        "3 projets",
-        "Développement local",
-        "Modèles communautaires",
-        "Modèles IA standard",
-        "Intégration GitHub"
-      ]
-    },
-    "pro": {
-      "name": "Pro",
-      "description": "Pour les créateurs livrant des applications en production.",
-      "price": "19 €",
-      "period": "/mois",
-      "cta": "Passer à Pro",
-      "badge": "Le plus populaire",
-      "features": [
-        "Projets illimités",
-        "Développement local + Cloud",
-        "Routage IA prioritaire",
-        "Accès aux modèles avancés",
-        "Déploiements en un clic",
-        "Domaines personnalisés",
-        "Support par email"
-      ]
-    },
-    "team": {
-      "name": "Équipe",
-      "description": "Collaborez et passez à l'échelle avec votre équipe.",
-      "price": "49 €",
-      "period": "/place /mois",
-      "cta": "Contacter les ventes",
-      "features": [
-        "Tout ce qui est dans Pro",
-        "Espaces de travail partagés",
-        "Accès basé sur les rôles",
-        "SSO et SAML",
-        "Journaux d'audit",
-        "Support dédié",
-        "SLA personnalisé"
-      ]
-    },
-    "trustNoCard": "Aucune carte de crédit requise pour Starter",
+    "subheading": "Commencez gratuitement, passez au niveau supérieur quand vous êtes prêt à publier. Sans frais cachés, annulez à tout moment.",
+    "monthly": "Mensuel",
+    "yearly": "Annuel",
+    "yearlyBadge": "2 mois offerts",
+    "perMonth": "/mois",
+    "perYear": "/an",
+    "currentPlan": "Offre actuelle",
+    "choosePlan": "Choisir {plan}",
+    "signInToUpgrade": "Connectez-vous pour passer à une offre supérieure",
+    "checkoutUnavailable": "Le paiement n’est pas encore configuré",
+    "mostPopular": "Le plus populaire",
+    "trustNoCard": "Aucune carte bancaire requise pour l’essai",
     "trustCancel": "Annulez à tout moment",
-    "trustRefund": "Garantie de remboursement de 14 jours"
+    "trustRefund": "Garantie de remboursement de 14 jours",
+    "plans": {
+      "trial": {
+        "name": "Essai",
+        "description": "Essayez le générateur avec un quota mensuel gratuit.",
+        "cta": "Commencer gratuitement",
+        "features": [
+          "3 générations par mois",
+          "1 heure de sandbox par mois",
+          "1 projet enregistré",
+          "Édition visuelle"
+        ]
+      },
+      "basic": {
+        "name": "Basic",
+        "description": "Pour les amateurs qui créent quelques sites par mois.",
+        "cta": "Choisir Basic",
+        "features": [
+          "10 générations par mois",
+          "5 heures de sandbox par mois",
+          "3 projets enregistrés",
+          "Édition visuelle"
+        ]
+      },
+      "standard": {
+        "name": "Standard",
+        "description": "Pour les créateurs qui publient des applications en production.",
+        "cta": "Choisir Standard",
+        "features": [
+          "50 générations par mois",
+          "30 heures de sandbox par mois",
+          "Projets enregistrés illimités",
+          "Édition visuelle",
+          "Édition par IA",
+          "Télécharger le ZIP",
+          "Pousser vers GitHub"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "Création illimitée avec la stack de déploiement complète.",
+        "cta": "Choisir Pro",
+        "features": [
+          "Générations illimitées",
+          "100 heures de sandbox par mois",
+          "Projets enregistrés illimités",
+          "Tout ce qui est inclus dans Standard",
+          "Intégration de base de données",
+          "Déploiement en un clic",
+          "Domaine personnalisé"
+        ]
+      }
+    }
   },
   "download": {
     "overline": "Application de bureau",

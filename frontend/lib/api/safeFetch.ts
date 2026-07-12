@@ -9,6 +9,8 @@ export interface SafeFetchError {
   status: number;
   statusText: string;
   error: string;
+  /** Parsed JSON error body, when the server sent one (e.g. PLAN_LIMIT). */
+  data?: unknown;
 }
 
 export interface SafeFetchSuccess<T> {
@@ -90,11 +92,18 @@ export async function safeFetchJson<T = unknown>(
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
+        let body: unknown;
+        try {
+          body = text ? JSON.parse(text) : undefined;
+        } catch {
+          body = undefined;
+        }
         const error: SafeFetchError = {
           ok: false,
           status: response.status,
           statusText: response.statusText,
-          error: extractErrorBodyMessage(text, response)
+          error: extractErrorBodyMessage(text, response),
+          data: body,
         };
         if (context) {
           console.warn(`[safeFetch] ${context} failed:`, error);

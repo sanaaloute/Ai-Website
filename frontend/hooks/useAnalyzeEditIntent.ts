@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { analyzeEditIntent, type SearchPlan } from "@/lib/api/client";
+import { analyzeEditIntent, extractPlanLimitError, type SearchPlan } from "@/lib/api/client";
+import { useEntitlementsStore } from "@/stores/entitlementsStore";
 
 export function useAnalyzeEditIntent() {
   const [loading, setLoading] = useState(false);
@@ -22,6 +23,10 @@ export function useAnalyzeEditIntent() {
       try {
         const result = await analyzeEditIntent(params);
         if (!result.ok) {
+          const planLimit = extractPlanLimitError(result);
+          if (planLimit) {
+            useEntitlementsStore.getState().openUpgradeDialog(planLimit);
+          }
           setError(result.error || "Failed to analyze edit intent.");
           setSearchPlan(null);
           return null;

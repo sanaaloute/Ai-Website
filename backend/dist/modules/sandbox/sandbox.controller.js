@@ -21,6 +21,7 @@ const user_decorator_1 = require("../../common/decorators/user.decorator");
 const e2b_service_1 = require("../../lib/e2b.service");
 const storage_service_1 = require("../../lib/storage.service");
 const idempotency_service_1 = require("../../lib/idempotency.service");
+const entitlements_service_1 = require("../billing/entitlements.service");
 const WORKDIR = '/home/user/app';
 function sseInit(res) {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -41,15 +42,19 @@ function sseDone(res) {
     }
 }
 let SandboxController = SandboxController_1 = class SandboxController {
-    constructor(e2b, storage, idempotency) {
+    constructor(e2b, storage, idempotency, entitlements) {
         this.e2b = e2b;
         this.storage = storage;
         this.idempotency = idempotency;
+        this.entitlements = entitlements;
         this.logger = new common_1.Logger(SandboxController_1.name);
     }
-    async createAiSandbox(body) {
+    async createAiSandbox(user, body) {
+        if (user?.id) {
+            await this.entitlements.assertSandboxTimeAvailable(user.id);
+        }
         return this.idempotency.process(body.idempotencyKey ?? '', async () => {
-            const data = await this.e2b.createSandbox({ skipSetup: body.skipSetup });
+            const data = await this.e2b.createSandbox({ skipSetup: body.skipSetup, userId: user?.id });
             return { success: true, ...data };
         }, 3600);
     }
@@ -367,9 +372,10 @@ exports.SandboxController = SandboxController;
 __decorate([
     (0, common_1.Post)('create-ai-sandbox-v2'),
     (0, common_1.UseGuards)(optional_auth_guard_1.OptionalAuthGuard),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], SandboxController.prototype, "createAiSandbox", null);
 __decorate([
@@ -565,6 +571,7 @@ exports.SandboxController = SandboxController = SandboxController_1 = __decorate
     (0, common_1.Controller)('api'),
     __metadata("design:paramtypes", [e2b_service_1.E2BService,
         storage_service_1.StorageService,
-        idempotency_service_1.IdempotencyService])
+        idempotency_service_1.IdempotencyService,
+        entitlements_service_1.EntitlementsService])
 ], SandboxController);
 //# sourceMappingURL=sandbox.controller.js.map

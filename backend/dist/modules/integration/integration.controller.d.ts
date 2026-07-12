@@ -7,6 +7,7 @@ import { E2BService } from "../../lib/e2b.service";
 import { IdempotencyService } from "../../lib/idempotency.service";
 import { SupabaseService } from "../../lib/supabase.service";
 import { ProjectService } from "../project/project.service";
+import { EntitlementsService } from "../billing/entitlements.service";
 export declare class IntegrationController {
     private readonly github;
     private readonly deploy;
@@ -15,8 +16,9 @@ export declare class IntegrationController {
     private readonly supabase;
     private readonly idempotency;
     private readonly projectService;
+    private readonly entitlements;
     private readonly logger;
-    constructor(github: GithubService, deploy: DeployService, tokens: IntegrationTokenService, e2b: E2BService, supabase: SupabaseService, idempotency: IdempotencyService, projectService: ProjectService);
+    constructor(github: GithubService, deploy: DeployService, tokens: IntegrationTokenService, e2b: E2BService, supabase: SupabaseService, idempotency: IdempotencyService, projectService: ProjectService, entitlements: EntitlementsService);
     private cookieOptions;
     authorize(next: string, res: Response): void;
     callback(code: string, state: string, req: Request, res: Response): Promise<void | Response<any, Record<string, any>>>;
@@ -47,7 +49,7 @@ export declare class IntegrationController {
         idempotencyKey?: string;
     }, req: Request, res: Response): Promise<import("../../lib/deploy/deploy.types").DeployResult>;
     vercelStatus(deploymentUuid: string, appUuid: string): Promise<Record<string, unknown>>;
-    connectUserSupabase(sandboxId: string, body: {
+    connectUserSupabase(user: User, sandboxId: string, body: {
         supabaseUrl?: string;
         supabaseAnonKey?: string;
     }): Promise<{

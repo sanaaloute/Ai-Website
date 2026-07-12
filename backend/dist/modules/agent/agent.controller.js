@@ -22,6 +22,7 @@ const user_decorator_1 = require("../../common/decorators/user.decorator");
 const ai_gateway_service_1 = require("../../lib/ai-gateway.service");
 const e2b_service_1 = require("../../lib/e2b.service");
 const provider_keys_service_1 = require("../profile/provider-keys.service");
+const entitlements_service_1 = require("../billing/entitlements.service");
 const agent_service_1 = require("./agent.service");
 const model_resolver_service_1 = require("./services/model-resolver.service");
 const agent_job_service_1 = require("../job-queue/agent-job.service");
@@ -49,10 +50,11 @@ function sseDone(res) {
     }
 }
 let AgentController = AgentController_1 = class AgentController {
-    constructor(ai, e2b, providerKeys, agentService, modelResolver, agentJobService, rateLimitService, idempotency) {
+    constructor(ai, e2b, providerKeys, entitlements, agentService, modelResolver, agentJobService, rateLimitService, idempotency) {
         this.ai = ai;
         this.e2b = e2b;
         this.providerKeys = providerKeys;
+        this.entitlements = entitlements;
         this.agentService = agentService;
         this.modelResolver = modelResolver;
         this.agentJobService = agentJobService;
@@ -87,6 +89,15 @@ let AgentController = AgentController_1 = class AgentController {
         return this.idempotency.process(idempotencyKey, async () => {
             let prompt;
             let sessionId;
+            const resumeReview = this.validateResumeReview(body.resumeReview);
+            const isContinuation = body.resume === true || resumeReview !== undefined;
+            if (!isContinuation) {
+                const intent = typeof body.intent === 'string' ? body.intent : undefined;
+                if (intent !== 'new_app') {
+                    await this.entitlements.assertFeature(user.id, 'ai_editing');
+                }
+                await this.entitlements.consumeGeneration(user.id);
+            }
             if (typeof body.sessionId === 'string') {
                 const session = await this.agentJobService.getSession(body.sessionId);
                 if (!session || session.userId !== user.id) {
@@ -113,7 +124,7 @@ let AgentController = AgentController_1 = class AgentController {
                 chatHistory: Array.isArray(body.chatHistory)
                     ? body.chatHistory.filter((h) => typeof h === 'object' && h !== null && 'role' in h && 'content' in h)
                     : [],
-                resumeReview: this.validateResumeReview(body.resumeReview),
+                resumeReview,
                 prompt,
             }, idempotencyKey || `${user.id}:${sessionId}:${sandboxId}`);
             await this.rateLimitService.reserveConcurrentGeneration(user.id, job.id);
@@ -345,6 +356,7 @@ let AgentController = AgentController_1 = class AgentController {
         return this.ai.filePlan(body.spec, body.blueprint, this.modelResolver.resolveSequence('file_plan'), aiCredentials);
     }
     async analyzeEditIntent(user, body) {
+        await this.entitlements.assertFeature(user.id, 'ai_editing');
         const aiCredentials = await this.fetchUserCredentials(user.id);
         const searchPlan = await this.ai.analyzeEditIntent(body.prompt, body.manifest, this.modelResolver.resolveSequence('analyze_edit_intent'), aiCredentials);
         return { success: true, search_plan: searchPlan };
@@ -578,6 +590,7 @@ exports.AgentController = AgentController = AgentController_1 = __decorate([
     __metadata("design:paramtypes", [ai_gateway_service_1.AiGatewayService,
         e2b_service_1.E2BService,
         provider_keys_service_1.ProviderKeysService,
+        entitlements_service_1.EntitlementsService,
         agent_service_1.AgentService,
         model_resolver_service_1.ModelResolverService,
         agent_job_service_1.AgentJobService,

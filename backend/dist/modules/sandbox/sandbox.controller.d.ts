@@ -3,13 +3,15 @@ import { User } from "../../types";
 import { E2BService } from "../../lib/e2b.service";
 import { StorageService } from "../../lib/storage.service";
 import { IdempotencyService } from "../../lib/idempotency.service";
+import { EntitlementsService } from "../billing/entitlements.service";
 export declare class SandboxController {
     private readonly e2b;
     private readonly storage;
     private readonly idempotency;
+    private readonly entitlements;
     private readonly logger;
-    constructor(e2b: E2BService, storage: StorageService, idempotency: IdempotencyService);
-    createAiSandbox(body: {
+    constructor(e2b: E2BService, storage: StorageService, idempotency: IdempotencyService, entitlements: EntitlementsService);
+    createAiSandbox(user: User | undefined, body: {
         projectName?: string;
         skipSetup?: boolean;
         idempotencyKey?: string;

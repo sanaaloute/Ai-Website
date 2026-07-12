@@ -22,6 +22,7 @@ import { IdempotencyService } from '@/lib/idempotency.service';
 import { SupabaseService } from '@/lib/supabase.service';
 import { E2BService, WORKDIR } from '@/lib/e2b.service';
 import { ProjectService } from '@/modules/project/project.service';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 import { env } from '@/config/env';
 import JSZip from 'jszip';
 
@@ -36,6 +37,7 @@ export class ProjectController {
     private readonly e2b: E2BService,
     private readonly idempotency: IdempotencyService,
     private readonly projectService: ProjectService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   @Get('projects')
@@ -133,6 +135,8 @@ export class ProjectController {
         .update({ name: projectName, updated_at: new Date().toISOString() })
         .eq('id', projectId);
     } else {
+      // New project — enforce the plan's project limit.
+      await this.entitlements.assertCanCreateProject(user.id);
       await this.supabase.admin.from('projects').insert({
         id: projectId,
         user_id: user.id,
@@ -287,6 +291,7 @@ export class ProjectController {
   @Post('create-zip')
   async createZip(@CurrentUser() user: User, @Body() body: { sandboxId?: string; projectId?: string; projectName?: string }) {
     if (!body.projectId) throw new HttpException({ success: false, error: 'projectId required' }, HttpStatus.BAD_REQUEST);
+    await this.entitlements.assertFeature(user.id, 'zip_download');
     const signedUrl = await this.storage.getSignedZipUrl(user.id, body.projectId);
     return {
       success: true,

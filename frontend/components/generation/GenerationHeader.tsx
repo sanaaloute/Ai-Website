@@ -1,12 +1,14 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import BuilderHeader from '@/components/builder/BuilderHeader';
-import { Pencil, Trash2, Save, GitBranch, Cloud, Database } from 'lucide-react';
+import { Pencil, Trash2, Save, GitBranch, Cloud, Database, Lock } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
 import type { ReadonlyURLSearchParams } from 'next/navigation';
 import type { CloudProjectListItem } from '@/hooks/useCloudProjects';
 import { useSandboxPocketbaseInfo } from '@/hooks/useSandboxPocketbaseInfo';
+import { useEntitlementsStore } from '@/stores/entitlementsStore';
+import type { PlanFeatureId } from '@/lib/api/client';
 
 export interface HeaderWorkspace {
   sandboxData: { sandboxId: string; url: string; [key: string]: unknown } | null;
@@ -88,6 +90,27 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
   const { info: pocketbaseInfo, loading: pocketbaseLoading } = useSandboxPocketbaseInfo(
     sandboxData?.sandboxId
   );
+
+  const entitlements = useEntitlementsStore((s) => s.entitlements);
+  const loadEntitlements = useEntitlementsStore((s) => s.loadEntitlements);
+  const hasFeature = useEntitlementsStore((s) => s.hasFeature);
+  const openUpgradeDialog = useEntitlementsStore((s) => s.openUpgradeDialog);
+
+  useEffect(() => {
+    if (!entitlements) void loadEntitlements();
+  }, [entitlements, loadEntitlements]);
+
+  const promptUpgrade = (
+    feature: PlanFeatureId,
+    requiredPlan: 'basic' | 'standard' | 'pro',
+    message: string
+  ) => {
+    openUpgradeDialog({ feature, quota: null, requiredPlan, message });
+  };
+
+  const zipLocked = !hasFeature('zip_download');
+  const pushLocked = !hasFeature('github_push');
+  const deployLocked = !hasFeature('deploy');
   const pbAdminUrl = pocketbaseInfo?.adminUrl;
   const pbAdminEmail = pocketbaseInfo?.adminEmail ?? 'admin@ai-website.com';
   const pbAdminPassword = pocketbaseInfo?.adminPassword ?? 'admin';
@@ -212,37 +235,88 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
         </button>
         <button
           type="button"
-          onClick={downloadZip}
-          disabled={!sandboxData || isDownloadingZip}
+          onClick={() => {
+            if (zipLocked) {
+              promptUpgrade(
+                'zip_download',
+                'standard',
+                'Downloading your project as a ZIP requires the Standard plan or higher.'
+              );
+              return;
+            }
+            void downloadZip();
+          }}
+          disabled={!zipLocked && (!sandboxData || isDownloadingZip)}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-35"
-          title={isDownloadingZip ? 'Preparing…' : 'Download ZIP'}
+          title={
+            zipLocked
+              ? 'Download ZIP requires the Standard plan'
+              : isDownloadingZip
+                ? 'Preparing…'
+                : 'Download ZIP'
+          }
         >
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="shrink-0">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-          </svg>
+          {zipLocked ? (
+            <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300/80" aria-hidden />
+          ) : (
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+            </svg>
+          )}
           <span className="hidden sm:inline">{isDownloadingZip ? 'DL…' : 'Download'}</span>
         </button>
         <button
           type="button"
-          onClick={() => openGithubPushDialog()}
-          disabled={!integrationReadiness.ready || integrationBusy !== null}
+          onClick={() => {
+            if (pushLocked) {
+              promptUpgrade(
+                'github_push',
+                'standard',
+                'Pushing your project to GitHub requires the Standard plan or higher.'
+              );
+              return;
+            }
+            openGithubPushDialog();
+          }}
+          disabled={!pushLocked && (!integrationReadiness.ready || integrationBusy !== null)}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-purple/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
           title={
-            !integrationReadiness.ready
-              ? integrationReadiness.primaryReason || 'Workflow not ready'
-              : undefined
+            pushLocked
+              ? 'Push to GitHub requires the Standard plan'
+              : !integrationReadiness.ready
+                ? integrationReadiness.primaryReason || 'Workflow not ready'
+                : undefined
           }
         >
-          <GitBranch className="h-3.5 w-3.5 shrink-0 text-glow-purple/80" aria-hidden />
+          {pushLocked ? (
+            <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300/80" aria-hidden />
+          ) : (
+            <GitBranch className="h-3.5 w-3.5 shrink-0 text-glow-purple/80" aria-hidden />
+          )}
           <span className="hidden sm:inline">{integrationBusy === 'github' ? 'Push…' : 'Push'}</span>
         </button>
         <button
           type="button"
-          onClick={() => void hostOnVercel()}
-          disabled={integrationBusy !== null}
+          onClick={() => {
+            if (deployLocked) {
+              promptUpgrade(
+                'deploy',
+                'pro',
+                'One-click deploy requires the Pro plan.'
+              );
+              return;
+            }
+            void hostOnVercel();
+          }}
+          disabled={!deployLocked && integrationBusy !== null}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+          title={deployLocked ? 'One-click deploy requires the Pro plan' : undefined}
         >
-          <Cloud className="h-3.5 w-3.5 shrink-0 text-glow-cyan/80" aria-hidden />
+          {deployLocked ? (
+            <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300/80" aria-hidden />
+          ) : (
+            <Cloud className="h-3.5 w-3.5 shrink-0 text-glow-cyan/80" aria-hidden />
+          )}
           <span className="hidden sm:inline">{integrationBusy === 'vercel' ? 'Deploy…' : 'Deploy'}</span>
         </button>
         {sandboxData && (

@@ -52,6 +52,7 @@ const path = __importStar(require("path"));
 const node_crypto_1 = require("node:crypto");
 const env_1 = require("../config/env");
 const pocketbase_service_1 = require("./pocketbase.service");
+const entitlements_service_1 = require("../modules/billing/entitlements.service");
 const template_service_1 = require("../modules/agent/services/template.service");
 const sandbox_state_service_1 = require("./sandbox-state.service");
 exports.WORKDIR = '/home/user/app';
@@ -135,8 +136,9 @@ class E2BProviderError extends Error {
 }
 exports.E2BProviderError = E2BProviderError;
 let E2BService = E2BService_1 = class E2BService {
-    constructor(state) {
+    constructor(state, entitlements) {
         this.state = state;
+        this.entitlements = entitlements;
         this.logger = new common_1.Logger(E2BService_1.name);
         this.sandboxes = new Map();
         this.frameworks = new Map();
@@ -201,7 +203,7 @@ let E2BService = E2BService_1 = class E2BService {
             const message = err instanceof Error ? err.message : String(err);
             this.logger.warn(`PocketBase setup failed for sandbox ${sandbox.sandboxId}: ${message}`);
         }
-        await this.state.setSandboxInfo(sandbox.sandboxId, { createdAt, endAt });
+        await this.state.setSandboxInfo(sandbox.sandboxId, { createdAt, endAt, userId: opts?.userId });
         return {
             sandboxId: sandbox.sandboxId,
             url: this.previewUrl(sandbox),
@@ -255,7 +257,8 @@ let E2BService = E2BService_1 = class E2BService {
             const now = Date.now();
             const createdAt = lifetime?.createdAt ?? new Date(now).toISOString();
             const endAt = lifetime?.endAt ?? new Date(now + SANDBOX_LIFETIME_MS).toISOString();
-            await this.state.setSandboxInfo(currentId, { createdAt, endAt });
+            const existing = await this.state.getSandboxInfo(currentId);
+            await this.state.setSandboxInfo(currentId, { ...existing, createdAt, endAt });
             return {
                 sandboxId: currentId,
                 url: this.previewUrl(sandbox),
@@ -282,11 +285,28 @@ let E2BService = E2BService_1 = class E2BService {
             throw new E2BProviderError(msg);
         }
     }
+    async finalizeSegment(sandboxId) {
+        try {
+            const info = await this.state.getSandboxInfo(sandboxId);
+            if (!info?.userId)
+                return;
+            const start = new Date(info.createdAt).getTime();
+            const end = Math.min(Date.now(), new Date(info.endAt).getTime());
+            const seconds = Math.max(0, Math.round((end - start) / 1000));
+            if (seconds > 0) {
+                await this.entitlements.addSandboxSeconds(info.userId, seconds);
+            }
+        }
+        catch (e) {
+            this.logger.warn(`Could not finalize sandbox usage for ${sandboxId}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+    }
     async kill(sandboxId) {
         if (!this.configured) {
             throw new E2BNotConfiguredError();
         }
         const currentId = await this.getCurrentSandboxId(sandboxId);
+        await this.finalizeSegment(currentId);
         try {
             const sandbox = this.sandboxes.get(currentId) ??
                 (await e2b_1.Sandbox.connect(currentId, {
@@ -320,6 +340,7 @@ let E2BService = E2BService_1 = class E2BService {
     }
     async removeSandboxInfo(sandboxId) {
         const currentId = await this.getCurrentSandboxId(sandboxId);
+        await this.finalizeSegment(currentId);
         this.sandboxes.delete(currentId);
         await this.state.clearSandboxState(currentId);
     }
@@ -416,7 +437,8 @@ let E2BService = E2BService_1 = class E2BService {
     async doRenewSandbox(currentId) {
         const start = Date.now();
         const files = await this.readFiles(currentId, { maxFiles: 1000 });
-        const newSandbox = await this.createSandbox();
+        const oldInfo = await this.state.getSandboxInfo(currentId);
+        const newSandbox = await this.createSandbox({ userId: oldInfo?.userId });
         try {
             for (const [path, content] of Object.entries(files.files)) {
                 await this.writeFile(newSandbox.sandboxId, path, content);
@@ -1056,6 +1078,7 @@ let E2BService = E2BService_1 = class E2BService {
 exports.E2BService = E2BService;
 exports.E2BService = E2BService = E2BService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [sandbox_state_service_1.SandboxStateService])
+    __metadata("design:paramtypes", [sandbox_state_service_1.SandboxStateService,
+        entitlements_service_1.EntitlementsService])
 ], E2BService);
 //# sourceMappingURL=e2b.service.js.map

@@ -5,6 +5,8 @@ export interface SandboxInfo {
   createdAt: string;
   endAt: string;
   renewing?: boolean;
+  /** Owner of the sandbox (authenticated creator); used for usage metering. */
+  userId?: string;
 }
 
 export interface PocketbaseInfo {

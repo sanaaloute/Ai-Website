@@ -18,10 +18,11 @@ import { IdempotencyService } from './idempotency.service';
 import { CookieService } from './cookie.service';
 import { PrismaService } from './prisma.service';
 import { ProviderKeysService } from '@/modules/profile/provider-keys.service';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 
 @Global()
 @Module({
-  providers: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService, ProviderKeysService],
-  exports: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService, ProviderKeysService],
+  providers: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService, ProviderKeysService, EntitlementsService],
+  exports: [SupabaseService, E2BService, StripeService, AiGatewayService, StorageService, GithubService, VercelService, DeployService, DockerDeployRunner, CoolifyDeployRunner, RedisService, SandboxStateService, IdempotencyService, CookieService, PrismaService, EncryptionService, IntegrationTokenService, ProviderKeysService, EntitlementsService],
 })
 export class CoreModule {}

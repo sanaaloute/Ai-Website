@@ -62,56 +62,71 @@
   "pricing": {
     "overline": "Pricing",
     "subheading": "Start free, upgrade when you are ready to ship. No hidden fees, cancel anytime.",
-    "starter": {
-      "name": "Starter",
-      "description": "Perfect for hobbyists and side projects.",
-      "price": "$0",
-      "period": "forever",
-      "cta": "Get Started",
-      "features": [
-        "3 projects",
-        "Local development",
-        "Community templates",
-        "Standard AI models",
-        "GitHub integration"
-      ]
-    },
-    "pro": {
-      "name": "Pro",
-      "description": "For builders shipping production apps.",
-      "price": "$19",
-      "period": "/month",
-      "cta": "Upgrade to Pro",
-      "badge": "Most Popular",
-      "features": [
-        "Unlimited projects",
-        "Local + Cloud development",
-        "Priority AI routing",
-        "Advanced model access",
-        "One-click deployments",
-        "Custom domains",
-        "Email support"
-      ]
-    },
-    "team": {
-      "name": "Team",
-      "description": "Collaborate and scale with your team.",
-      "price": "$49",
-      "period": "/seat /month",
-      "cta": "Contact Sales",
-      "features": [
-        "Everything in Pro",
-        "Shared team workspaces",
-        "Role-based access",
-        "SSO & SAML",
-        "Audit logs",
-        "Dedicated support",
-        "Custom SLA"
-      ]
-    },
-    "trustNoCard": "No credit card required for Starter",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "yearlyBadge": "2 months free",
+    "perMonth": "/mo",
+    "perYear": "/yr",
+    "currentPlan": "Current plan",
+    "choosePlan": "Choose {plan}",
+    "signInToUpgrade": "Sign in to upgrade",
+    "checkoutUnavailable": "Checkout is not configured yet",
+    "mostPopular": "Most popular",
+    "trustNoCard": "No credit card required for Trial",
     "trustCancel": "Cancel anytime",
-    "trustRefund": "14-day refund guarantee"
+    "trustRefund": "14-day refund guarantee",
+    "plans": {
+      "trial": {
+        "name": "Trial",
+        "description": "Try the builder with a free monthly allowance.",
+        "cta": "Start free",
+        "features": [
+          "3 generations per month",
+          "1 sandbox hour per month",
+          "1 saved project",
+          "Visual editing"
+        ]
+      },
+      "basic": {
+        "name": "Basic",
+        "description": "For hobbyists building a few sites each month.",
+        "cta": "Choose Basic",
+        "features": [
+          "10 generations per month",
+          "5 sandbox hours per month",
+          "3 saved projects",
+          "Visual editing"
+        ]
+      },
+      "standard": {
+        "name": "Standard",
+        "description": "For builders shipping production apps.",
+        "cta": "Choose Standard",
+        "features": [
+          "50 generations per month",
+          "30 sandbox hours per month",
+          "Unlimited saved projects",
+          "Visual editing",
+          "AI editing",
+          "Download ZIP",
+          "Push to GitHub"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "Unlimited creation with the full deployment stack.",
+        "cta": "Choose Pro",
+        "features": [
+          "Unlimited generations",
+          "100 sandbox hours per month",
+          "Unlimited saved projects",
+          "Everything in Standard",
+          "Database integration",
+          "One-click deploy",
+          "Custom domain"
+        ]
+      }
+    }
   },
   "download": {
     "overline": "Desktop app",

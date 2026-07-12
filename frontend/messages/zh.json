@@ -60,58 +60,73 @@
     }
   },
   "pricing": {
-    "overline": "价格",
-    "subheading": "免费开始，准备好发布时升级。无隐藏费用，随时取消。",
-    "starter": {
-      "name": "入门版",
-      "description": "适合爱好者和副业项目。",
-      "price": "¥0",
-      "period": "永久",
-      "cta": "开始使用",
-      "features": [
-        "3 个项目",
-        "本地开发",
-        "社区模板",
-        "标准 AI 模型",
-        "GitHub 集成"
-      ]
-    },
-    "pro": {
-      "name": "专业版",
-      "description": "为发布生产级应用的构建者打造。",
-      "price": "$19",
-      "period": "/月",
-      "cta": "升级到专业版",
-      "badge": "最受欢迎",
-      "features": [
-        "无限项目",
-        "本地 + 云端开发",
-        "优先 AI 路由",
-        "高级模型访问",
-        "一键部署",
-        "自定义域名",
-        "邮件支持"
-      ]
-    },
-    "team": {
-      "name": "团队版",
-      "description": "与团队协作并扩展规模。",
-      "price": "$49",
-      "period": "/座 /月",
-      "cta": "联系销售",
-      "features": [
-        "专业版全部功能",
-        "共享团队工作区",
-        "基于角色的访问",
-        "SSO 和 SAML",
-        "审计日志",
-        "专属支持",
-        "自定义 SLA"
-      ]
-    },
-    "trustNoCard": "入门版无需信用卡",
+    "overline": "价格方案",
+    "subheading": "免费开始，准备发布时再升级。无隐藏费用，随时取消。",
+    "monthly": "按月付费",
+    "yearly": "按年付费",
+    "yearlyBadge": "省 2 个月",
+    "perMonth": "/月",
+    "perYear": "/年",
+    "currentPlan": "当前方案",
+    "choosePlan": "选择 {plan}",
+    "signInToUpgrade": "登录后升级",
+    "checkoutUnavailable": "支付尚未配置",
+    "mostPopular": "最受欢迎",
+    "trustNoCard": "试用版无需信用卡",
     "trustCancel": "随时取消",
-    "trustRefund": "14 天退款保证"
+    "trustRefund": "14 天退款保证",
+    "plans": {
+      "trial": {
+        "name": "试用版",
+        "description": "使用每月免费额度体验建站。",
+        "cta": "免费开始",
+        "features": [
+          "每月 3 次生成",
+          "每月 1 小时沙箱",
+          "1 个已保存项目",
+          "可视化编辑"
+        ]
+      },
+      "basic": {
+        "name": "基础版",
+        "description": "适合每月构建几个网站的爱好者。",
+        "cta": "选择基础版",
+        "features": [
+          "每月 10 次生成",
+          "每月 5 小时沙箱",
+          "3 个已保存项目",
+          "可视化编辑"
+        ]
+      },
+      "standard": {
+        "name": "标准版",
+        "description": "适合发布生产级应用的开发者。",
+        "cta": "选择标准版",
+        "features": [
+          "每月 50 次生成",
+          "每月 30 小时沙箱",
+          "无限已保存项目",
+          "可视化编辑",
+          "AI 编辑",
+          "下载 ZIP",
+          "推送到 GitHub"
+        ]
+      },
+      "pro": {
+        "name": "专业版",
+        "description": "无限创作，完整部署能力。",
+        "cta": "选择专业版",
+        "features": [
+          "无限次生成",
+          "每月 100 小时沙箱",
+          "无限已保存项目",
+          "包含标准版全部功能",
+          "数据库集成",
+          "一键部署",
+          "自定义域名"
+        ]
+      }
+    }
   },
   "download": {
     "overline": "桌面应用",

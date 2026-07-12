@@ -39,6 +39,7 @@ model users {
   user_sessions       user_sessions[]
   user_integrations   user_integrations[]
   user_provider_keys  user_provider_keys[]
+  user_usage          user_usage[]
 
   @@index([email], map: "ix_users_email")
   @@index([status], map: "ix_users_status")
@@ -73,6 +74,17 @@ model user_provider_keys {
   @@unique([user_id, provider], map: "ix_user_provider_keys_user_id_provider")
   @@index([user_id], map: "ix_user_provider_keys_user_id")
   @@map("user_provider_keys")
+}
+
+model user_usage {
+  user_id         String @db.Uuid
+  period          String @db.Char(7)
+  generations     Int    @default(0)
+  sandbox_seconds BigInt @default(0)
+  user            users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([user_id, period])
+  @@map("user_usage")
 }
 
 model admin_users {

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { E2BService, SandboxGoneError, SandboxNotFoundError } from '@/lib/e2b.service';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 const RENEWAL_WINDOW_MS = 10 * 60 * 1000;
@@ -10,7 +11,10 @@ export class SandboxLifecycleService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SandboxLifecycleService.name);
   private interval: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private readonly e2b: E2BService) {}
+  constructor(
+    private readonly e2b: E2BService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   onModuleInit() {
     this.interval = setInterval(() => {
@@ -31,7 +35,7 @@ export class SandboxLifecycleService implements OnModuleInit, OnModuleDestroy {
     const now = Date.now();
     const entries = await this.e2b.getSandboxInfos();
 
-    for (const { sandboxId, endAt: endAtStr, renewing } of entries) {
+    for (const { sandboxId, endAt: endAtStr, renewing, userId } of entries) {
       if (renewing) continue;
 
       const endAt = new Date(endAtStr).getTime();
@@ -46,6 +50,23 @@ export class SandboxLifecycleService implements OnModuleInit, OnModuleDestroy {
           );
           await this.e2b.removeSandboxInfo(sandboxId);
           continue;
+        }
+
+        // Plan gate: when the owner's monthly sandbox hours are exhausted,
+        // stop renewing — the session ends naturally at its TTL (never a
+        // mid-session kill) and the elapsed time is billed on purge.
+        if (userId) {
+          try {
+            const remaining = await this.entitlements.sandboxSecondsRemaining(userId);
+            if (remaining <= 0) {
+              this.logger.warn(
+                `Sandbox ${sandboxId} not renewed: monthly sandbox hours exhausted for user ${userId}`,
+              );
+              continue;
+            }
+          } catch (e) {
+            this.logger.warn(`Could not check sandbox quota for ${sandboxId}: ${e instanceof Error ? e.message : String(e)}`);
+          }
         }
 
         this.logger.log(`Auto-renewing sandbox ${sandboxId} (expires in ${expiresIn}ms)`);

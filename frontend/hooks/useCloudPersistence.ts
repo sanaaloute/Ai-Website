@@ -3,7 +3,8 @@ import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
 import type { CloudProjectListItem } from '@/lib/generation/types';
 import type { StoredChatMessageV1 } from '@/lib/generation/storedChatTypes';
-import { saveSnapshot, saveProject } from '@/lib/api/client';
+import { saveSnapshot, saveProject, extractPlanLimitError } from '@/lib/api/client';
+import { useEntitlementsStore } from '@/stores/entitlementsStore';
 import { isUuidProjectId } from '@/lib/generation/remoteSandboxSnapshot';
 import { assertCurrentSandboxIdStrict } from '@/lib/sandbox/sandboxClientSession';
 
@@ -244,7 +245,15 @@ export function useCloudPersistence(deps: CloudPersistenceDeps) {
           warnings?: string[];
         };
         if (!result.ok || !json.success) {
-          throw new Error(json.error || 'Failed to save project.');
+          const planLimit = extractPlanLimitError(result);
+          if (planLimit) {
+            useEntitlementsStore.getState().openUpgradeDialog(planLimit);
+          }
+          const message =
+            json.error ||
+            (!result.ok && 'error' in result ? result.error : undefined) ||
+            'Failed to save project.';
+          throw new Error(message);
         }
         if (typeof json.projectId === 'string' && json.projectId) {
           const projectId = json.projectId;

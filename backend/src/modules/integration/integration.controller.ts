@@ -23,6 +23,7 @@ import { E2BService } from '@/lib/e2b.service';
 import { IdempotencyService } from '@/lib/idempotency.service';
 import { SupabaseService } from '@/lib/supabase.service';
 import { ProjectService } from '@/modules/project/project.service';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 import { env } from '@/config/env';
 
 const OAUTH_STATE_COOKIE = 'github_oauth_state';
@@ -45,6 +46,7 @@ export class IntegrationController {
     private readonly supabase: SupabaseService,
     private readonly idempotency: IdempotencyService,
     private readonly projectService: ProjectService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   private cookieOptions(domain: string) {
@@ -162,6 +164,8 @@ export class IntegrationController {
   ) {
     if (!body.repoName || !body.files) throw new HttpException({ success: false, error: 'repoName and files required' }, HttpStatus.BAD_REQUEST);
 
+    await this.entitlements.assertFeature(user.id, 'github_push');
+
     const projectId = body.aiWebsiteProjectId;
 
     const { accessToken, refreshToken, loadedFromDb } = await this.resolveGithubTokens(
@@ -243,6 +247,12 @@ export class IntegrationController {
     if (!body.repoUrl || !body.projectName) {
       throw new HttpException({ success: false, error: 'repoUrl and projectName required' }, HttpStatus.BAD_REQUEST);
     }
+
+    await this.entitlements.assertFeature(user.id, 'deploy');
+    if (body.customDomain) {
+      await this.entitlements.assertFeature(user.id, 'custom_domain');
+    }
+
     const repoUrl = body.repoUrl;
     const projectName = body.projectName;
 
@@ -348,10 +358,11 @@ export class IntegrationController {
 
   @Post('integrations/user-supabase/connect')
   @UseGuards(AuthGuard)
-  async connectUserSupabase(@Query('sandboxId') sandboxId: string, @Body() body: { supabaseUrl?: string; supabaseAnonKey?: string }) {
+  async connectUserSupabase(@CurrentUser() user: User, @Query('sandboxId') sandboxId: string, @Body() body: { supabaseUrl?: string; supabaseAnonKey?: string }) {
     if (!sandboxId || !body.supabaseUrl) {
       throw new HttpException({ success: false, error: 'sandboxId and supabaseUrl required' }, HttpStatus.BAD_REQUEST);
     }
+    await this.entitlements.assertFeature(user.id, 'db_integration');
     const envContent = `VITE_SUPABASE_URL=${body.supabaseUrl}\nVITE_SUPABASE_ANON_KEY=${body.supabaseAnonKey ?? ''}\n`;
     await this.e2b.writeFile(sandboxId, '.env', envContent);
     return { success: true, message: 'Connected' };

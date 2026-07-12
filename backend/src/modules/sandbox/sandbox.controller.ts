@@ -25,6 +25,7 @@ import {
 } from '@/lib/e2b.service';
 import { StorageService } from '@/lib/storage.service';
 import { IdempotencyService } from '@/lib/idempotency.service';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 
 const WORKDIR = '/home/user/app';
 
@@ -56,15 +57,23 @@ export class SandboxController {
     private readonly e2b: E2BService,
     private readonly storage: StorageService,
     private readonly idempotency: IdempotencyService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   @Post('create-ai-sandbox-v2')
   @UseGuards(OptionalAuthGuard)
-  async createAiSandbox(@Body() body: { projectName?: string; skipSetup?: boolean; idempotencyKey?: string }) {
+  async createAiSandbox(
+    @CurrentUser() user: User | undefined,
+    @Body() body: { projectName?: string; skipSetup?: boolean; idempotencyKey?: string },
+  ) {
+    // Authenticated users are subject to their plan's monthly sandbox hours.
+    if (user?.id) {
+      await this.entitlements.assertSandboxTimeAvailable(user.id);
+    }
     return this.idempotency.process(
       body.idempotencyKey ?? '',
       async () => {
-        const data = await this.e2b.createSandbox({ skipSetup: body.skipSetup });
+        const data = await this.e2b.createSandbox({ skipSetup: body.skipSetup, userId: user?.id });
         return { success: true, ...data };
       },
       3600,

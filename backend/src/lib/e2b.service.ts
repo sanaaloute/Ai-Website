@@ -6,6 +6,7 @@ import { randomBytes } from 'node:crypto';
 import { env } from '@/config/env';
 import { SandboxData } from '@/types';
 import { generateSandboxPocketbaseCredentials } from './pocketbase.service';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 import { MINIMAL_GENERIC_TEMPLATE } from '@/modules/agent/services/template.service';
 import { SandboxStateService, type PocketbaseInfo } from './sandbox-state.service';
 
@@ -123,13 +124,16 @@ export class E2BService {
   /** In-memory cache of per-sandbox framework (next | vite). */
   private readonly frameworks = new Map<string, SandboxFramework>();
 
-  constructor(private readonly state: SandboxStateService) {}
+  constructor(
+    private readonly state: SandboxStateService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   get configured(): boolean {
     return !!env().e2bApiKey;
   }
 
-  async createSandbox(opts?: { skipSetup?: boolean }): Promise<SandboxData> {
+  async createSandbox(opts?: { skipSetup?: boolean; userId?: string }): Promise<SandboxData> {
     if (!this.configured) {
       throw new E2BNotConfiguredError();
     }
@@ -190,7 +194,7 @@ export class E2BService {
       // Non-fatal: the frontend preview still works without PocketBase
     }
 
-    await this.state.setSandboxInfo(sandbox.sandboxId, { createdAt, endAt });
+    await this.state.setSandboxInfo(sandbox.sandboxId, { createdAt, endAt, userId: opts?.userId });
 
     return {
       sandboxId: sandbox.sandboxId,
@@ -260,7 +264,10 @@ export class E2BService {
       const createdAt = lifetime?.createdAt ?? new Date(now).toISOString();
       const endAt = lifetime?.endAt ?? new Date(now + SANDBOX_LIFETIME_MS).toISOString();
 
-      await this.state.setSandboxInfo(currentId, { createdAt, endAt });
+      // Preserve any existing metadata (owner, renewing flag) when refreshing
+      // the lifecycle timestamps.
+      const existing = await this.state.getSandboxInfo(currentId);
+      await this.state.setSandboxInfo(currentId, { ...existing, createdAt, endAt });
 
       return {
         sandboxId: currentId,
@@ -288,12 +295,33 @@ export class E2BService {
     }
   }
 
+  /**
+   * Bill the elapsed runtime of a sandbox segment to its owner's monthly
+   * usage. Called when a segment ends (kill, renewal, purge). Anonymous
+   * sandboxes (no userId) are not metered.
+   */
+  private async finalizeSegment(sandboxId: string): Promise<void> {
+    try {
+      const info = await this.state.getSandboxInfo(sandboxId);
+      if (!info?.userId) return;
+      const start = new Date(info.createdAt).getTime();
+      const end = Math.min(Date.now(), new Date(info.endAt).getTime());
+      const seconds = Math.max(0, Math.round((end - start) / 1000));
+      if (seconds > 0) {
+        await this.entitlements.addSandboxSeconds(info.userId, seconds);
+      }
+    } catch (e) {
+      this.logger.warn(`Could not finalize sandbox usage for ${sandboxId}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
   async kill(sandboxId: string): Promise<boolean> {
     if (!this.configured) {
       throw new E2BNotConfiguredError();
     }
 
     const currentId = await this.getCurrentSandboxId(sandboxId);
+    await this.finalizeSegment(currentId);
 
     try {
       const sandbox =
@@ -313,7 +341,7 @@ export class E2BService {
     }
   }
 
-  async getSandboxInfos(): Promise<Array<{ sandboxId: string; createdAt: string; endAt: string; renewing?: boolean }>> {
+  async getSandboxInfos(): Promise<Array<{ sandboxId: string; createdAt: string; endAt: string; renewing?: boolean; userId?: string }>> {
     const entries = await this.state.listSandboxInfos();
     return entries.map(({ sandboxId, info }) => ({
       sandboxId,
@@ -336,6 +364,7 @@ export class E2BService {
    */
   async removeSandboxInfo(sandboxId: string): Promise<void> {
     const currentId = await this.getCurrentSandboxId(sandboxId);
+    await this.finalizeSegment(currentId);
     this.sandboxes.delete(currentId);
     await this.state.clearSandboxState(currentId);
   }
@@ -474,8 +503,9 @@ export class E2BService {
     // 1. Snapshot the current sandbox.
     const files = await this.readFiles(currentId, { maxFiles: 1000 });
 
-    // 2. Create a fresh 1-hour sandbox.
-    const newSandbox = await this.createSandbox();
+    // 2. Create a fresh 1-hour sandbox, keeping the same owner for metering.
+    const oldInfo = await this.state.getSandboxInfo(currentId);
+    const newSandbox = await this.createSandbox({ userId: oldInfo?.userId });
 
     try {
       // 3. Migrate every file.

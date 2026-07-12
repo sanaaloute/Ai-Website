@@ -748,6 +748,72 @@ export async function syncCheckoutSession(body: {
   return apiPost<{ ok: boolean }>('/billing/sync-checkout-session', body, 'syncCheckoutSession');
 }
 
+// ─── Plans / entitlements ─────────────────────────────────────────────────
+
+export type PlanFeatureId =
+  | 'ai_editing'
+  | 'zip_download'
+  | 'github_push'
+  | 'db_integration'
+  | 'deploy'
+  | 'custom_domain';
+
+export interface PlanLimits {
+  generationsPerMonth: number | null;
+  sandboxSecondsPerMonth: number | null;
+  maxProjects: number | null;
+}
+
+export interface Entitlements {
+  ok: boolean;
+  plan: 'trial' | 'basic' | 'standard' | 'pro';
+  planLabel: string;
+  features: PlanFeatureId[];
+  limits: PlanLimits;
+  usage: { generations: number; sandboxSeconds: number; projects: number };
+}
+
+export interface BillingPlan {
+  id: 'basic' | 'standard' | 'pro';
+  label: string;
+  priceMonthly: number;
+  priceYearly: number;
+  priceIdMonthly: string | null;
+  priceIdYearly: string | null;
+  features: { id: PlanFeatureId; label: string; requiredPlan: string }[];
+  limits: PlanLimits;
+}
+
+export interface PlanLimitError {
+  code: 'PLAN_LIMIT';
+  feature: PlanFeatureId | null;
+  quota: 'generations' | 'sandbox_hours' | 'projects' | null;
+  requiredPlan: 'basic' | 'standard' | 'pro';
+  message: string;
+}
+
+/** Extract a PLAN_LIMIT payload from a failed SafeFetchResult, if present. */
+export function extractPlanLimitError(result: { ok: boolean; data?: unknown }): PlanLimitError | null {
+  if (result.ok) return null;
+  const data = result.data as Record<string, unknown> | undefined;
+  if (data && data.code === 'PLAN_LIMIT') {
+    return data as unknown as PlanLimitError;
+  }
+  return null;
+}
+
+export async function getEntitlements() {
+  return apiGet<Entitlements>('/entitlements', 'getEntitlements');
+}
+
+export async function getBillingPlans() {
+  return apiGet<{
+    ok: boolean;
+    trial: { id: 'trial'; label: string; priceMonthly: number; priceYearly: number; features: []; limits: PlanLimits };
+    plans: BillingPlan[];
+  }>('/billing/plans', 'getBillingPlans');
+}
+
 // ─── Integration APIs ───────────────────────────────────────────────────
 
 export async function getVercelStatus(params: { deploymentUuid: string; appUuid: string }) {

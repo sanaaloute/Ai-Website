@@ -21,6 +21,7 @@ import { AiGatewayService } from '@/lib/ai-gateway.service';
 import { E2BService, FORBIDDEN_PATH_PREFIXES } from '@/lib/e2b.service';
 import { ProviderKeysService } from '@/modules/profile/provider-keys.service';
 import { AiCredential } from '@/lib/llm-providers';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 import { AgentService } from './agent.service';
 import { AgentEvent } from './state';
 import { ModelResolverService } from './services/model-resolver.service';
@@ -69,6 +70,7 @@ export class AgentController {
     private readonly ai: AiGatewayService,
     private readonly e2b: E2BService,
     private readonly providerKeys: ProviderKeysService,
+    private readonly entitlements: EntitlementsService,
     private readonly agentService: AgentService,
     private readonly modelResolver: ModelResolverService,
     private readonly agentJobService: AgentJobService,
@@ -125,6 +127,19 @@ export class AgentController {
         let prompt: AgentSessionData['prompt'] | undefined;
         let sessionId: string | undefined;
 
+        // Plan gating: fresh generations consume the monthly quota; edit-mode
+        // runs additionally require the AI editing feature (Standard+).
+        // Resumes of an interrupted run are free continuations.
+        const resumeReview = this.validateResumeReview(body.resumeReview);
+        const isContinuation = body.resume === true || resumeReview !== undefined;
+        if (!isContinuation) {
+          const intent = typeof body.intent === 'string' ? body.intent : undefined;
+          if (intent !== 'new_app') {
+            await this.entitlements.assertFeature(user.id, 'ai_editing');
+          }
+          await this.entitlements.consumeGeneration(user.id);
+        }
+
         if (typeof body.sessionId === 'string') {
           const session = await this.agentJobService.getSession(body.sessionId);
           if (!session || session.userId !== user.id) {
@@ -156,7 +171,7 @@ export class AgentController {
                     typeof h === 'object' && h !== null && 'role' in h && 'content' in h,
                 )
               : [],
-            resumeReview: this.validateResumeReview(body.resumeReview),
+            resumeReview,
             prompt,
           },
           idempotencyKey || `${user.id}:${sessionId}:${sandboxId}`,
@@ -461,6 +476,7 @@ export class AgentController {
   @Post('analyze-edit-intent')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async analyzeEditIntent(@CurrentUser() user: User, @Body() body: AnalyzeEditIntentDto) {
+    await this.entitlements.assertFeature(user.id, 'ai_editing');
     const aiCredentials = await this.fetchUserCredentials(user.id);
     const searchPlan = await this.ai.analyzeEditIntent(
       body.prompt,

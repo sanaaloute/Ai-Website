@@ -1,5 +1,6 @@
 import { Sandbox } from 'e2b';
 import { SandboxData } from "../types";
+import { EntitlementsService } from "../modules/billing/entitlements.service";
 import { SandboxStateService, type PocketbaseInfo } from './sandbox-state.service';
 export declare const WORKDIR = "/home/user/app";
 export declare const FORBIDDEN_PATH_PREFIXES: string[];
@@ -20,23 +21,27 @@ export declare class E2BProviderError extends Error {
 }
 export declare class E2BService {
     private readonly state;
+    private readonly entitlements;
     private readonly logger;
     private readonly sandboxes;
     private readonly frameworks;
-    constructor(state: SandboxStateService);
+    constructor(state: SandboxStateService, entitlements: EntitlementsService);
     get configured(): boolean;
     createSandbox(opts?: {
         skipSetup?: boolean;
+        userId?: string;
     }): Promise<SandboxData>;
     private getCurrentSandboxId;
     private getSandboxLifetime;
     attach(sandboxId: string): Promise<SandboxData>;
+    private finalizeSegment;
     kill(sandboxId: string): Promise<boolean>;
     getSandboxInfos(): Promise<Array<{
         sandboxId: string;
         createdAt: string;
         endAt: string;
         renewing?: boolean;
+        userId?: string;
     }>>;
     setRenewing(sandboxId: string, renewing: boolean): Promise<void>;
     removeSandboxInfo(sandboxId: string): Promise<void>;

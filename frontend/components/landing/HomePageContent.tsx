@@ -1,6 +1,7 @@
 import Navbar from "@/components/landing/Navbar";
 import PromptInput from "@/components/landing/PromptInput";
 import HowItWorks from "@/components/landing/HowItWorks";
+import PricingSection from "@/components/landing/PricingSection";
 import Download from "@/components/landing/Download";
 import Footer from "@/components/landing/Footer";
 import HomePageTitle from "@/components/landing/HomePageTitle";
@@ -25,6 +26,11 @@ export default function HomePageContent() {
         {/* How it works */}
         <section className="mt-16 scroll-mt-24">
           <HowItWorks />
+        </section>
+
+        {/* Pricing */}
+        <section className="mt-16 scroll-mt-24">
+          <PricingSection />
         </section>
 
         {/* Download */}

@@ -13,6 +13,7 @@ import { CurrentUser } from '@/common/decorators/user.decorator';
 import { User } from '@/types';
 import { E2BService } from '@/lib/e2b.service';
 import { PocketbaseService } from '@/lib/pocketbase.service';
+import { EntitlementsService } from '@/modules/billing/entitlements.service';
 
 class PrepareDeployDto {
   projectName!: string;
@@ -25,6 +26,7 @@ export class PocketbaseController {
   constructor(
     private readonly pocketbase: PocketbaseService,
     private readonly e2b: E2BService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   @Get('template')
@@ -49,13 +51,15 @@ export class PocketbaseController {
 
   @Post('prepare-deploy')
   @UseGuards(AuthGuard)
-  async prepareDeploy(@CurrentUser() _user: User, @Body() body: PrepareDeployDto) {
+  async prepareDeploy(@CurrentUser() user: User, @Body() body: PrepareDeployDto) {
     if (!body.projectName || !body.domain) {
       throw new HttpException(
         { success: false, error: 'projectName and domain are required' },
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    await this.entitlements.assertFeature(user.id, 'db_integration');
 
     const deployment = await this.pocketbase.renderDeploymentFiles({
       projectName: body.projectName,

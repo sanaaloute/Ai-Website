@@ -26,15 +26,17 @@ const idempotency_service_1 = require("../../lib/idempotency.service");
 const supabase_service_1 = require("../../lib/supabase.service");
 const e2b_service_1 = require("../../lib/e2b.service");
 const project_service_1 = require("./project.service");
+const entitlements_service_1 = require("../billing/entitlements.service");
 const env_1 = require("../../config/env");
 const jszip_1 = __importDefault(require("jszip"));
 let ProjectController = ProjectController_1 = class ProjectController {
-    constructor(storage, supabase, e2b, idempotency, projectService) {
+    constructor(storage, supabase, e2b, idempotency, projectService, entitlements) {
         this.storage = storage;
         this.supabase = supabase;
         this.e2b = e2b;
         this.idempotency = idempotency;
         this.projectService = projectService;
+        this.entitlements = entitlements;
         this.logger = new common_1.Logger(ProjectController_1.name);
     }
     async listProjects(user) {
@@ -78,11 +80,11 @@ let ProjectController = ProjectController_1 = class ProjectController {
             .eq('user_id', user.id);
         if (error)
             throw new common_1.HttpException({ success: false, error: error.message }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
-        const lovecodeResult = await this.projectService.upsertLovecodeJson(user.id, body.projectId, {
+        const aiWebsiteResult = await this.projectService.upsertAiWebsiteJson(user.id, body.projectId, {
             project: { name: trimmedName },
         });
-        if (!lovecodeResult) {
-            throw new common_1.HttpException({ success: false, error: 'Failed to update lovecode.json during rename' }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        if (!aiWebsiteResult) {
+            throw new common_1.HttpException({ success: false, error: 'Failed to update ai-website.json during rename' }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return { success: true, projectId: body.projectId, projectName: trimmedName };
     }
@@ -108,6 +110,7 @@ let ProjectController = ProjectController_1 = class ProjectController {
                 .eq('id', projectId);
         }
         else {
+            await this.entitlements.assertCanCreateProject(user.id);
             await this.supabase.admin.from('projects').insert({
                 id: projectId,
                 user_id: user.id,
@@ -131,7 +134,7 @@ let ProjectController = ProjectController_1 = class ProjectController {
                 this.logger.warn(`Could not read files from sandbox ${sandboxId} during save: ${message}`);
             }
         }
-        const lovecodeResult = await this.projectService.upsertLovecodeJson(user.id, projectId, {
+        const aiWebsiteResult = await this.projectService.upsertAiWebsiteJson(user.id, projectId, {
             project: {
                 uuid: projectId,
                 name: projectName,
@@ -139,8 +142,8 @@ let ProjectController = ProjectController_1 = class ProjectController {
             },
             snapshot: { ...body, sandboxFiles },
         });
-        const updatedSnapshot = lovecodeResult?.snapshot ?? { ...body, sandboxFiles };
-        const lovecodeContent = lovecodeResult?.content;
+        const updatedSnapshot = aiWebsiteResult?.snapshot ?? { ...body, sandboxFiles };
+        const aiWebsiteContent = aiWebsiteResult?.content;
         const forbiddenPrefixes = ['node_modules/'];
         const filteredFiles = {};
         const filesToUpload = updatedSnapshot.sandboxFiles ?? sandboxFiles;
@@ -149,8 +152,8 @@ let ProjectController = ProjectController_1 = class ProjectController {
                 continue;
             filteredFiles[path] = content;
         }
-        if (lovecodeContent) {
-            filteredFiles['lovecode.json'] = lovecodeContent;
+        if (aiWebsiteContent) {
+            filteredFiles['ai-website.json'] = aiWebsiteContent;
         }
         let uploaded = 0;
         for (const [path, content] of Object.entries(filteredFiles)) {
@@ -236,6 +239,7 @@ let ProjectController = ProjectController_1 = class ProjectController {
     async createZip(user, body) {
         if (!body.projectId)
             throw new common_1.HttpException({ success: false, error: 'projectId required' }, common_1.HttpStatus.BAD_REQUEST);
+        await this.entitlements.assertFeature(user.id, 'zip_download');
         const signedUrl = await this.storage.getSignedZipUrl(user.id, body.projectId);
         return {
             success: true,
@@ -323,6 +327,7 @@ exports.ProjectController = ProjectController = ProjectController_1 = __decorate
         supabase_service_1.SupabaseService,
         e2b_service_1.E2BService,
         idempotency_service_1.IdempotencyService,
-        project_service_1.ProjectService])
+        project_service_1.ProjectService,
+        entitlements_service_1.EntitlementsService])
 ], ProjectController);
 //# sourceMappingURL=project.controller.js.map
