@@ -4,6 +4,7 @@ import { PrismaService } from '@/lib/prisma.service';
 import {
   FEATURE_LABELS,
   FEATURE_REQUIRED_PLAN,
+  LIFETIME_USAGE_PERIOD,
   PLANS,
   PlanDef,
   PlanFeature,
@@ -33,9 +34,13 @@ export interface Entitlements {
  * recognizes `code: 'PLAN_LIMIT'` and opens the upgrade dialog.
  */
 export class PlanLimitException extends HttpException {
-  constructor(params: { feature?: PlanFeature; quota?: PlanQuota; requiredPlan: PlanId }) {
-    const { feature, quota, requiredPlan } = params;
-    const what = feature ? FEATURE_LABELS[feature] : `Your monthly ${quota?.replace('_', ' ')} limit`;
+  constructor(params: { feature?: PlanFeature; quota?: PlanQuota; requiredPlan: PlanId; lifetime?: boolean }) {
+    const { feature, quota, requiredPlan, lifetime } = params;
+    const what = feature
+      ? FEATURE_LABELS[feature]
+      : lifetime
+        ? `Your lifetime ${quota?.replace('_', ' ')} limit`
+        : `Your monthly ${quota?.replace('_', ' ')} limit`;
     super(
       {
         success: false,
@@ -76,26 +81,36 @@ export class EntitlementsService {
     return planFromSubscription(data?.subscribed, data?.subscription_type);
   }
 
-  async getUsage(userId: string): Promise<EntitlementUsage> {
+  async getUsage(userId: string, plan?: PlanId): Promise<EntitlementUsage> {
+    const resolvedPlan = plan ?? (await this.getPlan(userId));
     const period = this.currentPeriod();
-    const [row, projectsRes] = await Promise.all([
+    const hasLifetimeGenerations = PLANS[resolvedPlan].limits.generationsLifetime !== null;
+    const [monthRow, lifetimeRow, projectsRes] = await Promise.all([
       this.prisma.user_usage.findUnique({
         where: { user_id_period: { user_id: userId, period } },
       }),
+      hasLifetimeGenerations
+        ? this.prisma.user_usage.findUnique({
+            where: { user_id_period: { user_id: userId, period: LIFETIME_USAGE_PERIOD } },
+          })
+        : null,
       this.supabase.admin
         .from('projects')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId),
     ]);
     return {
-      generations: row?.generations ?? 0,
-      sandboxSeconds: Number(row?.sandbox_seconds ?? 0),
+      generations: hasLifetimeGenerations
+        ? (lifetimeRow?.generations ?? 0)
+        : (monthRow?.generations ?? 0),
+      sandboxSeconds: Number(monthRow?.sandbox_seconds ?? 0),
       projects: projectsRes.count ?? 0,
     };
   }
 
   async getEntitlements(userId: string): Promise<Entitlements> {
-    const [plan, usage] = await Promise.all([this.getPlan(userId), this.getUsage(userId)]);
+    const plan = await this.getPlan(userId);
+    const usage = await this.getUsage(userId, plan);
     const def = PLANS[plan];
     return {
       plan,
@@ -116,7 +131,8 @@ export class EntitlementsService {
 
   /** Throw 402 when the user reached their plan's project limit. */
   async assertCanCreateProject(userId: string): Promise<void> {
-    const [plan, usage] = await Promise.all([this.getPlan(userId), this.getUsage(userId)]);
+    const plan = await this.getPlan(userId);
+    const usage = await this.getUsage(userId, plan);
     const limit = PLANS[plan].limits.maxProjects;
     if (limit !== null && usage.projects >= limit) {
       throw new PlanLimitException({ quota: 'projects', requiredPlan: 'standard' });
@@ -124,14 +140,18 @@ export class EntitlementsService {
   }
 
   /**
-   * Atomically consume one generation from the user's monthly quota.
-   * Throws 402 PLAN_LIMIT when the quota is exhausted. Unlimited plans
-   * (`generationsPerMonth: null`) are still counted for stats.
+   * Atomically consume one generation from the user's quota. Plans with a
+   * lifetime cap (`generationsLifetime`) are counted in a single non-expiring
+   * bucket; other plans use the current-month bucket. Throws 402 PLAN_LIMIT
+   * when the quota is exhausted. Unlimited plans (`generationsPerMonth: null`
+   * and no lifetime cap) are still counted for stats.
    */
   async consumeGeneration(userId: string): Promise<void> {
     const plan = await this.getPlan(userId);
-    const limit = PLANS[plan].limits.generationsPerMonth;
-    const period = this.currentPeriod();
+    const limits = PLANS[plan].limits;
+    const isLifetime = limits.generationsLifetime !== null;
+    const limit = limits.generationsLifetime ?? limits.generationsPerMonth;
+    const period = isLifetime ? LIFETIME_USAGE_PERIOD : this.currentPeriod();
 
     if (limit === null) {
       await this.prisma.user_usage.upsert({
@@ -153,7 +173,11 @@ export class EntitlementsService {
       RETURNING generations
     `;
     if (rows.length === 0) {
-      throw new PlanLimitException({ quota: 'generations', requiredPlan: plan === 'trial' ? 'basic' : 'standard' });
+      throw new PlanLimitException({
+        quota: 'generations',
+        requiredPlan: plan === 'trial' ? 'basic' : 'standard',
+        lifetime: isLifetime,
+      });
     }
   }
 
@@ -174,7 +198,7 @@ export class EntitlementsService {
     const plan = await this.getPlan(userId);
     const limit = PLANS[plan].limits.sandboxSecondsPerMonth;
     if (limit === null) return Infinity;
-    const usage = await this.getUsage(userId);
+    const usage = await this.getUsage(userId, plan);
     return Math.max(0, limit - usage.sandboxSeconds);
   }
 

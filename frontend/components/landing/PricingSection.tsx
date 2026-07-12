@@ -16,10 +16,14 @@ const PLAN_ORDER: PlanId[] = ["trial", "basic", "standard", "pro"];
 /** Fallback display prices when /billing/plans is unavailable. */
 const FALLBACK_PRICES: Record<PlanId, { monthly: number; yearly: number }> = {
   trial: { monthly: 0, yearly: 0 },
-  basic: { monthly: 9, yearly: 90 },
-  standard: { monthly: 29, yearly: 290 },
-  pro: { monthly: 79, yearly: 790 },
+  basic: { monthly: 9.9, yearly: 108.9 },
+  standard: { monthly: 19.9, yearly: 218.9 },
+  pro: { monthly: 39.9, yearly: 438.9 },
 };
+
+/** Format a USD price: integers stay plain ("$9"), decimals get 2 places ("$9.90"). */
+const formatPrice = (amount: number) =>
+  Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
 
 export default function PricingSection() {
   const t = useTranslations("pricing");
@@ -164,7 +168,7 @@ export default function PricingSection() {
               </p>
 
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-white">${price}</span>
+                <span className="text-3xl font-bold text-white">${formatPrice(price)}</span>
                 {price > 0 && (
                   <span className="text-xs text-zinc-500">
                     {yearly ? t("perYear") : t("perMonth")}

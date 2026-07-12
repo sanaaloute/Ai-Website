@@ -64,7 +64,7 @@
     "subheading": "Commencez gratuitement, passez au niveau supérieur quand vous êtes prêt à publier. Sans frais cachés, annulez à tout moment.",
     "monthly": "Mensuel",
     "yearly": "Annuel",
-    "yearlyBadge": "2 mois offerts",
+    "yearlyBadge": "1 mois offert",
     "perMonth": "/mois",
     "perYear": "/an",
     "currentPlan": "Offre actuelle",
@@ -78,10 +78,10 @@
     "plans": {
       "trial": {
         "name": "Essai",
-        "description": "Essayez le générateur avec un quota mensuel gratuit.",
+        "description": "Essayez le générateur avec un quota gratuit.",
         "cta": "Commencer gratuitement",
         "features": [
-          "3 générations par mois",
+          "3 générations",
           "1 heure de sandbox par mois",
           "1 projet enregistré",
           "Édition visuelle"

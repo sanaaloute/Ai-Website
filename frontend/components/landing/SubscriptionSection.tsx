@@ -61,6 +61,7 @@ export default function SubscriptionSection({
 
   const formatHours = (seconds: number) => `${(seconds / 3600).toFixed(1)}h`;
   const showUpgrade = entitlements && entitlements.plan !== "pro";
+  const hasLifetimeGenerations = entitlements?.limits.generationsLifetime != null;
 
   return (
     <section className="rounded-2xl border border-white/10 bg-background-soft/90 p-5 shadow-[0_0_40px_rgba(15,23,42,0.9)] backdrop-blur-xl">
@@ -123,7 +124,7 @@ export default function SubscriptionSection({
           <div className="rounded-xl border border-white/10 bg-background/50 p-3">
             <h3 className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
               <Gauge size={14} className="text-glow-cyan" />
-              Usage this month
+              {hasLifetimeGenerations ? "Lifetime usage" : "Usage this month"}
               <span className="ml-auto rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium capitalize text-zinc-400">
                 {entitlements.planLabel}
               </span>
@@ -132,7 +133,10 @@ export default function SubscriptionSection({
               <UsageMeter
                 label="Generations"
                 used={entitlements.usage.generations}
-                limit={entitlements.limits.generationsPerMonth}
+                limit={
+                  entitlements.limits.generationsPerMonth ??
+                  entitlements.limits.generationsLifetime
+                }
                 format={(v) => String(v)}
               />
               <UsageMeter

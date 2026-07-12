@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LogIn, User, Download } from "lucide-react";
+import { Menu, X, LogIn, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import LoginSection from "@/components/landing/LoginSection";
 import LanguageSwitcher from "@/components/landing/LanguageSwitcher";
@@ -21,6 +21,7 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
     { label: t("home"), href: "/" },
     { label: t("projects"), href: "/projects" },
     { label: t("templates"), href: "/templates" },
+    { label: t("pricing"), href: "#pricing" },
     { label: t("github"), href: "https://github.com", external: true },
   ];
   const [menuOpen, setMenuOpen] = useState(false);
@@ -30,7 +31,6 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
   const loginDialogOpen = useLandingAuthStore((s) => s.loginDialogOpen);
   const openLoginDialog = useLandingAuthStore((s) => s.openLoginDialog);
   const closeLoginDialog = useLandingAuthStore((s) => s.closeLoginDialog);
-  const openApiKeyDialog = useLandingAuthStore((s) => s.openApiKeyDialog);
   const isProtectedAppHref = (href: string) =>
     href.startsWith("/builder") ||
     href.startsWith("/generation") ||
@@ -92,26 +92,10 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
                   {item.label}
                 </a>
               ))}
-              <button
-                type="button"
-                onClick={() => openApiKeyDialog()}
-                className="whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-400 transition hover:text-white"
-                title={t("getApiKey")}
-              >
-                {t("getApiKey")}
-              </button>
             </div>
 
             {/* Desktop actions */}
             <div className="hidden flex-nowrap items-center gap-2 lg:flex">
-              <a
-                href={resolveHref("#download")}
-                title={t("download")}
-                aria-label={t("download")}
-                className={`inline-flex items-center justify-center bg-primary p-2 text-sm font-semibold text-white transition hover:bg-primary/90 ${radius}`}
-              >
-                <Download size={16} className="shrink-0" aria-hidden />
-              </a>
               <LanguageSwitcher />
               {isAuthenticated ? (
                 <a
@@ -185,16 +169,6 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
                         {item.label}
                       </a>
                     ))}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        openApiKeyDialog();
-                      }}
-                      className="rounded-lg px-3 py-2.5 text-left text-zinc-300 transition hover:bg-white/5 hover:text-white"
-                    >
-                      {t("getApiKey")}
-                    </button>
                     {isAuthenticated && (
                       <a
                         href="/profile"
@@ -227,15 +201,6 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
                         {t("loginShort")}
                       </button>
                     )}
-                    <a
-                      href={resolveHref("#download")}
-                      onClick={() => setMenuOpen(false)}
-                      title={t("download")}
-                      aria-label={t("download")}
-                      className="mt-2 inline-flex items-center justify-center rounded-xl bg-primary p-2.5 font-semibold text-white"
-                    >
-                      <Download size={16} aria-hidden />
-                    </a>
                     <div className="mt-3 flex justify-center">
                       <LanguageSwitcher />
                     </div>

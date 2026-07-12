@@ -64,7 +64,7 @@
     "subheading": "Empieza gratis y mejora tu plan cuando estés listo para publicar. Sin cargos ocultos, cancela cuando quieras.",
     "monthly": "Mensual",
     "yearly": "Anual",
-    "yearlyBadge": "2 meses gratis",
+    "yearlyBadge": "1 mes gratis",
     "perMonth": "/mes",
     "perYear": "/año",
     "currentPlan": "Plan actual",
@@ -78,10 +78,10 @@
     "plans": {
       "trial": {
         "name": "Prueba",
-        "description": "Prueba el generador con una cuota mensual gratuita.",
+        "description": "Prueba el generador con una cuota gratuita.",
         "cta": "Empezar gratis",
         "features": [
-          "3 generaciones al mes",
+          "3 generaciones",
           "1 hora de sandbox al mes",
           "1 proyecto guardado",
           "Edición visual"

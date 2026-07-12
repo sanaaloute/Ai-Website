@@ -760,6 +760,8 @@ export type PlanFeatureId =
 
 export interface PlanLimits {
   generationsPerMonth: number | null;
+  /** Lifetime generation cap, never reset. null = no lifetime cap. */
+  generationsLifetime: number | null;
   sandboxSecondsPerMonth: number | null;
   maxProjects: number | null;
 }

@@ -18,11 +18,19 @@ export type PlanFeature =
 export interface PlanLimits {
   /** null = unlimited */
   generationsPerMonth: number | null;
+  /** Lifetime generation cap, never reset. null = no lifetime cap. */
+  generationsLifetime: number | null;
   /** null = unlimited */
   sandboxSecondsPerMonth: number | null;
   /** null = unlimited */
   maxProjects: number | null;
 }
+
+/**
+ * Synthetic `user_usage.period` bucket for lifetime (non-monthly) counters.
+ * Fits the Char(7) column and never collides with a real "YYYY-MM" period.
+ */
+export const LIFETIME_USAGE_PERIOD = '0000-00';
 
 export interface PlanDef {
   id: PlanId;
@@ -63,7 +71,8 @@ export const PLANS: Record<PlanId, PlanDef> = {
     priceYearly: 0,
     features: [],
     limits: {
-      generationsPerMonth: 3,
+      generationsPerMonth: null,
+      generationsLifetime: 3,
       sandboxSecondsPerMonth: 1 * HOUR,
       maxProjects: 1,
     },
@@ -71,11 +80,12 @@ export const PLANS: Record<PlanId, PlanDef> = {
   basic: {
     id: 'basic',
     label: 'Basic',
-    priceMonthly: 9,
-    priceYearly: 90,
+    priceMonthly: 9.9,
+    priceYearly: 108.9,
     features: [],
     limits: {
       generationsPerMonth: 10,
+      generationsLifetime: null,
       sandboxSecondsPerMonth: 5 * HOUR,
       maxProjects: 3,
     },
@@ -83,11 +93,12 @@ export const PLANS: Record<PlanId, PlanDef> = {
   standard: {
     id: 'standard',
     label: 'Standard',
-    priceMonthly: 29,
-    priceYearly: 290,
+    priceMonthly: 19.9,
+    priceYearly: 218.9,
     features: ['ai_editing', 'zip_download', 'github_push'],
     limits: {
       generationsPerMonth: 50,
+      generationsLifetime: null,
       sandboxSecondsPerMonth: 30 * HOUR,
       maxProjects: null,
     },
@@ -95,11 +106,12 @@ export const PLANS: Record<PlanId, PlanDef> = {
   pro: {
     id: 'pro',
     label: 'Pro',
-    priceMonthly: 79,
-    priceYearly: 790,
+    priceMonthly: 39.9,
+    priceYearly: 438.9,
     features: ['ai_editing', 'zip_download', 'github_push', 'db_integration', 'deploy', 'custom_domain'],
     limits: {
       generationsPerMonth: null,
+      generationsLifetime: null,
       sandboxSecondsPerMonth: 100 * HOUR,
       maxProjects: null,
     },

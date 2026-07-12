@@ -18,6 +18,7 @@ import TemplateCard from "@/components/templates/TemplateCard";
 import { getAiWebsiteApiKey, createAgentSession } from "@/lib/api/client";
 import { getCurrentUser, type AuthUser } from "@/lib/auth/backendAuth";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
+import PricingSection from "@/components/landing/PricingSection";
 
 type ApiKeyCheckResult =
   | { ok: true; hasApiKey: boolean; keyPreview: string | null }
@@ -321,6 +322,11 @@ export default function PromptInput() {
           </button>
         </div>
       </motion.div>
+
+      {/* Pricing */}
+      <div id="pricing" className="mt-16 w-full scroll-mt-24">
+        <PricingSection />
+      </div>
 
       {/* Featured templates */}
       <div className="mt-16 w-full">

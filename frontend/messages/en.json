@@ -64,7 +64,7 @@
     "subheading": "Start free, upgrade when you are ready to ship. No hidden fees, cancel anytime.",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "yearlyBadge": "2 months free",
+    "yearlyBadge": "1 month free",
     "perMonth": "/mo",
     "perYear": "/yr",
     "currentPlan": "Current plan",
@@ -78,10 +78,10 @@
     "plans": {
       "trial": {
         "name": "Trial",
-        "description": "Try the builder with a free monthly allowance.",
+        "description": "Try the builder with a free allowance.",
         "cta": "Start free",
         "features": [
-          "3 generations per month",
+          "3 generations",
           "1 sandbox hour per month",
           "1 saved project",
           "Visual editing"

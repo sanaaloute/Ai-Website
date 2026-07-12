@@ -64,7 +64,7 @@
     "subheading": "免费开始，准备发布时再升级。无隐藏费用，随时取消。",
     "monthly": "按月付费",
     "yearly": "按年付费",
-    "yearlyBadge": "省 2 个月",
+    "yearlyBadge": "省 1 个月",
     "perMonth": "/月",
     "perYear": "/年",
     "currentPlan": "当前方案",
@@ -78,10 +78,10 @@
     "plans": {
       "trial": {
         "name": "试用版",
-        "description": "使用每月免费额度体验建站。",
+        "description": "使用免费额度体验建站。",
         "cta": "免费开始",
         "features": [
-          "每月 3 次生成",
+          "3 次生成",
           "每月 1 小时沙箱",
           "1 个已保存项目",
           "可视化编辑"
