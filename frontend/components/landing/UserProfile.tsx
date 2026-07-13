@@ -254,8 +254,15 @@ export default function UserProfile() {
 
   if (error && !profile) {
     return (
-      <div className="rounded-2xl border border-red-500/30 bg-red-950/40 px-4 py-6 text-center text-sm text-red-200">
-        {error}
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-500/30 bg-red-950/40 px-4 py-6 text-center text-sm text-red-200">
+        <p>{error}</p>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-xs font-medium text-zinc-200 transition hover:border-white/30 hover:text-white"
+        >
+          Retry
+        </button>
       </div>
     );
   }

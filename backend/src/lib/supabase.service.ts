@@ -2,6 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { env } from '@/config/env';
 
+/**
+ * Hard timeout for every Supabase HTTP call. Without it, a stalled or
+ * unreachable Supabase endpoint makes supabase-js fetch hang forever,
+ * which freezes every guarded API request (and the profile page UI).
+ */
+const SUPABASE_FETCH_TIMEOUT_MS = 10_000;
+
+const timedFetch: typeof fetch = (input, init) => {
+  const timeoutSignal = AbortSignal.timeout(SUPABASE_FETCH_TIMEOUT_MS);
+  const signal = init?.signal
+    ? AbortSignal.any([init.signal, timeoutSignal])
+    : timeoutSignal;
+  return fetch(input, { ...init, signal });
+};
+
 @Injectable()
 export class SupabaseService {
   private readonly logger = new Logger(SupabaseService.name);
@@ -12,9 +27,11 @@ export class SupabaseService {
     const e = env();
     this.admin = createClient(e.supabaseUrl, e.supabaseServiceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: { fetch: timedFetch },
     });
     this.anon = createClient(e.supabaseUrl, e.supabaseAnonKey, {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: { fetch: timedFetch },
     });
   }
 

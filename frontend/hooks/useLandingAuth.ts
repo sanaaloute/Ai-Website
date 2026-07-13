@@ -10,15 +10,10 @@ import {
 } from "@/lib/auth/backendAuth";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
 
-async function loadNavbarProfile(): Promise<{
+function navbarProfileFrom(user: AuthUser): {
   avatarUrl: string | null;
   displayName: string;
-}> {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { avatarUrl: null, displayName: "Profile" };
-  }
-
+} {
   const url = user.avatarUrl?.trim() || null;
   const displayName =
     user.fullName?.trim() ||
@@ -49,8 +44,8 @@ export function useLandingAuth() {
       setIsAuthenticated(authed);
       setAuthChecked(true);
 
-      if (authed) {
-        const p = await loadNavbarProfile();
+      if (authed && user) {
+        const p = navbarProfileFrom(user);
         if (mounted) setProfile(p.avatarUrl, p.displayName);
       } else {
         resetProfile();
@@ -64,10 +59,9 @@ export function useLandingAuth() {
       const authed = Boolean(user);
       setIsAuthenticated(authed);
       setAuthChecked(true);
-      if (authed) {
-        void loadNavbarProfile().then((p) => {
-          if (mounted) setProfile(p.avatarUrl, p.displayName);
-        });
+      if (authed && user) {
+        const p = navbarProfileFrom(user);
+        if (mounted) setProfile(p.avatarUrl, p.displayName);
       } else {
         resetProfile();
       }
@@ -88,8 +82,10 @@ export function useLandingAuth() {
     if (!isAuthenticated) return;
     let cancelled = false;
     void (async () => {
-      const p = await loadNavbarProfile();
-      if (!cancelled) setProfile(p.avatarUrl, p.displayName);
+      const user = await getCurrentUser();
+      if (!user || cancelled) return;
+      const p = navbarProfileFrom(user);
+      setProfile(p.avatarUrl, p.displayName);
     })();
     return () => {
       cancelled = true;

@@ -40,6 +40,8 @@ export async function refreshAuthToken(): Promise<boolean> {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
+        // Never let a stalled backend block the UI forever.
+        signal: AbortSignal.timeout(15_000),
       });
 
       if (!res.ok) {

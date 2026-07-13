@@ -51,6 +51,23 @@ function isAuthRefreshRequest(input: RequestInfo | URL): boolean {
   return url.includes('/api/auth/refresh');
 }
 
+/** Default per-request timeouts so a stalled backend can never spin forever. */
+const JSON_TIMEOUT_MS = 15_000;
+const BLOB_TIMEOUT_MS = 60_000;
+
+function withTimeout(init: RequestInit | undefined, timeoutMs: number): RequestInit {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const callerSignal = init?.signal;
+  return {
+    ...init,
+    signal: callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal,
+  };
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+}
+
 async function fetchWithAuthRetry<T>(
   fetcher: () => Promise<SafeFetchResult<T>>,
   input: RequestInfo | URL,
@@ -88,7 +105,7 @@ export async function safeFetchJson<T = unknown>(
   try {
     const doFetch = async (): Promise<SafeFetchResult<T>> => {
       const finalInit = requireAuth ? withAuthInit(init) : init;
-      const response = await fetch(input, finalInit);
+      const response = await fetch(input, withTimeout(finalInit, JSON_TIMEOUT_MS));
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
@@ -143,7 +160,9 @@ export async function safeFetchJson<T = unknown>(
       ok: false,
       status: 0,
       statusText: 'Network Error',
-      error: getErrorMessage(networkError)
+      error: isTimeoutError(networkError)
+        ? 'Request timed out. Please try again.'
+        : getErrorMessage(networkError)
     };
     if (context) {
       console.warn(`[safeFetch] ${context} network error:`, error);
@@ -169,7 +188,7 @@ export async function safeFetchBlob(
   try {
     const doFetch = async (): Promise<SafeFetchResult<Blob>> => {
       const finalInit = requireAuth ? withAuthInit(init) : init;
-      const response = await fetch(input, finalInit);
+      const response = await fetch(input, withTimeout(finalInit, BLOB_TIMEOUT_MS));
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');
@@ -195,7 +214,9 @@ export async function safeFetchBlob(
       ok: false,
       status: 0,
       statusText: 'Network Error',
-      error: getErrorMessage(networkError)
+      error: isTimeoutError(networkError)
+        ? 'Request timed out. Please try again.'
+        : getErrorMessage(networkError)
     };
     if (context) {
       console.warn(`[safeFetchBlob] ${context} network error:`, error);

@@ -52,6 +52,10 @@ async function apiFetch<T>(
     const res = await fetch(backendApiUrl(path), {
       credentials: 'include',
       ...init,
+      // Never let a stalled backend block the UI forever.
+      signal: init?.signal
+        ? AbortSignal.any([init.signal, AbortSignal.timeout(15_000)])
+        : AbortSignal.timeout(15_000),
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers || {}),
