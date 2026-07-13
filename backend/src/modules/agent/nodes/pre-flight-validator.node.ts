@@ -137,6 +137,7 @@ export async function preFlightValidatorNode(state: AgentState, deps: GraphDepen
       async (token) => {
         await deps.emit({ type: 'token', data: { content: token } });
       },
+      deps.signal,
     );
 
     const result = extractJson(resultText) || {};

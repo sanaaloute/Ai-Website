@@ -9,6 +9,7 @@ import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat'
 import { ScrapedWebsitesPanel } from './ScrapedWebsitesPanel';
 import { ChatMessageItem } from './ChatMessageItem';
 import { GenerationProgressPanel } from './GenerationProgressPanel';
+import { AgentStreamCards } from './AgentStreamCards';
 import { AgentQuestionnaire } from './AgentQuestionnaire';
 import { Square } from 'lucide-react';
 
@@ -130,10 +131,17 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
         )}
 
         {/* File generation progress - inline display (during generation) */}
-        <GenerationProgressPanel
-          generationProgress={generationProgress}
-          generationEstimatedPercent={generationEstimatedPercent}
-        />
+        {generationProgress.agentSteps && generationProgress.agentSteps.length > 0 ? (
+          <AgentStreamCards
+            generationProgress={generationProgress}
+            generationEstimatedPercent={generationEstimatedPercent}
+          />
+        ) : (
+          <GenerationProgressPanel
+            generationProgress={generationProgress}
+            generationEstimatedPercent={generationEstimatedPercent}
+          />
+        )}
 
         {/* Planning Questionnaire */}
         {generationProgress.questionnaire && (

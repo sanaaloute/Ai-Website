@@ -13,6 +13,7 @@ import { TemplateService } from './services/template.service';
 import { AgentPersistenceService } from './services/agent-persistence.service';
 import { DatabaseSeederService } from './services/database-seeder.service';
 import { AgentMcpToolService } from './services/agent-mcp-tool.service';
+import { isCancellation } from '@/lib/cancellation';
 
 export interface StreamOptions {
   userId: string;
@@ -92,6 +93,7 @@ export class AgentService {
       agentMcpToolService: this.agentMcpToolService,
       logger: this.logger,
       emit,
+      signal: options.signal,
     };
 
     const threadId = options.threadId ?? `agent-${options.userId ?? 'anon'}-${randomUUID()}`;
@@ -135,6 +137,9 @@ export class AgentService {
         streamMode: 'updates',
         configurable: { deps, thread_id: threadId },
         recursionLimit: 50,
+        // Propagate the user-cancel signal into LangGraph so it also aborts
+        // between super-steps, not just inside our own checks.
+        signal: options.signal,
       });
 
       for await (const chunk of stream) {
@@ -245,8 +250,13 @@ export class AgentService {
         });
       }
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      this.logger.error(`Graph execution error: ${message}`);
+      const cancelled = isCancellation(e) || options.signal?.aborted;
+      const message = cancelled ? 'Cancelled by user' : e instanceof Error ? e.message : String(e);
+      if (!cancelled) {
+        this.logger.error(`Graph execution error: ${message}`);
+      } else {
+        this.logger.log('Graph execution cancelled by user');
+      }
       const errorEvent: AgentEvent = { type: 'error', data: { message } };
       await emit(errorEvent);
       yield errorEvent;
@@ -258,7 +268,7 @@ export class AgentService {
         await this.persistence.finishGeneration({
           generationId,
           threadId,
-          status: 'failed',
+          status: cancelled ? 'cancelled' : 'failed',
           error: message,
           state: runningState,
         });

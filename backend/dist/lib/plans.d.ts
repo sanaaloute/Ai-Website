@@ -1,10 +1,12 @@
 export type PlanId = 'trial' | 'basic' | 'standard' | 'pro';
-export type PlanFeature = 'ai_editing' | 'zip_download' | 'github_push' | 'db_integration' | 'deploy' | 'custom_domain';
+export type PlanFeature = 'github_push' | 'db_integration' | 'deploy' | 'custom_domain' | 'templates';
 export interface PlanLimits {
     generationsPerMonth: number | null;
+    generationsLifetime: number | null;
     sandboxSecondsPerMonth: number | null;
     maxProjects: number | null;
 }
+export declare const LIFETIME_USAGE_PERIOD = "0000-00";
 export interface PlanDef {
     id: PlanId;
     label: string;

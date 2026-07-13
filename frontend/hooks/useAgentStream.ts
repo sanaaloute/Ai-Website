@@ -42,6 +42,18 @@ export interface AgentStreamState {
   exitPlan: boolean;
   finalResponse: string | null;
   suggestions: string[];
+  /**
+   * Per-agent streamed output, in arrival order. Each agent (graph node) gets
+   * one "thinking" step; code-writing streams get a separate "code" step
+   * (rendered as the "Stream synthesis" card in the chat).
+   */
+  agentSteps: Array<{
+    id: string;
+    node: string;
+    kind: 'thinking' | 'code';
+    text: string;
+    done: boolean;
+  }>;
 }
 
 export interface UseAgentStreamOptions {
@@ -90,6 +102,7 @@ export function useAgentStream(options: UseAgentStreamOptions) {
           exitPlan: false,
           finalResponse: null,
           suggestions: [],
+          agentSteps: [],
         };
         onStateChange(errorState);
         return errorState;
@@ -120,6 +133,7 @@ export function useAgentStream(options: UseAgentStreamOptions) {
         exitPlan: false,
         finalResponse: null,
         suggestions: [],
+        agentSteps: [],
       };
 
       onStateChange({ ...state });
@@ -149,23 +163,69 @@ export function useAgentStream(options: UseAgentStreamOptions) {
         const { jobId } = enqueueResult.data;
         currentJobIdRef.current = jobId;
 
-        // Step 2: open an SSE subscription to the queued job. This survives
-        // backend restarts because events are published to Redis.
-        const response = await subscribeAgentStream(jobId, abortRef.current.signal);
+        // Step 2: open an SSE subscription to the queued job. If the stream
+        // stalls or the connection drops while the job is still running,
+        // re-subscribe to the SAME job instead of failing — resubscribing is
+        // free (no plan quota) and the worker keeps running in the background.
+        const MAX_RESUBSCRIBES = 5;
+        let lastStreamError: unknown;
+        for (let attempt = 0; attempt <= MAX_RESUBSCRIBES; attempt++) {
+          if (attempt > 0) {
+            state.isRunning = true;
+            state.statusLabel = 'Reconnecting to generation...';
+            onStateChange({ ...state });
+            await new Promise<void>((resolve, reject) => {
+              const timer = setTimeout(resolve, 2000);
+              abortRef.current?.signal.addEventListener(
+                'abort',
+                () => {
+                  clearTimeout(timer);
+                  reject(new DOMException('Aborted', 'AbortError'));
+                },
+                { once: true },
+              );
+            });
+          }
 
-        if (!response.ok) {
-          const data = (await response.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          throw new Error(data.error || `SSE error! status: ${response.status}`);
+          try {
+            const response = await subscribeAgentStream(jobId, abortRef.current.signal);
+
+            if (!response.ok) {
+              const data = (await response.json().catch(() => ({}))) as {
+                error?: string;
+              };
+              throw new Error(data.error || `SSE error! status: ${response.status}`);
+            }
+
+            const finalState = await readAgentStream(response, state, onStateChange, options.onEvent, sandboxIdRef, lastSnapshotIdRef);
+
+            // The stream only closes cleanly on a terminal event (done/error).
+            // Anything else means the connection dropped mid-run — resubscribe.
+            if (finalState.status === 'done' || finalState.status === 'error') {
+              return finalState;
+            }
+            lastStreamError = new Error('Connection to generation lost');
+            continue;
+          } catch (streamErr) {
+            if ((streamErr as Error).name === 'AbortError') {
+              throw streamErr;
+            }
+            lastStreamError = streamErr;
+            continue;
+          }
         }
 
-        return await readAgentStream(response, state, onStateChange, options.onEvent, sandboxIdRef, lastSnapshotIdRef);
+        throw lastStreamError instanceof Error
+          ? lastStreamError
+          : new Error('Generation stream stalled. Please retry or refresh.');
       } catch (error) {
         if ((error as Error).name === 'AbortError') {
           state.isRunning = false;
           state.status = 'done';
           state.statusLabel = 'Cancelled';
+          state.agentSteps.forEach((s) => {
+            s.done = true;
+          });
           onStateChange({ ...state });
           return state;
         }
@@ -176,6 +236,9 @@ export function useAgentStream(options: UseAgentStreamOptions) {
         state.status = 'error';
         state.statusLabel = 'Error';
         state.isRunning = false;
+        state.agentSteps.forEach((s) => {
+          s.done = true;
+        });
         onStateChange({ ...state });
         return state;
       }
@@ -270,13 +333,42 @@ async function readAgentStream(
                   break;
 
                 case 'token': {
-                  // Only stream code tokens that belong to an active file-writing
-                  // tool. Planning/analyzer tokens that arrive before any file has
-                  // started are ignored so the streaming panel stays clean and the
-                  // browser doesn't accumulate a huge raw token string.
-                  if (state.currentFile) {
+                  const node = event.data.node ?? 'assistant';
+                  // The backend tags code tokens (extracted from file-writing tool
+                  // arguments) with kind='code'. Everything else is the agent's
+                  // reasoning/narration ("thinking"). Fall back to the legacy
+                  // currentFile gate when kind is missing.
+                  const kind =
+                    event.data.kind ?? (state.currentFile ? 'code' : 'thinking');
+
+                  if (kind === 'code' && state.currentFile) {
                     state.streamedText += event.data.content;
                     state.currentFile.content += event.data.content;
+                    // Code streams into the per-agent "Stream synthesis" step.
+                    const codeStepId = `${node}:code`;
+                    let codeStep = state.agentSteps.find((s) => s.id === codeStepId);
+                    if (!codeStep) {
+                      state.agentSteps.forEach((s) => {
+                        s.done = true;
+                      });
+                      codeStep = { id: codeStepId, node, kind: 'code', text: '', done: false };
+                      state.agentSteps.push(codeStep);
+                    }
+                    codeStep.text += event.data.content;
+                  } else {
+                    // Thinking/reasoning tokens accumulate into the agent's own
+                    // step so the chat can show one streaming card per agent.
+                    let step = state.agentSteps.find(
+                      (s) => s.id === node && s.kind === 'thinking',
+                    );
+                    if (!step) {
+                      state.agentSteps.forEach((s) => {
+                        s.done = true;
+                      });
+                      step = { id: node, node, kind: 'thinking', text: '', done: false };
+                      state.agentSteps.push(step);
+                    }
+                    step.text += event.data.content;
                   }
                   if (process.env.NODE_ENV === 'development') {
                     console.log('[useAgentStream token]', event.data.content.length, event.data.content.slice(0, 40));
@@ -480,6 +572,9 @@ async function readAgentStream(
                   state.status = 'done';
                   state.statusLabel = 'Done';
                   state.finalResponse = event.data.finalResponse;
+                  state.agentSteps.forEach((s) => {
+                    s.done = true;
+                  });
                   break;
 
                 case 'suggestions':
@@ -491,6 +586,9 @@ async function readAgentStream(
                   state.status = 'error';
                   state.statusLabel = 'Error';
                   state.isRunning = false;
+                  state.agentSteps.forEach((s) => {
+                    s.done = true;
+                  });
                   break;
 
                 case 'questionnaire':

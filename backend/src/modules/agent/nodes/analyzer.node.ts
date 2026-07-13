@@ -106,6 +106,7 @@ export async function analyzerNode(state: AgentState, deps: GraphDependencies): 
       async (token) => {
         await deps.emit({ type: 'token', data: { content: token } });
       },
+      deps.signal,
     );
     const parsed = extractJson(resultText);
     if (parsed) {

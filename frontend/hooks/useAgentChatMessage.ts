@@ -24,6 +24,35 @@ export type SendChatMessageInput =
       };
     };
 
+/**
+ * Human-readable card titles for each agent (graph node) streaming step.
+ * Code-writing streams (kind='code') are always surfaced as "Stream synthesis".
+ */
+function getAgentStepLabel(step: { node: string; kind: 'thinking' | 'code' }): string {
+  if (step.kind === 'code') return 'Stream synthesis';
+  const labels: Record<string, string> = {
+    coordinator: 'Analyzing your request',
+    analyzer: 'Analyzing your request',
+    designer: 'Designing website',
+    component_selector: 'Selecting components',
+    template_selector: 'Selecting template',
+    database_initializer: 'Preparing database',
+    planner: 'Planning',
+    pre_flight_validator: 'Validating plan',
+    executor: 'Writing code',
+    reviewer: 'Reviewing code',
+    debugger: 'Fixing issues',
+    answer_generator: 'Answering',
+  };
+  return (
+    labels[step.node] ??
+    step.node
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  );
+}
+
 export interface AgentChatMessageDeps {
   aiEnabled: boolean;
   ensureAiWebsiteApiKey: () => Promise<boolean>;
@@ -191,6 +220,7 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
           questionnaire: null,
           plan: null,
           exitPlan: false,
+          agentSteps: [],
         }));
 
         const chatHistory = chatMessages
@@ -325,6 +355,12 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
               questionnaire: state.questionnaire,
               plan: state.plan,
               exitPlan: state.exitPlan,
+              agentSteps: state.agentSteps
+                .filter((step) => step.kind !== 'code')
+                .map((step) => ({
+                  ...step,
+                  label: getAgentStepLabel(step),
+                })),
               reviewMaxReached: state.reviewMaxReached || prev.reviewMaxReached,
               reviewMaxIssues: state.reviewMaxIssues?.length ? state.reviewMaxIssues : prev.reviewMaxIssues,
               reviewMaxTodos: state.reviewMaxTodos?.length ? state.reviewMaxTodos : prev.reviewMaxTodos,

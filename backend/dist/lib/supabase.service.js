@@ -14,15 +14,25 @@ exports.SupabaseService = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_js_1 = require("@supabase/supabase-js");
 const env_1 = require("../config/env");
+const SUPABASE_FETCH_TIMEOUT_MS = 10_000;
+const timedFetch = (input, init) => {
+    const timeoutSignal = AbortSignal.timeout(SUPABASE_FETCH_TIMEOUT_MS);
+    const signal = init?.signal
+        ? AbortSignal.any([init.signal, timeoutSignal])
+        : timeoutSignal;
+    return fetch(input, { ...init, signal });
+};
 let SupabaseService = SupabaseService_1 = class SupabaseService {
     constructor() {
         this.logger = new common_1.Logger(SupabaseService_1.name);
         const e = (0, env_1.env)();
         this.admin = (0, supabase_js_1.createClient)(e.supabaseUrl, e.supabaseServiceRoleKey, {
             auth: { autoRefreshToken: false, persistSession: false },
+            global: { fetch: timedFetch },
         });
         this.anon = (0, supabase_js_1.createClient)(e.supabaseUrl, e.supabaseAnonKey, {
             auth: { autoRefreshToken: false, persistSession: false },
+            global: { fetch: timedFetch },
         });
     }
     async getUser(id) {

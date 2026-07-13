@@ -26,7 +26,17 @@ let ProfileController = class ProfileController {
         this.providerKeys = providerKeys;
     }
     async getProfile(user) {
-        const profile = (await this.supabase.getProfile(user.id)) ?? {
+        const [profileRow, subscriptionRes] = await Promise.all([
+            this.supabase.getProfile(user.id),
+            this.supabase.admin
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single(),
+        ]);
+        const profile = profileRow ?? {
             id: user.id,
             email: user.email,
             full_name: user.user_metadata?.full_name ?? null,
@@ -37,13 +47,7 @@ let ProfileController = class ProfileController {
             created_at: user.created_at,
             updated_at: user.updated_at,
         };
-        const { data: subscription } = await this.supabase.admin
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        const subscription = subscriptionRes.data;
         return {
             profile,
             subscription: subscription

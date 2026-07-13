@@ -117,7 +117,8 @@ async function apiPost<T = unknown>(
   path: string,
   body?: Record<string, unknown>,
   context?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  timeoutMs?: number
 ): Promise<SafeFetchResult<T>> {
   return safeFetchJson<T>(
     apiUrl(path),
@@ -126,7 +127,9 @@ async function apiPost<T = unknown>(
       body: body ? JSON.stringify(body) : undefined,
       signal,
     },
-    context ?? path
+    context ?? path,
+    true,
+    timeoutMs
   );
 }
 
@@ -215,7 +218,12 @@ export async function createSandbox(body?: { projectName?: string; skipSetup?: b
     structure: string;
     fileCount: number;
     error?: string;
-  }>('/create-ai-sandbox-v2', { ...body, idempotencyKey: body?.idempotencyKey ?? generateIdempotencyKey() }, 'createSandbox');
+  }>('/create-ai-sandbox-v2', { ...body, idempotencyKey: body?.idempotencyKey ?? generateIdempotencyKey() }, 'createSandbox', undefined,
+    // Cold E2B sandboxes + npm install routinely take 30-60s. The 15s default
+    // JSON timeout aborts the request mid-creation, so give this endpoint a
+    // 60s budget. The idempotency key above makes a user retry safe if this
+    // still times out.
+    60_000);
 }
 
 export async function getSandboxStatus(sandboxId?: string, signal?: AbortSignal) {

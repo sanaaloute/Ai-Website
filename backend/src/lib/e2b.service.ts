@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Sandbox } from 'e2b';
+import { CommandExitError, Sandbox } from 'e2b';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { randomBytes } from 'node:crypto';
@@ -20,9 +20,18 @@ const POCKETBASE_DIR = '/home/user/pb';
 // The bundled JS migrations/hooks use the legacy Dao / onModelBeforeCreate API,
 // which was removed in PocketBase v0.23. Pin to the latest v0.22.x backport.
 const POCKETBASE_VERSION = '0.22.46';
-const CONNECT_TIMEOUT_MS = 10_000;
-const CREATE_TIMEOUT_MS = 30_000;
-const REQUEST_TIMEOUT_MS = 30_000;
+// Handshake timeout for Sandbox.connect. NOTE: the E2B SDK bakes this value
+// into the returned Sandbox object, so every subsequent file/command call on
+// a cached sandbox inherits it. Aligned with the E2B SDK default (60s): on
+// slow/cross-continental networks handshakes regularly exceed 30s.
+const CONNECT_TIMEOUT_MS = 60_000;
+// E2B cold starts regularly exceed 30s under load; give each create attempt
+// 45s and retry once (the second attempt usually hits a warm pool and
+// succeeds in a few seconds).
+const CREATE_TIMEOUT_MS = 45_000;
+const CREATE_MAX_ATTEMPTS = 2;
+const CREATE_RETRY_DELAY_MS = 3_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 const SANDBOX_LIFETIME_MS = 60 * 60 * 1000;
 
 function isTimeoutOrNetworkError(err: unknown): boolean {
@@ -39,6 +48,39 @@ function isTimeoutOrNetworkError(err: unknown): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retry an operation that touches the E2B sandbox when it fails with a
+ * transient error (timeout, aborted in-flight RPC, network blip). E2B
+ * connectivity can be flaky — the previous failure mode aborted whole agent
+ * nodes ("signal: aborted") on the first hiccup. Non-transient errors are
+ * rethrown immediately.
+ */
+export async function withTransientRetry<T>(
+  label: string,
+  fn: () => Promise<T>,
+  logger?: { warn: (message: string) => void },
+  maxAttempts = 2,
+  delayMs = 2_000,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= maxAttempts || !isTimeoutOrNetworkError(err)) {
+        throw err;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      logger?.warn(
+        `${label} failed with transient error (attempt ${attempt}/${maxAttempts}): ${message} — retrying in ${delayMs}ms`,
+      );
+      await sleep(delayMs);
+    }
+  }
+  throw lastErr;
 }
 
 /**
@@ -138,15 +180,32 @@ export class E2BService {
       throw new E2BNotConfiguredError();
     }
 
-    let sandbox: Sandbox;
-    try {
-      sandbox = await Sandbox.create({
-        apiKey: env().e2bApiKey,
-        timeoutMs: SANDBOX_LIFETIME_MS,
-        requestTimeoutMs: CREATE_TIMEOUT_MS,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+    let sandbox: Sandbox | undefined;
+    let lastCreateErr: unknown;
+    for (let attempt = 1; attempt <= CREATE_MAX_ATTEMPTS; attempt++) {
+      try {
+        sandbox = await Sandbox.create({
+          apiKey: env().e2bApiKey,
+          timeoutMs: SANDBOX_LIFETIME_MS,
+          requestTimeoutMs: CREATE_TIMEOUT_MS,
+        });
+        break;
+      } catch (err) {
+        lastCreateErr = err;
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.warn(
+          `E2B createSandbox attempt ${attempt}/${CREATE_MAX_ATTEMPTS} failed: ${message}`,
+        );
+        if (attempt < CREATE_MAX_ATTEMPTS && isTimeoutOrNetworkError(err)) {
+          await sleep(CREATE_RETRY_DELAY_MS);
+          continue;
+        }
+        break;
+      }
+    }
+    if (!sandbox) {
+      const message =
+        lastCreateErr instanceof Error ? lastCreateErr.message : String(lastCreateErr);
       this.logger.error(`E2B createSandbox failed: ${message}`);
       throw new E2BProviderError(message);
     }
@@ -282,15 +341,14 @@ export class E2BService {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const lower = msg.toLowerCase();
-      if (isTimeoutOrNetworkError(err)) {
-        throw new SandboxGoneError();
-      }
       if (lower.includes('not found') || lower.includes('does not exist')) {
         throw new SandboxNotFoundError();
       }
       if (lower.includes('gone')) {
         throw new SandboxGoneError();
       }
+      // Timeouts/network errors are transient: the sandbox may still be alive.
+      // Do not report it as gone — let the caller retry.
       throw new E2BProviderError(msg);
     }
   }
@@ -593,14 +651,49 @@ export class E2BService {
     }
 
     try {
-      const result = await sandbox.commands.run(command, {
-        cwd,
-        timeoutMs: opts?.timeoutMs,
-        onStdout: opts?.onStdout,
-        onStderr: opts?.onStderr,
-      });
-      return { output: result.stdout, error: result.stderr, exitCode: result.exitCode };
+      // envd returns "exit status 25x" when it cannot spawn the process at all
+      // (sandbox still booting, transient envd hiccup). Retry those — plus
+      // network timeouts — a few times before giving up.
+      const MAX_ATTEMPTS = 3;
+      let result: Awaited<ReturnType<typeof sandbox.commands.run>> | undefined;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          result = await sandbox.commands.run(command, {
+            cwd,
+            timeoutMs: opts?.timeoutMs,
+            onStdout: opts?.onStdout,
+            onStderr: opts?.onStderr,
+          });
+          break;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          const isSpawnFailure = /exit status 25[0-9]/.test(msg);
+          if (attempt < MAX_ATTEMPTS && (isSpawnFailure || isTimeoutOrNetworkError(err))) {
+            this.logger.warn(
+              `runCommand transient failure (attempt ${attempt}/${MAX_ATTEMPTS}): ${msg} — retrying`,
+            );
+            await sleep(3_000 * attempt);
+            continue;
+          }
+          throw err;
+        }
+      }
+      return {
+        output: result!.stdout ?? '',
+        error: result!.stderr ?? '',
+        exitCode: result!.exitCode ?? 0,
+      };
     } catch (err) {
+      // The SDK throws CommandExitError for ANY non-zero exit code. Convert it
+      // back into a result object so callers can inspect exitCode themselves
+      // instead of having the whole node blow up on a failing command.
+      if (err instanceof CommandExitError) {
+        return {
+          output: err.stdout ?? '',
+          error: err.error ?? err.message,
+          exitCode: err.exitCode ?? 1,
+        };
+      }
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('gone')) {
         const currentId = await this.getCurrentSandboxId(sandboxId);
@@ -826,6 +919,68 @@ export class E2BService {
     }
   }
 
+  /**
+   * Write many files in as few envd round-trips as possible: one mkdir for all
+   * parent directories, then a single batched files.write (multipart upload).
+   * Used for template copying — the previous per-file loop cost 2 round-trips
+   * per file and took 10+ minutes (or failed entirely) on slow networks.
+   */
+  async writeFilesBatch(
+    sandboxId: string,
+    files: Array<{ relativePath: string; content: string }>,
+  ): Promise<string[]> {
+    if (!this.configured) {
+      throw new E2BNotConfiguredError();
+    }
+    if (files.length === 0) return [];
+
+    const sandbox = await this.getSandbox(sandboxId);
+    if (!sandbox) {
+      throw new SandboxNotFoundError();
+    }
+
+    const entries = files.map((f) => ({
+      path: `${WORKDIR}/${f.relativePath}`,
+      data: f.content,
+    }));
+
+    try {
+      // One mkdir for every unique parent directory.
+      const dirs = [
+        ...new Set(
+          entries
+            .map((e) => path.dirname(e.path))
+            .filter((d) => d && d !== WORKDIR && d !== `${WORKDIR}/` && d !== '/'),
+        ),
+      ];
+      if (dirs.length > 0) {
+        const mkdirRes = await this.runCommand(sandboxId, `mkdir -p ${dirs.join(' ')}`, WORKDIR);
+        if (mkdirRes.exitCode !== 0) {
+          this.logger.error(
+            `writeFilesBatch mkdir failed: exitCode=${mkdirRes.exitCode}, stderr=${mkdirRes.error}`,
+          );
+        }
+      }
+
+      // Single batched upload, retried once on transient network errors.
+      await withTransientRetry(
+        `files.write batch (${entries.length} files)`,
+        () => sandbox.files.write(entries),
+        this.logger,
+      );
+
+      return files.map((f) => f.relativePath);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('gone')) {
+        const currentId = await this.getCurrentSandboxId(sandboxId);
+        this.sandboxes.delete(currentId);
+        throw new SandboxGoneError();
+      }
+      throw new Error(msg);
+    }
+  }
+
   async restartPreview(sandboxId: string): Promise<boolean> {
     if (!this.configured) {
       throw new E2BNotConfiguredError();
@@ -935,15 +1090,24 @@ export class E2BService {
     if (this.sandboxes.has(currentId)) return this.sandboxes.get(currentId)!;
 
     try {
-      const sandbox = await Sandbox.connect(currentId, {
-        apiKey: env().e2bApiKey,
-        requestTimeoutMs: CONNECT_TIMEOUT_MS,
-      });
+      const sandbox = await withTransientRetry(
+        `Sandbox.connect(${currentId})`,
+        () =>
+          Sandbox.connect(currentId, {
+            apiKey: env().e2bApiKey,
+            requestTimeoutMs: CONNECT_TIMEOUT_MS,
+          }),
+        this.logger,
+      );
       this.sandboxes.set(currentId, sandbox);
       return sandbox;
     } catch (err) {
+      // A timeout/network error means we cannot reach the sandbox right now —
+      // it does NOT mean the sandbox is dead. Surface it as a transient
+      // provider error so callers retry instead of purging a live sandbox.
       if (isTimeoutOrNetworkError(err)) {
-        throw new SandboxGoneError();
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new E2BProviderError(`Sandbox temporarily unreachable: ${msg}`);
       }
       return null;
     }
@@ -1000,8 +1164,10 @@ export class E2BService {
       throw new Error(`PocketBase download failed: ${downloadRes.stderr || downloadRes.stdout}`);
     }
 
-    // Write migration and hook files from the built-in template.
-    // resolvePocketbaseTemplateDir returns the inner `pocketbase/` directory.
+    // Category templates no longer ship PocketBase migrations/hooks (removed
+    // in the backend rework — all templates are now Next.js + Prisma). Copy
+    // them only if a category re-introduces them; otherwise PocketBase simply
+    // runs with an empty schema for ad-hoc use by generated apps.
     const category = 'ecommerce';
     const templateDir = await this.resolvePocketbaseTemplateDir(category);
     const migrationFile = '1749767600_ecommerce.js';
@@ -1013,9 +1179,8 @@ export class E2BService {
       const hookContent = await fs.readFile(hookSource, 'utf-8');
       await sandbox.files.write(`${POCKETBASE_DIR}/pb_migrations/${migrationFile}`, migrationContent);
       await sandbox.files.write(`${POCKETBASE_DIR}/pb_hooks/main.pb.js`, hookContent);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`Could not copy PocketBase template files: ${message}`);
+    } catch {
+      this.logger.debug('No PocketBase template files found; continuing with an empty schema');
     }
 
     // Initialize the PocketBase data directory and create the first admin.
@@ -1148,8 +1313,10 @@ export class E2BService {
       // directories may already exist
     }
 
-    // Copy category-specific migration and hook files.
-    // resolvePocketbaseTemplateDir returns the inner `pocketbase/` directory.
+    // Copy category-specific migration and hook files when the template ships
+    // them. Templates without a `pocketbase/` directory (the default since the
+    // Next.js + Prisma rework) start PocketBase with an empty schema instead of
+    // failing the whole reconfiguration.
     const templateDir = await this.resolvePocketbaseTemplateDir(category);
     const migrationFile = `1749767600_${category}.js`;
     const migrationSource = path.join(templateDir, 'pb_migrations', migrationFile);
@@ -1160,10 +1327,8 @@ export class E2BService {
       const hookContent = await fs.readFile(hookSource, 'utf-8');
       await sandbox.files.write(`${POCKETBASE_DIR}/pb_migrations/${migrationFile}`, migrationContent);
       await sandbox.files.write(`${POCKETBASE_DIR}/pb_hooks/main.pb.js`, hookContent);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Could not copy PocketBase template files for category ${category}: ${message}`);
-      return null;
+    } catch {
+      this.logger.log(`No PocketBase migrations for category ${category}; starting with an empty schema`);
     }
 
     // Initialize the data directory and create the admin before starting serve.

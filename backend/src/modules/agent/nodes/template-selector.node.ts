@@ -1,6 +1,66 @@
 import { AgentState, DesignSpec } from '../state';
 import { GraphDependencies } from '../graph';
 import { SandboxProvider, createFileUpdateEvent } from '../tools';
+import { withTransientRetry, isForbiddenPath } from '@/lib/e2b.service';
+import { throwIfCancelled } from '@/lib/cancellation';
+
+export interface TemplateCopyResult {
+  category: string;
+  framework: 'next' | 'vite';
+  templateFiles: Record<string, string>;
+  writtenCount: number;
+}
+
+/**
+ * Run the template file copy (load files + batched sandbox upload). Shared by
+ * the parallel kick-off (started during the designer node) and the sequential
+ * fallback inside the template selector node.
+ */
+async function runTemplateCopy(
+  deps: GraphDependencies,
+  sandboxId: string,
+  category: string,
+): Promise<TemplateCopyResult> {
+  let resolvedCategory = category;
+  let templateFiles = await deps.templateService.getTemplateFiles(resolvedCategory);
+  if (!Object.keys(templateFiles).length) {
+    deps.logger.warn(`No template found for category ${resolvedCategory}, using generic`);
+    templateFiles = await deps.templateService.getGenericTemplate();
+    resolvedCategory = 'generic';
+  }
+
+  const framework = await deps.templateService.getTemplateKind(resolvedCategory);
+
+  const templateEntries = Object.entries(templateFiles)
+    .filter(([filePath]) => !isForbiddenPath(filePath))
+    .map(([filePath, content]) => ({ relativePath: filePath, content }));
+  const written = await deps.e2b.writeFilesBatch(sandboxId, templateEntries);
+  return {
+    category: resolvedCategory,
+    framework,
+    templateFiles,
+    writtenCount: written.length,
+  };
+}
+
+/**
+ * Kick off the template copy in the background so it runs in parallel with
+ * the designer/component-selector nodes. The template selector node awaits
+ * (and consumes) the promise; if it never ran (non new_app flows) or failed,
+ * the node falls back to copying the template itself.
+ */
+export function startTemplateCopy(
+  deps: GraphDependencies,
+  sandboxId: string,
+  category: string,
+): void {
+  if (deps.templateCopy) return;
+  deps.logger.log(`Starting template copy in parallel for category '${category}'`);
+  deps.templateCopy = {
+    category,
+    promise: runTemplateCopy(deps, sandboxId, category),
+  };
+}
 
 function renderColor(token: { name: string; value: string; usage: string }): string {
   return `- **${token.name}**: ${token.value} — ${token.usage}`;
@@ -58,37 +118,55 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
   const tools = new SandboxProvider(deps.e2b, state.sandboxId, state.projectId);
 
   try {
+    throwIfCancelled(deps.signal);
     await tools.ensureAlive(state.userId);
-
-    let templateFiles = await deps.templateService.getTemplateFiles(category);
-    if (!Object.keys(templateFiles).length) {
-      deps.logger.warn(`No template found for category ${category}, using generic`);
-      templateFiles = await deps.templateService.getGenericTemplate();
-      category = 'generic';
-    }
 
     // Detect the template framework (next | vite) so downstream setup branches
     // to the right runtime (Next.js + Prisma vs Vite + PocketBase).
-    const framework = await deps.templateService.getTemplateKind(category);
-
-    // Copy the template into the sandbox. We intentionally do NOT add these
-    // baseline files to filesWritten: they are scaffold, not agent-generated
-    // changes, and including them causes the reviewer to waste context reading
-    // the entire template instead of the actual code the agent produced.
+    //
+    // The template copy may have been started in parallel during the designer
+    // node (see startTemplateCopy). If so, await its result; otherwise copy
+    // the template now in a single batched upload (one mkdir + one multipart
+    // write, retried on transient network errors). The old per-file loop
+    // needed 2 envd round-trips per file and could take 10+ minutes — or fail
+    // outright — on slow networks.
+    // We intentionally do NOT add these baseline files to filesWritten: they
+    // are scaffold, not agent-generated changes, and including them causes the
+    // reviewer to waste context reading the entire template.
+    let templateFiles: Record<string, string>;
+    let framework: 'next' | 'vite';
     let loadedCount = 0;
-    let failedCount = 0;
-    for (const [filePath, content] of Object.entries(templateFiles)) {
-      try {
-        await tools.writeFile(filePath, content);
-        loadedCount++;
-        // Stream a lightweight file_update so the frontend knows the template file
-        // exists and can fetch its content lazily.
-        await deps.emit(createFileUpdateEvent(filePath, content, 'created'));
-      } catch (e) {
+    const failedCount = 0;
+
+    const pendingCopy = deps.templateCopy;
+    deps.templateCopy = undefined;
+    if (pendingCopy) {
+      deps.logger.log(`Awaiting parallel template copy for category '${pendingCopy.category}'`);
+    }
+    let copyResult: TemplateCopyResult;
+    try {
+      copyResult = pendingCopy
+        ? await pendingCopy.promise
+        : await runTemplateCopy(deps, state.sandboxId, category);
+    } catch (e) {
+      // If the parallel copy failed, retry the copy inline before giving up.
+      if (pendingCopy) {
         const message = e instanceof Error ? e.message : String(e);
-        deps.logger.warn(`Failed to copy template file ${filePath}: ${message}`);
-        failedCount++;
+        deps.logger.warn(`Parallel template copy failed (${message}); retrying inline`);
+        copyResult = await runTemplateCopy(deps, state.sandboxId, category);
+      } else {
+        throw e;
       }
+    }
+
+    category = copyResult.category;
+    templateFiles = copyResult.templateFiles;
+    framework = copyResult.framework;
+    loadedCount = copyResult.writtenCount;
+    // Stream lightweight file_update events so the frontend knows the
+    // template files exist and can fetch their content lazily.
+    for (const [filePath, content] of Object.entries(templateFiles)) {
+      await deps.emit(createFileUpdateEvent(filePath, content, 'created'));
     }
 
     const dbSchema = await deps.templateService.getDbSchema(category);
@@ -114,13 +192,21 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
     await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring ${framework === 'next' ? 'database (Prisma)' : 'PocketBase'} for ${category}...` } });
     let backendReady = false;
     if (framework === 'next') {
-      const next = await deps.e2b.prepareNextSandbox(state.sandboxId, category);
+      const next = await withTransientRetry(
+        'prepareNextSandbox',
+        () => deps.e2b.prepareNextSandbox(state.sandboxId, category),
+        deps.logger,
+      );
       backendReady = next.ok;
       if (!next.ok) {
         deps.logger.warn(`Prisma setup failed for category ${category}; continuing without a migrated database`);
       }
     } else {
-      const pbInfo = await deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category);
+      const pbInfo = await withTransientRetry(
+        'reconfigurePocketbaseForCategory',
+        () => deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category),
+        deps.logger,
+      );
       backendReady = !!pbInfo;
       if (!pbInfo) {
         deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
@@ -142,12 +228,16 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
       messages: [{ role: 'assistant', content: `Loaded '${category}' (${framework}) template with ${loadedCount} files${failedCount ? ` (${failedCount} failed)` : ''}${backendReady ? (framework === 'next' ? ' and migrated the Prisma database' : ' and configured PocketBase') : ''}` }],
     };
   } catch (e) {
-    deps.logger.error(`Template selector failed: ${e instanceof Error ? e.message : String(e)}`);
+    const message = e instanceof Error ? e.message : String(e);
+    const name = e instanceof Error ? e.name : 'UnknownError';
+    deps.logger.error(
+      `Template selector failed: [${name}] ${message}${e instanceof Error && e.stack ? `\n${e.stack}` : ''}`,
+    );
     return {
       templateId: 'generic',
       templateLoaded: false,
-      error: e instanceof Error ? e.message : String(e),
-      messages: [{ role: 'assistant', content: `Template error: ${e instanceof Error ? e.message : String(e)}` }],
+      error: message,
+      messages: [{ role: 'assistant', content: `Template error: ${message}` }],
     };
   }
 }

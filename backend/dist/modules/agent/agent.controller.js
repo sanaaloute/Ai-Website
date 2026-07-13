@@ -64,9 +64,13 @@ let AgentController = AgentController_1 = class AgentController {
     }
     async createAgentSession(user, body) {
         const prompt = this.validatePrompt(body.prompt);
+        const templateRepo = typeof body.templateRepo === 'string' ? body.templateRepo : undefined;
+        if (templateRepo) {
+            await this.entitlements.assertFeature(user.id, 'templates');
+        }
         const sessionData = {
             prompt: prompt ?? undefined,
-            templateRepo: typeof body.templateRepo === 'string' ? body.templateRepo : undefined,
+            templateRepo,
             templatePrompt: typeof body.templatePrompt === 'string' ? body.templatePrompt : undefined,
             projectName: typeof body.projectName === 'string' ? body.projectName : undefined,
         };
@@ -92,10 +96,6 @@ let AgentController = AgentController_1 = class AgentController {
             const resumeReview = this.validateResumeReview(body.resumeReview);
             const isContinuation = body.resume === true || resumeReview !== undefined;
             if (!isContinuation) {
-                const intent = typeof body.intent === 'string' ? body.intent : undefined;
-                if (intent !== 'new_app') {
-                    await this.entitlements.assertFeature(user.id, 'ai_editing');
-                }
                 await this.entitlements.consumeGeneration(user.id);
             }
             if (typeof body.sessionId === 'string') {
@@ -356,7 +356,6 @@ let AgentController = AgentController_1 = class AgentController {
         return this.ai.filePlan(body.spec, body.blueprint, this.modelResolver.resolveSequence('file_plan'), aiCredentials);
     }
     async analyzeEditIntent(user, body) {
-        await this.entitlements.assertFeature(user.id, 'ai_editing');
         const aiCredentials = await this.fetchUserCredentials(user.id);
         const searchPlan = await this.ai.analyzeEditIntent(body.prompt, body.manifest, this.modelResolver.resolveSequence('analyze_edit_intent'), aiCredentials);
         return { success: true, search_plan: searchPlan };

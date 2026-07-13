@@ -152,7 +152,7 @@ async function executorNode(state, deps) {
             type: 'status',
             data: {
                 status: 'executing',
-                message: `Implementing ${state.todos?.length ?? 0} steps. This may take 1-3 minutes for complex requests...`,
+                message: `Implementing ${state.todos?.length ?? 0} steps...`,
             },
         });
         await deps.emit({
@@ -188,8 +188,8 @@ async function executorNode(state, deps) {
         while (iteration < maxIterations) {
             iteration++;
             deps.logger.debug(`Executor iteration ${iteration}`);
-            const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence('executor'), aiCredentials, async (token) => {
-                await deps.emit({ type: 'token', data: { content: token } });
+            const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence('executor'), aiCredentials, async (token, kind) => {
+                await deps.emit({ type: 'token', data: { content: token, kind } });
             }, async (toolCall) => executeSingleToolCall(toolCall), async (path) => {
                 deps.logger.debug(`[executor file_start] ${path}`);
                 await deps.emit({ type: 'file_start', data: { path } });

@@ -100,12 +100,13 @@ export async function safeFetchJson<T = unknown>(
   input: RequestInfo | URL,
   init?: RequestInit,
   context?: string,
-  requireAuth = true
+  requireAuth = true,
+  timeoutMs: number = JSON_TIMEOUT_MS
 ): Promise<SafeFetchResult<T>> {
   try {
     const doFetch = async (): Promise<SafeFetchResult<T>> => {
       const finalInit = requireAuth ? withAuthInit(init) : init;
-      const response = await fetch(input, withTimeout(finalInit, JSON_TIMEOUT_MS));
+      const response = await fetch(input, withTimeout(finalInit, timeoutMs));
 
       if (!response.ok) {
         const text = await response.text().catch(() => '');

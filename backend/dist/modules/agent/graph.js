@@ -32,7 +32,14 @@ function wrapNode(name, fn) {
             throw new Error(`Missing graph dependencies for node "${name}"`);
         }
         deps.logger.debug(`Running node: ${name}`);
-        return fn(state, deps);
+        const nodeDeps = {
+            ...deps,
+            emit: (event) => deps.emit({
+                ...event,
+                data: { ...(event.data ?? {}), node: name },
+            }),
+        };
+        return fn(state, nodeDeps);
     };
 }
 function routeAfterAnalyzer(state) {

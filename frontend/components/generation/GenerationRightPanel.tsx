@@ -1,9 +1,9 @@
 'use client';
 
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
-import { MousePointerClick, Code2, Eye, RefreshCw, ExternalLink } from 'lucide-react';
+import { MousePointerClick, Code2, Eye, RefreshCw, ExternalLink, Clock } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { GenerationPreviewPanelProps } from '@/components/generation/GenerationPreviewPanel';
 
@@ -41,6 +41,53 @@ export interface RightPanelWorkspace extends GenerationPreviewPanelProps {
 
 interface GenerationRightPanelProps {
   workspace: RightPanelWorkspace;
+}
+
+function formatElapsed(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return hours > 0
+    ? `${hours}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(minutes)}:${pad(seconds)}`;
+}
+
+/**
+ * Elapsed-time counter shown while a generation is running. Resets whenever
+ * generation stops and starts again.
+ */
+function GenerationTimer({ isGenerating }: { isGenerating: boolean }) {
+  const startedAtRef = useRef<number | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!isGenerating) {
+      startedAtRef.current = null;
+      return;
+    }
+    startedAtRef.current = Date.now();
+    setNowMs(Date.now());
+    const intervalId = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(intervalId);
+  }, [isGenerating]);
+
+  if (!isGenerating || startedAtRef.current === null) return null;
+
+  const elapsedSeconds = Math.max(0, Math.floor((nowMs - startedAtRef.current) / 1000));
+
+  return (
+    <div
+      className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-xs font-medium text-zinc-400"
+      title="Elapsed generation time"
+    >
+      <Clock className="h-3 w-3 shrink-0 text-glow-cyan/70" />
+      <span className="tabular-nums text-zinc-200">{formatElapsed(elapsedSeconds)}</span>
+      <span className="hidden text-zinc-500 lg:inline">
+        · Full projects can take up to 1 hour
+      </span>
+    </div>
+  );
 }
 
 function GenerationRightPanelComponent({ workspace }: GenerationRightPanelProps) {
@@ -119,6 +166,8 @@ function GenerationRightPanelComponent({ workspace }: GenerationRightPanelProps)
               {generationProgress.isEdit ? 'Editing' : 'Generating'}
             </div>
           )}
+
+          <GenerationTimer isGenerating={generationProgress.isGenerating} />
 
           {activeTab === 'preview' && sandboxData?.url ? (
             <button

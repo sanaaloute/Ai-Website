@@ -48,8 +48,8 @@ async function runToolLoop(deps, state, buildTools, messages, nodeType, aiCreden
     while (iteration < maxIterations) {
         iteration++;
         deps.logger.debug(`[${nodeType}] tool loop iteration ${iteration}`);
-        const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence(nodeType), aiCredentials, async (token) => {
-            await deps.emit({ type: 'token', data: { content: token } });
+        const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence(nodeType), aiCredentials, async (token, kind) => {
+            await deps.emit({ type: 'token', data: { content: token, kind } });
         }, async (toolCall) => executeSingleToolCall(toolCall), async (path) => {
             await deps.emit({ type: 'file_start', data: { path } });
         });

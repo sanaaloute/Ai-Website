@@ -12,6 +12,8 @@ async function generateMetaDescription(state: AgentState, deps: GraphDependencie
       [{ role: 'user', content: prompt }],
       deps.modelResolver.resolveSequence('seo_meta'),
       state.aiCredentials,
+      undefined,
+      deps.signal,
     );
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) {

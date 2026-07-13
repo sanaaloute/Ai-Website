@@ -2,6 +2,7 @@ import { AgentState, DesignSpec } from '../state';
 import { GraphDependencies } from '../graph';
 import { promptToString, buildPromptContent } from '@/types';
 import { buildPlanningToolSet, runToolLoop, ToolLoopMessage } from '../tools';
+import { startTemplateCopy } from './template-selector.node';
 
 function extractJson(text: string): Record<string, unknown> | null {
   try {
@@ -70,6 +71,13 @@ export async function designerNode(state: AgentState, deps: GraphDependencies): 
   ];
 
   try {
+    // Start copying the selected template into the sandbox in parallel — the
+    // template selector node will await this instead of copying sequentially
+    // after the design phase finishes.
+    if (state.workflow === 'new_app' && state.sandboxId) {
+      startTemplateCopy(deps, state.sandboxId, state.websiteCategory || 'generic');
+    }
+
     await deps.emit({
       type: 'status',
       data: { status: 'analyzing', message: 'Creating design system spec...' },

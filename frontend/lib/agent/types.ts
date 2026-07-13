@@ -35,7 +35,7 @@ export interface PlanData {
 
 export type AgentStreamEvent =
   | { type: "status"; data: { status: AgentStatus; message: string } }
-  | { type: "token"; data: { content: string } }
+  | { type: "token"; data: { content: string; node?: string; kind?: "thinking" | "code" } }
   | { type: "tool_start"; data: { tool: string; args: Record<string, unknown> } }
   | { type: "tool_end"; data: { tool: string; result: string } }
   | { type: "tool_progress"; data: { tool: string; message?: string; percent?: number } }

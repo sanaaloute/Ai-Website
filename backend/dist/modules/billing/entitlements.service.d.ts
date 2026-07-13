@@ -20,6 +20,7 @@ export declare class PlanLimitException extends HttpException {
         feature?: PlanFeature;
         quota?: PlanQuota;
         requiredPlan: PlanId;
+        lifetime?: boolean;
     });
 }
 export declare class EntitlementsService {
@@ -28,7 +29,7 @@ export declare class EntitlementsService {
     constructor(supabase: SupabaseService, prisma: PrismaService);
     private currentPeriod;
     getPlan(userId: string): Promise<PlanId>;
-    getUsage(userId: string): Promise<EntitlementUsage>;
+    getUsage(userId: string, plan?: PlanId): Promise<EntitlementUsage>;
     getEntitlements(userId: string): Promise<Entitlements>;
     assertFeature(userId: string, feature: PlanFeature): Promise<void>;
     assertCanCreateProject(userId: string): Promise<void>;

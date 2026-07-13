@@ -3,6 +3,9 @@ import { SandboxData } from "../types";
 import { EntitlementsService } from "../modules/billing/entitlements.service";
 import { SandboxStateService, type PocketbaseInfo } from './sandbox-state.service';
 export declare const WORKDIR = "/home/user/app";
+export declare function withTransientRetry<T>(label: string, fn: () => Promise<T>, logger?: {
+    warn: (message: string) => void;
+}, maxAttempts?: number, delayMs?: number): Promise<T>;
 export declare const FORBIDDEN_PATH_PREFIXES: string[];
 export declare const FORBIDDEN_FILE_NAMES: Set<string>;
 export type SandboxFramework = 'next' | 'vite';
@@ -77,6 +80,10 @@ export declare class E2BService {
     deleteFile(sandboxId: string, relativePath: string): Promise<boolean>;
     renameFile(sandboxId: string, relativePath: string, newRelativePath: string): Promise<boolean>;
     private writeFileInternal;
+    writeFilesBatch(sandboxId: string, files: Array<{
+        relativePath: string;
+        content: string;
+    }>): Promise<string[]>;
     restartPreview(sandboxId: string): Promise<boolean>;
     previewHealth(previewUrl: string): Promise<{
         reachable: boolean;

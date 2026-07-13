@@ -24,7 +24,7 @@ export declare class AiGatewayService {
         tool_call_id?: string;
         name?: string;
         tool_calls?: ToolCall[];
-    }>, tools: ToolDefinition[], model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string) => void | Promise<void>, onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>, onFileStart?: (path: string) => void | Promise<void>): Promise<{
+    }>, tools: ToolDefinition[], model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string, kind: 'thinking' | 'code') => void | Promise<void>, onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>, onFileStart?: (path: string) => void | Promise<void>): Promise<{
         content: string | null;
         toolCalls: ToolCall[];
         toolResults: ToolExecutionResult[];

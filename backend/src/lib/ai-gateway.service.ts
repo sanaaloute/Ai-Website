@@ -4,6 +4,7 @@ import { SearchPlan, FilePlanEntry, PromptContent, normalizePromptContent, promp
 import { ToolDefinition, ToolCall } from '@/modules/agent/tools/tool-definitions';
 import type { ToolExecutionResult } from '@/modules/agent/tools/tool-executor';
 import { AiCredential, AiKeyInput, ProviderId, getProvider } from '@/lib/llm-providers';
+import { CancelledError, combineAbortSignals, isCancellation, throwIfCancelled } from '@/lib/cancellation';
 
 /** A concrete request target: one provider + key + the models to try on it. */
 interface AiCandidate {
@@ -275,6 +276,7 @@ export class AiGatewayService {
     model: string | string[],
     apiKey?: AiKeyInput,
     onToken?: (token: string) => void | Promise<void>,
+    signal?: AbortSignal,
   ): Promise<string> {
     const candidates = this.normalizeCandidates(model, apiKey);
 
@@ -291,9 +293,11 @@ export class AiGatewayService {
 
       for (const [i, m] of candidate.models.entries()) {
       try {
+        throwIfCancelled(signal);
         const res = await fetch(url, {
           method: 'POST',
           headers,
+          signal: combineAbortSignals(signal),
           body: JSON.stringify({
             model: m,
             messages,
@@ -318,6 +322,7 @@ export class AiGatewayService {
         let fullText = '';
 
         while (true) {
+          throwIfCancelled(signal);
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
@@ -353,6 +358,9 @@ export class AiGatewayService {
 
         return fullText;
       } catch (err) {
+        if (isCancellation(err) || signal?.aborted) {
+          throw isCancellation(err) ? err : new CancelledError();
+        }
         const msg = err instanceof Error ? err.message : String(err);
         errors.push(`${candidate.provider}/${m}: ${msg}`);
         this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} error: ${msg}`);
@@ -369,9 +377,10 @@ export class AiGatewayService {
     tools: ToolDefinition[],
     model: string | string[],
     apiKey?: AiKeyInput,
-    onToken?: (token: string) => void | Promise<void>,
+    onToken?: (token: string, kind: 'thinking' | 'code') => void | Promise<void>,
     onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>,
     onFileStart?: (path: string) => void | Promise<void>,
+    signal?: AbortSignal,
   ): Promise<{ content: string | null; toolCalls: ToolCall[]; toolResults: ToolExecutionResult[] }> {
     const candidates = this.normalizeCandidates(model, apiKey);
 
@@ -388,9 +397,11 @@ export class AiGatewayService {
 
       for (const [i, m] of candidate.models.entries()) {
       try {
+        throwIfCancelled(signal);
         const res = await fetch(url, {
           method: 'POST',
           headers,
+          signal: combineAbortSignals(signal),
           body: JSON.stringify({
             model: m,
             messages,
@@ -453,6 +464,7 @@ export class AiGatewayService {
         };
 
         while (true) {
+          throwIfCancelled(signal);
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
@@ -475,7 +487,9 @@ export class AiGatewayService {
                 content += delta.content;
                 if (onToken) {
                   try {
-                    await onToken(delta.content);
+                    // Plain content deltas are the model's reasoning/narration
+                    // ("thinking"), as opposed to code extracted from tool args.
+                    await onToken(delta.content, 'thinking');
                   } catch (tokenErr) {
                     this.logger.warn(`chatCompletionsWithToolsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
                   }
@@ -531,10 +545,10 @@ export class AiGatewayService {
                           // frontend renders incrementally instead of jumping.
                           const CHUNK_SIZE = 80;
                           if (codeToken.length <= CHUNK_SIZE) {
-                            await onToken(codeToken);
+                            await onToken(codeToken, 'code');
                           } else {
                             for (let i = 0; i < codeToken.length; i += CHUNK_SIZE) {
-                              await onToken(codeToken.slice(i, i + CHUNK_SIZE));
+                              await onToken(codeToken.slice(i, i + CHUNK_SIZE), 'code');
                               // Yield to the event loop so the network stack can
                               // flush the SSE chunk to the frontend.
                               await this.sleep(0);
@@ -572,6 +586,9 @@ export class AiGatewayService {
 
         return { content: content || null, toolCalls, toolResults };
       } catch (err) {
+        if (isCancellation(err) || signal?.aborted) {
+          throw isCancellation(err) ? err : new CancelledError();
+        }
         const msg = err instanceof Error ? err.message : String(err);
         errors.push(`${candidate.provider}/${m}: ${msg}`);
         this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} error: ${msg}`);

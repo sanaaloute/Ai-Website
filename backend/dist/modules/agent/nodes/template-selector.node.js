@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.templateSelectorNode = templateSelectorNode;
 const tools_1 = require("../tools");
+const e2b_service_1 = require("../../../lib/e2b.service");
 function renderColor(token) {
     return `- **${token.name}**: ${token.value} — ${token.usage}`;
 }
@@ -64,17 +65,20 @@ async function templateSelectorNode(state, deps) {
         const framework = await deps.templateService.getTemplateKind(category);
         let loadedCount = 0;
         let failedCount = 0;
-        for (const [filePath, content] of Object.entries(templateFiles)) {
-            try {
-                await tools.writeFile(filePath, content);
-                loadedCount++;
+        const templateEntries = Object.entries(templateFiles)
+            .filter(([filePath]) => !(0, e2b_service_1.isForbiddenPath)(filePath))
+            .map(([filePath, content]) => ({ relativePath: filePath, content }));
+        try {
+            const written = await deps.e2b.writeFilesBatch(state.sandboxId, templateEntries);
+            loadedCount = written.length;
+            for (const [filePath, content] of Object.entries(templateFiles)) {
                 await deps.emit((0, tools_1.createFileUpdateEvent)(filePath, content, 'created'));
             }
-            catch (e) {
-                const message = e instanceof Error ? e.message : String(e);
-                deps.logger.warn(`Failed to copy template file ${filePath}: ${message}`);
-                failedCount++;
-            }
+        }
+        catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            deps.logger.error(`Template copy failed: ${message}`);
+            throw new Error(`Template copy failed: ${message}`);
         }
         const dbSchema = await deps.templateService.getDbSchema(category);
         if (state.designSpec) {
@@ -94,14 +98,14 @@ async function templateSelectorNode(state, deps) {
         await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring ${framework === 'next' ? 'database (Prisma)' : 'PocketBase'} for ${category}...` } });
         let backendReady = false;
         if (framework === 'next') {
-            const next = await deps.e2b.prepareNextSandbox(state.sandboxId, category);
+            const next = await (0, e2b_service_1.withTransientRetry)('prepareNextSandbox', () => deps.e2b.prepareNextSandbox(state.sandboxId, category), deps.logger);
             backendReady = next.ok;
             if (!next.ok) {
                 deps.logger.warn(`Prisma setup failed for category ${category}; continuing without a migrated database`);
             }
         }
         else {
-            const pbInfo = await deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category);
+            const pbInfo = await (0, e2b_service_1.withTransientRetry)('reconfigurePocketbaseForCategory', () => deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category), deps.logger);
             backendReady = !!pbInfo;
             if (!pbInfo) {
                 deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
@@ -121,12 +125,14 @@ async function templateSelectorNode(state, deps) {
         };
     }
     catch (e) {
-        deps.logger.error(`Template selector failed: ${e instanceof Error ? e.message : String(e)}`);
+        const message = e instanceof Error ? e.message : String(e);
+        const name = e instanceof Error ? e.name : 'UnknownError';
+        deps.logger.error(`Template selector failed: [${name}] ${message}${e instanceof Error && e.stack ? `\n${e.stack}` : ''}`);
         return {
             templateId: 'generic',
             templateLoaded: false,
-            error: e instanceof Error ? e.message : String(e),
-            messages: [{ role: 'assistant', content: `Template error: ${e instanceof Error ? e.message : String(e)}` }],
+            error: message,
+            messages: [{ role: 'assistant', content: `Template error: ${message}` }],
         };
     }
 }

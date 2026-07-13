@@ -401,7 +401,7 @@ export class AgentPersistenceService extends BaseCheckpointSaver {
   async finishGeneration(input: {
     generationId?: string | null;
     threadId: string;
-    status: 'completed' | 'failed';
+    status: 'completed' | 'failed' | 'cancelled';
     error?: string;
     summary?: string;
     previewUrl?: string;

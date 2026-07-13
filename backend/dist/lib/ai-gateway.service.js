@@ -388,7 +388,7 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
                                     content += delta.content;
                                     if (onToken) {
                                         try {
-                                            await onToken(delta.content);
+                                            await onToken(delta.content, 'thinking');
                                         }
                                         catch (tokenErr) {
                                             this.logger.warn(`chatCompletionsWithToolsStream onToken error: ${tokenErr instanceof Error ? tokenErr.message : String(tokenErr)}`);
@@ -437,11 +437,11 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
                                                     try {
                                                         const CHUNK_SIZE = 80;
                                                         if (codeToken.length <= CHUNK_SIZE) {
-                                                            await onToken(codeToken);
+                                                            await onToken(codeToken, 'code');
                                                         }
                                                         else {
                                                             for (let i = 0; i < codeToken.length; i += CHUNK_SIZE) {
-                                                                await onToken(codeToken.slice(i, i + CHUNK_SIZE));
+                                                                await onToken(codeToken.slice(i, i + CHUNK_SIZE), 'code');
                                                                 await this.sleep(0);
                                                             }
                                                         }

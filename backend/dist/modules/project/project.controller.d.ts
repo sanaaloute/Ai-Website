@@ -1,4 +1,3 @@
-import { Response } from 'express';
 import { User, ProjectSummary } from "../../types";
 import { StorageService } from "../../lib/storage.service";
 import { IdempotencyService } from "../../lib/idempotency.service";
@@ -77,5 +76,4 @@ export declare class ProjectController {
         fileName: string;
         message: string;
     }>;
-    downloadRepo(repoUrl: string, res: Response): Promise<void>;
 }

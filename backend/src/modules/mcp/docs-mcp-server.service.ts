@@ -21,7 +21,7 @@ const FRAMEWORK_LIBRARY_IDS: Record<string, string> = {
 
 const SHORTCUT_LIBRARY_IDS: Record<string, string> = {
   shadcn: '/shadcn-ui/ui',
-  tailwind: '/tailwindlabs/tailwindcss',
+  tailwind: '/tailwindlabs/tailwindcss.com',
   framer_motion: '/grx7/framer-motion',
   zod: '/colinhacks/zod',
   react_hook_form: '/react-hook-form/react-hook-form',
@@ -32,6 +32,26 @@ const SHORTCUT_LIBRARY_IDS: Record<string, string> = {
 interface CacheEntry {
   value: string;
   expiresAt: number;
+}
+
+/**
+ * Extract the `redirectUrl` from a Context7 `library_redirected` error, if any.
+ * fetchText embeds the JSON error body in the error message, e.g.
+ * `Context7 request failed (301): {"error":"library_redirected",...,"redirectUrl":"/org/lib"}`.
+ */
+function extractRedirectUrl(err: unknown): string | null {
+  const message = err instanceof Error ? err.message : String(err);
+  if (!message.includes('library_redirected')) return null;
+  const jsonStart = message.indexOf('{');
+  if (jsonStart < 0) return null;
+  try {
+    const body = JSON.parse(message.slice(jsonStart)) as { redirectUrl?: unknown };
+    return typeof body.redirectUrl === 'string' && body.redirectUrl.length > 0
+      ? body.redirectUrl
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 @Injectable()
@@ -118,15 +138,35 @@ export class DocsMcpServerService {
       }
 
       // Prefer the v1 per-library endpoint; fall back to v2/context if it fails.
-      const normalizedId = args.libraryId.replace(/^\//, '');
-      const v1Url = `https://context7.com/api/v1/${normalizedId}?tokens=${tokens}&topic=${encodeURIComponent(args.query)}`;
-
-      let text: string;
-      try {
-        text = await this.fetchText(v1Url);
-      } catch (v1Err) {
-        const v2Url = `https://context7.com/api/v2/context?libraryId=${encodeURIComponent(args.libraryId)}&query=${encodeURIComponent(args.query)}&tokens=${tokens}`;
-        text = await this.fetchText(v2Url);
+      // If Context7 reports the library was redirected (301 library_redirected),
+      // retry once with the redirect target so moved libraries keep working.
+      let libraryId = args.libraryId;
+      let text: string | undefined;
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const normalizedId = libraryId.replace(/^\//, '');
+        const v1Url = `https://context7.com/api/v1/${normalizedId}?tokens=${tokens}&topic=${encodeURIComponent(args.query)}`;
+        try {
+          try {
+            text = await this.fetchText(v1Url);
+          } catch (v1Err) {
+            const v2Url = `https://context7.com/api/v2/context?libraryId=${encodeURIComponent(libraryId)}&query=${encodeURIComponent(args.query)}&tokens=${tokens}`;
+            text = await this.fetchText(v2Url);
+          }
+          break;
+        } catch (err) {
+          lastError = err;
+          const redirectUrl = extractRedirectUrl(err);
+          if (redirectUrl && attempt === 0) {
+            this.logger.log(`Context7 library ${libraryId} redirected to ${redirectUrl}; retrying`);
+            libraryId = redirectUrl;
+            continue;
+          }
+          throw err;
+        }
+      }
+      if (text === undefined) {
+        throw lastError instanceof Error ? lastError : new Error(String(lastError));
       }
 
       this.setCache(cacheKey, text);

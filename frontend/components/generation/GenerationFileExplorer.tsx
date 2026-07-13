@@ -94,6 +94,12 @@ function TreeNodeItem({
 }) {
   const isExpanded = expandedFolders.has(node.path);
   const isSelected = node.type === 'file' && selectedFile === node.path;
+  // Highlight folders that contain the file the agent is currently working on.
+  const containsSelectedFile =
+    node.type === 'folder' &&
+    node.path !== '' &&
+    !!selectedFile &&
+    selectedFile.startsWith(node.path + '/');
   const hasChildren = node.type === 'folder' && node.children.length > 0;
   const canModify = node.path !== '' && !!onRenameFile && !!onDeleteFile;
   const [isRenaming, setIsRenaming] = useState(false);
@@ -231,7 +237,11 @@ function TreeNodeItem({
   return (
     <div>
       <div
-        className="group flex items-center gap-1.5 py-[3px] px-2 hover:bg-white/[0.04] rounded cursor-pointer text-zinc-500 transition-colors border-l-2 border-transparent"
+        className={`group flex items-center gap-1.5 py-[3px] px-2 rounded cursor-pointer transition-colors border-l-2 ${
+          containsSelectedFile
+            ? 'bg-glow-purple/10 text-zinc-200 border-glow-purple/50'
+            : 'hover:bg-white/[0.04] text-zinc-500 border-transparent'
+        }`}
         style={{ paddingLeft: `${10 + depth * 14}px` }}
         onClick={() => onToggleFolder(node.path)}
       >
@@ -303,7 +313,11 @@ export function GenerationFileExplorer({
         <div>
           {/* Root project folder */}
           <div
-            className="flex items-center gap-1.5 py-[3px] px-2 hover:bg-white/[0.04] rounded cursor-pointer text-zinc-500 transition-colors border-l-2 border-transparent"
+            className={`flex items-center gap-1.5 py-[3px] px-2 rounded cursor-pointer transition-colors border-l-2 ${
+              selectedFile && !selectedFile.includes('/')
+                ? 'bg-glow-purple/10 text-zinc-200 border-glow-purple/50'
+                : 'hover:bg-white/[0.04] text-zinc-500 border-transparent'
+            }`}
             onClick={() => onToggleFolder('root')}
           >
             {rootExpanded ? (

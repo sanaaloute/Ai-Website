@@ -1,5 +1,6 @@
 import { AgentState } from '../state';
 import { GraphDependencies } from '../graph';
+import { withTransientRetry } from '@/lib/e2b.service';
 
 export async function databaseInitializerNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
   const category = state.websiteCategory || 'generic';
@@ -31,10 +32,15 @@ export async function databaseInitializerNode(state: AgentState, deps: GraphDepe
       data: { status: 'analyzing', message: `Verifying ${state.framework === 'next' ? 'Prisma tables' : 'PocketBase collections'} for ${category}...` },
     });
 
-    const status = await deps.databaseSeeder.verifyAndSeed(
-      state.sandboxId,
-      category,
-      state.dbSchemaTemplate,
+    const status = await withTransientRetry(
+      'verifyAndSeed',
+      () =>
+        deps.databaseSeeder.verifyAndSeed(
+          state.sandboxId,
+          category,
+          state.dbSchemaTemplate,
+        ),
+      deps.logger,
     );
 
     const message = status.message;
@@ -50,7 +56,10 @@ export async function databaseInitializerNode(state: AgentState, deps: GraphDepe
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    deps.logger.error(`Database initializer failed: ${message}`);
+    const name = e instanceof Error ? e.name : 'UnknownError';
+    deps.logger.error(
+      `Database initializer failed: [${name}] ${message}${e instanceof Error && e.stack ? `\n${e.stack}` : ''}`,
+    );
     return {
       databaseReady: false,
       databaseStatus: {

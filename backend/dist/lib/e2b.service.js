@@ -44,6 +44,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var E2BService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.E2BService = exports.E2BProviderError = exports.SandboxGoneError = exports.SandboxNotFoundError = exports.E2BNotConfiguredError = exports.FORBIDDEN_FILE_NAMES = exports.FORBIDDEN_PATH_PREFIXES = exports.WORKDIR = void 0;
+exports.withTransientRetry = withTransientRetry;
 exports.isForbiddenPath = isForbiddenPath;
 const common_1 = require("@nestjs/common");
 const e2b_1 = require("e2b");
@@ -63,9 +64,11 @@ const NEXT_LOG = '/tmp/next.log';
 const POCKETBASE_PORT = 8090;
 const POCKETBASE_DIR = '/home/user/pb';
 const POCKETBASE_VERSION = '0.22.46';
-const CONNECT_TIMEOUT_MS = 10_000;
-const CREATE_TIMEOUT_MS = 30_000;
-const REQUEST_TIMEOUT_MS = 30_000;
+const CONNECT_TIMEOUT_MS = 60_000;
+const CREATE_TIMEOUT_MS = 45_000;
+const CREATE_MAX_ATTEMPTS = 2;
+const CREATE_RETRY_DELAY_MS = 3_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 const SANDBOX_LIFETIME_MS = 60 * 60 * 1000;
 function isTimeoutOrNetworkError(err) {
     if (!(err instanceof Error))
@@ -79,6 +82,24 @@ function isTimeoutOrNetworkError(err) {
 }
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function withTransientRetry(label, fn, logger, maxAttempts = 2, delayMs = 2_000) {
+    let lastErr;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await fn();
+        }
+        catch (err) {
+            lastErr = err;
+            if (attempt >= maxAttempts || !isTimeoutOrNetworkError(err)) {
+                throw err;
+            }
+            const message = err instanceof Error ? err.message : String(err);
+            logger?.warn(`${label} failed with transient error (attempt ${attempt}/${maxAttempts}): ${message} — retrying in ${delayMs}ms`);
+            await sleep(delayMs);
+        }
+    }
+    throw lastErr;
 }
 exports.FORBIDDEN_PATH_PREFIXES = [
     'node_modules/',
@@ -151,15 +172,29 @@ let E2BService = E2BService_1 = class E2BService {
             throw new E2BNotConfiguredError();
         }
         let sandbox;
-        try {
-            sandbox = await e2b_1.Sandbox.create({
-                apiKey: (0, env_1.env)().e2bApiKey,
-                timeoutMs: SANDBOX_LIFETIME_MS,
-                requestTimeoutMs: CREATE_TIMEOUT_MS,
-            });
+        let lastCreateErr;
+        for (let attempt = 1; attempt <= CREATE_MAX_ATTEMPTS; attempt++) {
+            try {
+                sandbox = await e2b_1.Sandbox.create({
+                    apiKey: (0, env_1.env)().e2bApiKey,
+                    timeoutMs: SANDBOX_LIFETIME_MS,
+                    requestTimeoutMs: CREATE_TIMEOUT_MS,
+                });
+                break;
+            }
+            catch (err) {
+                lastCreateErr = err;
+                const message = err instanceof Error ? err.message : String(err);
+                this.logger.warn(`E2B createSandbox attempt ${attempt}/${CREATE_MAX_ATTEMPTS} failed: ${message}`);
+                if (attempt < CREATE_MAX_ATTEMPTS && isTimeoutOrNetworkError(err)) {
+                    await sleep(CREATE_RETRY_DELAY_MS);
+                    continue;
+                }
+                break;
+            }
         }
-        catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
+        if (!sandbox) {
+            const message = lastCreateErr instanceof Error ? lastCreateErr.message : String(lastCreateErr);
             this.logger.error(`E2B createSandbox failed: ${message}`);
             throw new E2BProviderError(message);
         }
@@ -273,9 +308,6 @@ let E2BService = E2BService_1 = class E2BService {
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             const lower = msg.toLowerCase();
-            if (isTimeoutOrNetworkError(err)) {
-                throw new SandboxGoneError();
-            }
             if (lower.includes('not found') || lower.includes('does not exist')) {
                 throw new SandboxNotFoundError();
             }
@@ -495,15 +527,43 @@ let E2BService = E2BService_1 = class E2BService {
             throw new SandboxNotFoundError();
         }
         try {
-            const result = await sandbox.commands.run(command, {
-                cwd,
-                timeoutMs: opts?.timeoutMs,
-                onStdout: opts?.onStdout,
-                onStderr: opts?.onStderr,
-            });
-            return { output: result.stdout, error: result.stderr, exitCode: result.exitCode };
+            const MAX_ATTEMPTS = 3;
+            let result;
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                try {
+                    result = await sandbox.commands.run(command, {
+                        cwd,
+                        timeoutMs: opts?.timeoutMs,
+                        onStdout: opts?.onStdout,
+                        onStderr: opts?.onStderr,
+                    });
+                    break;
+                }
+                catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    const isSpawnFailure = /exit status 25[0-9]/.test(msg);
+                    if (attempt < MAX_ATTEMPTS && (isSpawnFailure || isTimeoutOrNetworkError(err))) {
+                        this.logger.warn(`runCommand transient failure (attempt ${attempt}/${MAX_ATTEMPTS}): ${msg} — retrying`);
+                        await sleep(3_000 * attempt);
+                        continue;
+                    }
+                    throw err;
+                }
+            }
+            return {
+                output: result.stdout ?? '',
+                error: result.stderr ?? '',
+                exitCode: result.exitCode ?? 0,
+            };
         }
         catch (err) {
+            if (err instanceof e2b_1.CommandExitError) {
+                return {
+                    output: err.stdout ?? '',
+                    error: err.error ?? err.message,
+                    exitCode: err.exitCode ?? 1,
+                };
+            }
             const msg = err instanceof Error ? err.message : String(err);
             if (msg.includes('gone')) {
                 const currentId = await this.getCurrentSandboxId(sandboxId);
@@ -691,6 +751,45 @@ let E2BService = E2BService_1 = class E2BService {
             throw new Error(msg);
         }
     }
+    async writeFilesBatch(sandboxId, files) {
+        if (!this.configured) {
+            throw new E2BNotConfiguredError();
+        }
+        if (files.length === 0)
+            return [];
+        const sandbox = await this.getSandbox(sandboxId);
+        if (!sandbox) {
+            throw new SandboxNotFoundError();
+        }
+        const entries = files.map((f) => ({
+            path: `${exports.WORKDIR}/${f.relativePath}`,
+            data: f.content,
+        }));
+        try {
+            const dirs = [
+                ...new Set(entries
+                    .map((e) => path.dirname(e.path))
+                    .filter((d) => d && d !== exports.WORKDIR && d !== `${exports.WORKDIR}/` && d !== '/')),
+            ];
+            if (dirs.length > 0) {
+                const mkdirRes = await this.runCommand(sandboxId, `mkdir -p ${dirs.join(' ')}`, exports.WORKDIR);
+                if (mkdirRes.exitCode !== 0) {
+                    this.logger.error(`writeFilesBatch mkdir failed: exitCode=${mkdirRes.exitCode}, stderr=${mkdirRes.error}`);
+                }
+            }
+            await withTransientRetry(`files.write batch (${entries.length} files)`, () => sandbox.files.write(entries), this.logger);
+            return files.map((f) => f.relativePath);
+        }
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes('gone')) {
+                const currentId = await this.getCurrentSandboxId(sandboxId);
+                this.sandboxes.delete(currentId);
+                throw new SandboxGoneError();
+            }
+            throw new Error(msg);
+        }
+    }
     async restartPreview(sandboxId) {
         if (!this.configured) {
             throw new E2BNotConfiguredError();
@@ -774,16 +873,17 @@ let E2BService = E2BService_1 = class E2BService {
         if (this.sandboxes.has(currentId))
             return this.sandboxes.get(currentId);
         try {
-            const sandbox = await e2b_1.Sandbox.connect(currentId, {
+            const sandbox = await withTransientRetry(`Sandbox.connect(${currentId})`, () => e2b_1.Sandbox.connect(currentId, {
                 apiKey: (0, env_1.env)().e2bApiKey,
                 requestTimeoutMs: CONNECT_TIMEOUT_MS,
-            });
+            }), this.logger);
             this.sandboxes.set(currentId, sandbox);
             return sandbox;
         }
         catch (err) {
             if (isTimeoutOrNetworkError(err)) {
-                throw new SandboxGoneError();
+                const msg = err instanceof Error ? err.message : String(err);
+                throw new E2BProviderError(`Sandbox temporarily unreachable: ${msg}`);
             }
             return null;
         }

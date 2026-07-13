@@ -9,6 +9,7 @@ import { toolsToDefinitions } from './tool-definitions';
 import type { ToolCall } from './tool-definitions';
 import { executeToolCall } from './tool-executor';
 import type { AiCredential } from '@/lib/llm-providers';
+import { throwIfCancelled } from '@/lib/cancellation';
 
 export interface ToolLoopMessage {
   role: string;
@@ -74,13 +75,14 @@ export async function runToolLoop(
   let iteration = 0;
 
   const executeSingleToolCall = async (toolCall: ToolCall) => {
-    const result = await executeToolCall(toolCall, tools);
+    const result = await executeToolCall(toolCall, tools, deps.signal);
     deps.logger.debug(`[${nodeType}] tool result: ${result.name} = ${result.content.slice(0, 200)}`);
     return result;
   };
 
   while (iteration < maxIterations) {
     iteration++;
+    throwIfCancelled(deps.signal);
     deps.logger.debug(`[${nodeType}] tool loop iteration ${iteration}`);
 
     const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(
@@ -88,13 +90,14 @@ export async function runToolLoop(
       toolDefinitions,
       deps.modelResolver.resolveSequence(nodeType),
       aiCredentials,
-      async (token) => {
-        await deps.emit({ type: 'token', data: { content: token } });
+      async (token, kind) => {
+        await deps.emit({ type: 'token', data: { content: token, kind } });
       },
       async (toolCall) => executeSingleToolCall(toolCall),
       async (path) => {
         await deps.emit({ type: 'file_start', data: { path } });
       },
+      deps.signal,
     );
 
     if (content) {

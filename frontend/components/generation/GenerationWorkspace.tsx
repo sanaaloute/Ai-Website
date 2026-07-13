@@ -59,13 +59,23 @@ function GenerationWorkspace({ workspace }: GenerationWorkspaceProps) {
       const path = generationProgress.currentFile.path;
       setSelectedFile(path);
 
-      // Expand all parent folders so the current file is visible in the explorer.
+      // Expand the root plus all parent folders so the current file is
+      // visible in the explorer.
       const parts = path.split('/');
       const foldersToExpand = new Set(expandedFolders);
-      for (let i = 1; i < parts.length; i++) {
-        foldersToExpand.add(parts.slice(0, i).join('/'));
+      let changed = false;
+      if (!foldersToExpand.has('root')) {
+        foldersToExpand.add('root');
+        changed = true;
       }
-      if (foldersToExpand.size !== expandedFolders.size) {
+      for (let i = 1; i < parts.length; i++) {
+        const folder = parts.slice(0, i).join('/');
+        if (!foldersToExpand.has(folder)) {
+          foldersToExpand.add(folder);
+          changed = true;
+        }
+      }
+      if (changed) {
         setExpandedFolders(foldersToExpand);
       }
     }

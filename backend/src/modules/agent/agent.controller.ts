@@ -254,16 +254,30 @@ export class AgentController {
     const { unsubscribe } = this.agentJobService.subscribeToEvents(jobId, (event) => {
       sseWrite(res, event);
       if (event.type === 'done' || event.type === 'error') {
+        clearInterval(heartbeat);
         unsubscribe();
         if (!res.writableEnded) res.end();
       }
     });
+
+    // Heartbeat: keep bytes flowing during long backend silences (template
+    // copy, Prisma setup, package installs, E2B retries can take minutes) so
+    // the client's idle/stall detector doesn't kill a healthy stream.
+    const heartbeat = setInterval(() => {
+      if (res.writableEnded) {
+        clearInterval(heartbeat);
+        return;
+      }
+      res.write(':heartbeat\n\n');
+      (res as unknown as { flush?: () => void }).flush?.();
+    }, 15000);
 
     // Safety: close SSE if the job finishes or fails while we were subscribing.
     const checkInterval = setInterval(async () => {
       const currentState = await job.getState();
       if (currentState === 'completed' || currentState === 'failed') {
         clearInterval(checkInterval);
+        clearInterval(heartbeat);
         unsubscribe();
         if (!res.writableEnded) res.end();
       }
@@ -271,6 +285,7 @@ export class AgentController {
 
     res.req.on('close', () => {
       clearInterval(checkInterval);
+      clearInterval(heartbeat);
       unsubscribe();
     });
   }

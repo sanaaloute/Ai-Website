@@ -11,29 +11,29 @@ declare const planningQuestionnaireSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         type: "text" | "radio" | "checkbox";
         question: string;
-        id?: string | undefined;
         options?: string[] | undefined;
+        id?: string | undefined;
         required?: boolean | undefined;
         placeholder?: string | undefined;
     }, {
         type: "text" | "radio" | "checkbox";
         question: string;
-        id?: string | undefined;
         options?: string[] | undefined;
+        id?: string | undefined;
         required?: boolean | undefined;
         placeholder?: string | undefined;
     }>, {
         type: "text" | "radio" | "checkbox";
         question: string;
-        id?: string | undefined;
         options?: string[] | undefined;
+        id?: string | undefined;
         required?: boolean | undefined;
         placeholder?: string | undefined;
     }, {
         type: "text" | "radio" | "checkbox";
         question: string;
-        id?: string | undefined;
         options?: string[] | undefined;
+        id?: string | undefined;
         required?: boolean | undefined;
         placeholder?: string | undefined;
     }>, "many">;
@@ -41,8 +41,8 @@ declare const planningQuestionnaireSchema: z.ZodObject<{
     questions: {
         type: "text" | "radio" | "checkbox";
         question: string;
-        id?: string | undefined;
         options?: string[] | undefined;
+        id?: string | undefined;
         required?: boolean | undefined;
         placeholder?: string | undefined;
     }[];
@@ -50,8 +50,8 @@ declare const planningQuestionnaireSchema: z.ZodObject<{
     questions: {
         type: "text" | "radio" | "checkbox";
         question: string;
-        id?: string | undefined;
         options?: string[] | undefined;
+        id?: string | undefined;
         required?: boolean | undefined;
         placeholder?: string | undefined;
     }[];
@@ -70,29 +70,29 @@ export declare class PlanningQuestionnaireTool extends AgentTool {
         }, "strip", z.ZodTypeAny, {
             type: "text" | "radio" | "checkbox";
             question: string;
-            id?: string | undefined;
             options?: string[] | undefined;
+            id?: string | undefined;
             required?: boolean | undefined;
             placeholder?: string | undefined;
         }, {
             type: "text" | "radio" | "checkbox";
             question: string;
-            id?: string | undefined;
             options?: string[] | undefined;
+            id?: string | undefined;
             required?: boolean | undefined;
             placeholder?: string | undefined;
         }>, {
             type: "text" | "radio" | "checkbox";
             question: string;
-            id?: string | undefined;
             options?: string[] | undefined;
+            id?: string | undefined;
             required?: boolean | undefined;
             placeholder?: string | undefined;
         }, {
             type: "text" | "radio" | "checkbox";
             question: string;
-            id?: string | undefined;
             options?: string[] | undefined;
+            id?: string | undefined;
             required?: boolean | undefined;
             placeholder?: string | undefined;
         }>, "many">;
@@ -100,8 +100,8 @@ export declare class PlanningQuestionnaireTool extends AgentTool {
         questions: {
             type: "text" | "radio" | "checkbox";
             question: string;
-            id?: string | undefined;
             options?: string[] | undefined;
+            id?: string | undefined;
             required?: boolean | undefined;
             placeholder?: string | undefined;
         }[];
@@ -109,8 +109,8 @@ export declare class PlanningQuestionnaireTool extends AgentTool {
         questions: {
             type: "text" | "radio" | "checkbox";
             question: string;
-            id?: string | undefined;
             options?: string[] | undefined;
+            id?: string | undefined;
             required?: boolean | undefined;
             placeholder?: string | undefined;
         }[];

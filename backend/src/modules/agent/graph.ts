@@ -38,6 +38,15 @@ import { a11yReviewerNode } from './nodes/a11y-reviewer.node';
 import { e2eTestGeneratorNode } from './nodes/e2e-test-generator.node';
 import { securityReviewerNode } from './nodes/security-reviewer.node';
 import { seoMetaNode } from './nodes/seo-meta.node';
+import type { TemplateCopyResult } from './nodes/template-selector.node';
+import {
+  isCancellation,
+  sleepWithSignal,
+  throwIfCancelled,
+} from '@/lib/cancellation';
+
+/** How many times a failed agent node is retried before giving up. */
+const MAX_NODE_ATTEMPTS = 3;
 
 export interface GraphDependencies {
   aiGateway: AiGatewayService;
@@ -50,6 +59,16 @@ export interface GraphDependencies {
   agentMcpToolService: AgentMcpToolService;
   logger: Logger;
   emit: (event: AgentEvent) => void | Promise<void>;
+  /** User-initiated cancellation; checked at every level of the workflow. */
+  signal?: AbortSignal;
+  /**
+   * Template copy started in parallel with the designer node. The template
+   * selector awaits (and consumes) this instead of copying sequentially.
+   */
+  templateCopy?: {
+    category: string;
+    promise: Promise<TemplateCopyResult>;
+  };
 }
 
 type NodeFunction = (
@@ -66,8 +85,75 @@ function wrapNode(name: string, fn: NodeFunction) {
     if (!deps) {
       throw new Error(`Missing graph dependencies for node "${name}"`);
     }
+    const signal = deps.signal ?? (config?.signal as AbortSignal | undefined);
+    throwIfCancelled(signal);
     deps.logger.debug(`Running node: ${name}`);
-    return fn(state, deps);
+    // Tag every event emitted inside this node with the node name so the
+    // frontend can attribute streamed tokens to the agent that produced them.
+    const nodeDeps: GraphDependencies = {
+      ...deps,
+      emit: (event) =>
+        deps.emit({
+          ...event,
+          data: { ...(event.data ?? {}), node: name },
+        }),
+    };
+
+    // Retry policy: if an agent node throws or reports a failed status
+    // (returns an `error` field), retry up to MAX_NODE_ATTEMPTS times with a
+    // backoff before continuing to the next step. Cancellation is never
+    // retried — it propagates immediately.
+    let lastError: unknown;
+    let failedResult: Partial<AgentState> | null = null;
+    for (let attempt = 1; attempt <= MAX_NODE_ATTEMPTS; attempt++) {
+      throwIfCancelled(signal);
+      try {
+        const result = await fn(state, nodeDeps);
+        if (result && typeof result.error === 'string' && result.error) {
+          failedResult = result;
+          lastError = new Error(result.error);
+          if (attempt < MAX_NODE_ATTEMPTS) {
+            await nodeDeps.emit({
+              type: 'status',
+              data: {
+                status: 'retrying',
+                message: `${name} failed, retrying (${attempt + 1}/${MAX_NODE_ATTEMPTS})...`,
+              },
+            });
+            deps.logger.warn(
+              `Node ${name} reported failure (attempt ${attempt}/${MAX_NODE_ATTEMPTS}): ${result.error}`,
+            );
+            await sleepWithSignal(1000 * attempt, signal);
+            continue;
+          }
+        }
+        return result;
+      } catch (e) {
+        if (isCancellation(e)) throw e;
+        lastError = e;
+        if (attempt < MAX_NODE_ATTEMPTS) {
+          const message = e instanceof Error ? e.message : String(e);
+          await nodeDeps.emit({
+            type: 'status',
+            data: {
+              status: 'retrying',
+              message: `${name} failed, retrying (${attempt + 1}/${MAX_NODE_ATTEMPTS})...`,
+            },
+          });
+          deps.logger.warn(
+            `Node ${name} threw (attempt ${attempt}/${MAX_NODE_ATTEMPTS}): ${message}`,
+          );
+          await sleepWithSignal(1000 * attempt, signal);
+          continue;
+        }
+      }
+    }
+
+    // Attempts exhausted: if the node returned a failed status, hand that
+    // result back so existing error routing (e.g. executor -> reviewer) still
+    // applies; otherwise rethrow the last unexpected error.
+    if (failedResult) return failedResult;
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
   };
 }
 

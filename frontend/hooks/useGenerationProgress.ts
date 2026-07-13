@@ -46,6 +46,15 @@ export interface PlanData {
   plan: string;
 }
 
+export interface AgentStep {
+  id: string;
+  node: string;
+  kind: 'thinking' | 'code';
+  label: string;
+  text: string;
+  done: boolean;
+}
+
 export interface GenerationProgress {
   isGenerating: boolean;
   status: string;
@@ -70,6 +79,7 @@ export interface GenerationProgress {
   reviewMaxReached?: boolean;
   reviewMaxIssues?: string[];
   reviewMaxTodos?: Array<{ id: string; content: string; status: string }>;
+  agentSteps?: AgentStep[];
 }
 
 export interface CodeApplicationState {

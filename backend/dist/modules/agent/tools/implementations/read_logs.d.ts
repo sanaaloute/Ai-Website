@@ -8,12 +8,12 @@ declare const readLogsSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     type?: "all" | "client" | "server" | "build" | undefined;
     limit?: number | undefined;
-    level?: "error" | "info" | "warn" | "all" | undefined;
+    level?: "error" | "warn" | "info" | "all" | undefined;
     searchTerm?: string | undefined;
 }, {
     type?: "all" | "client" | "server" | "build" | undefined;
     limit?: number | undefined;
-    level?: "error" | "info" | "warn" | "all" | undefined;
+    level?: "error" | "warn" | "info" | "all" | undefined;
     searchTerm?: string | undefined;
 }>;
 export declare class ReadLogsTool extends AgentTool {
@@ -27,12 +27,12 @@ export declare class ReadLogsTool extends AgentTool {
     }, "strip", z.ZodTypeAny, {
         type?: "all" | "client" | "server" | "build" | undefined;
         limit?: number | undefined;
-        level?: "error" | "info" | "warn" | "all" | undefined;
+        level?: "error" | "warn" | "info" | "all" | undefined;
         searchTerm?: string | undefined;
     }, {
         type?: "all" | "client" | "server" | "build" | undefined;
         limit?: number | undefined;
-        level?: "error" | "info" | "warn" | "all" | undefined;
+        level?: "error" | "warn" | "info" | "all" | undefined;
         searchTerm?: string | undefined;
     }>;
     _call(args: z.infer<typeof readLogsSchema>): Promise<string>;

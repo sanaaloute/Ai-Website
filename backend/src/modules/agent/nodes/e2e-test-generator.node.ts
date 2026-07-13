@@ -74,6 +74,8 @@ export async function e2eTestGeneratorNode(state: AgentState, deps: GraphDepende
       messages,
       deps.modelResolver.resolveSequence('e2e_test_generator'),
       state.aiCredentials,
+      undefined,
+      deps.signal,
     );
 
     const testCode = extractCode(rawCode);

@@ -19,7 +19,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_guard_1 = require("../../common/guards/auth.guard");
-const optional_auth_guard_1 = require("../../common/guards/optional-auth.guard");
 const user_decorator_1 = require("../../common/decorators/user.decorator");
 const storage_service_1 = require("../../lib/storage.service");
 const idempotency_service_1 = require("../../lib/idempotency.service");
@@ -239,7 +238,6 @@ let ProjectController = ProjectController_1 = class ProjectController {
     async createZip(user, body) {
         if (!body.projectId)
             throw new common_1.HttpException({ success: false, error: 'projectId required' }, common_1.HttpStatus.BAD_REQUEST);
-        await this.entitlements.assertFeature(user.id, 'zip_download');
         const signedUrl = await this.storage.getSignedZipUrl(user.id, body.projectId);
         return {
             success: true,
@@ -247,13 +245,6 @@ let ProjectController = ProjectController_1 = class ProjectController {
             fileName: `${body.projectName ?? 'project'}.zip`,
             message: 'ZIP created successfully',
         };
-    }
-    async downloadRepo(repoUrl, res) {
-        if (!repoUrl)
-            throw new common_1.HttpException({ success: false, error: 'repo_url required' }, common_1.HttpStatus.BAD_REQUEST);
-        res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', 'attachment; filename=repo.zip');
-        res.send(Buffer.from(`stub zip for ${repoUrl}`));
     }
 };
 exports.ProjectController = ProjectController;
@@ -311,15 +302,6 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], ProjectController.prototype, "createZip", null);
-__decorate([
-    (0, common_1.Get)('download-repo'),
-    (0, common_1.UseGuards)(optional_auth_guard_1.OptionalAuthGuard),
-    __param(0, (0, common_1.Query)('repo_url')),
-    __param(1, (0, common_1.Res)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], ProjectController.prototype, "downloadRepo", null);
 exports.ProjectController = ProjectController = ProjectController_1 = __decorate([
     (0, common_1.Controller)('api'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),

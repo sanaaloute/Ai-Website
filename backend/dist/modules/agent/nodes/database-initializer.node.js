@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseInitializerNode = databaseInitializerNode;
+const e2b_service_1 = require("../../../lib/e2b.service");
 async function databaseInitializerNode(state, deps) {
     const category = state.websiteCategory || 'generic';
     const workflow = state.workflow || 'new_app';
@@ -25,7 +26,7 @@ async function databaseInitializerNode(state, deps) {
             type: 'status',
             data: { status: 'analyzing', message: `Verifying ${state.framework === 'next' ? 'Prisma tables' : 'PocketBase collections'} for ${category}...` },
         });
-        const status = await deps.databaseSeeder.verifyAndSeed(state.sandboxId, category, state.dbSchemaTemplate);
+        const status = await (0, e2b_service_1.withTransientRetry)('verifyAndSeed', () => deps.databaseSeeder.verifyAndSeed(state.sandboxId, category, state.dbSchemaTemplate), deps.logger);
         const message = status.message;
         await deps.emit({
             type: 'status',
@@ -39,7 +40,8 @@ async function databaseInitializerNode(state, deps) {
     }
     catch (e) {
         const message = e instanceof Error ? e.message : String(e);
-        deps.logger.error(`Database initializer failed: ${message}`);
+        const name = e instanceof Error ? e.name : 'UnknownError';
+        deps.logger.error(`Database initializer failed: [${name}] ${message}${e instanceof Error && e.stack ? `\n${e.stack}` : ''}`);
         return {
             databaseReady: false,
             databaseStatus: {

@@ -49,6 +49,7 @@ Rules:
       async (token) => {
         await deps.emit({ type: 'token', data: { content: token } });
       },
+      deps.signal,
     );
 
     return {
