@@ -1,0 +1,11 @@
+{
+  "id": "b2b-saas-devops-monitoring",
+  "name": "UptimeCloud — DevOps Monitoring",
+  "category": "b2b-saas",
+  "subcategory": "devops",
+  "description": "Monitoring & observability landing page template for DevOps/SRE tools: hero with live metrics, logo cloud, features, stats, testimonials, pricing, FAQ and CTA.",
+  "tags": ["devops", "monitoring", "observability", "sre", "saas"],
+  "framework": "nextjs",
+  "styling": "tailwindcss",
+  "primaryColor": "160 84% 39%"
+}

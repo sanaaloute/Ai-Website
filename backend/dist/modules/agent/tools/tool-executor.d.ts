@@ -6,4 +6,4 @@ export interface ToolExecutionResult {
     content: string;
     success: boolean;
 }
-export declare function executeToolCall(toolCall: ToolCall, tools: StructuredTool[]): Promise<ToolExecutionResult>;
+export declare function executeToolCall(toolCall: ToolCall, tools: StructuredTool[], signal?: AbortSignal, maxAttempts?: number): Promise<ToolExecutionResult>;

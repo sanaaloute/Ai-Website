@@ -1,7 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeToolCall = executeToolCall;
-async function executeToolCall(toolCall, tools) {
+const cancellation_1 = require("../../../lib/cancellation");
+const MAX_TOOL_ATTEMPTS = 3;
+async function executeToolCall(toolCall, tools, signal, maxAttempts = MAX_TOOL_ATTEMPTS) {
     const tool = tools.find((t) => t.name === toolCall.function.name);
     if (!tool) {
         return {
@@ -23,22 +25,33 @@ async function executeToolCall(toolCall, tools) {
             success: false,
         };
     }
-    try {
-        const result = await tool.invoke(args);
-        return {
-            toolCallId: toolCall.id,
-            name: toolCall.function.name,
-            content: typeof result === 'string' ? result : JSON.stringify(result),
-            success: true,
-        };
+    let lastError;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        (0, cancellation_1.throwIfCancelled)(signal);
+        try {
+            const result = await tool.invoke(args);
+            return {
+                toolCallId: toolCall.id,
+                name: toolCall.function.name,
+                content: typeof result === 'string' ? result : JSON.stringify(result),
+                success: true,
+            };
+        }
+        catch (err) {
+            if ((0, cancellation_1.isCancellation)(err)) {
+                throw err;
+            }
+            lastError = err;
+            if (attempt < maxAttempts) {
+                await (0, cancellation_1.sleepWithSignal)(500 * attempt, signal);
+            }
+        }
     }
-    catch (err) {
-        return {
-            toolCallId: toolCall.id,
-            name: toolCall.function.name,
-            content: `Error executing ${toolCall.function.name}: ${err instanceof Error ? err.message : String(err)}`,
-            success: false,
-        };
-    }
+    return {
+        toolCallId: toolCall.id,
+        name: toolCall.function.name,
+        content: `Error executing ${toolCall.function.name} after ${maxAttempts} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+        success: false,
+    };
 }
 //# sourceMappingURL=tool-executor.js.map

@@ -929,9 +929,8 @@ let E2BService = E2BService_1 = class E2BService {
             await sandbox.files.write(`${POCKETBASE_DIR}/pb_migrations/${migrationFile}`, migrationContent);
             await sandbox.files.write(`${POCKETBASE_DIR}/pb_hooks/main.pb.js`, hookContent);
         }
-        catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            this.logger.warn(`Could not copy PocketBase template files: ${message}`);
+        catch {
+            this.logger.debug('No PocketBase template files found; continuing with an empty schema');
         }
         await this.initializePocketbaseData(sandbox.sandboxId, credentials);
         const pbHost = sandbox.getHost(POCKETBASE_PORT);
@@ -1005,10 +1004,8 @@ let E2BService = E2BService_1 = class E2BService {
             await sandbox.files.write(`${POCKETBASE_DIR}/pb_migrations/${migrationFile}`, migrationContent);
             await sandbox.files.write(`${POCKETBASE_DIR}/pb_hooks/main.pb.js`, hookContent);
         }
-        catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            this.logger.error(`Could not copy PocketBase template files for category ${category}: ${message}`);
-            return null;
+        catch {
+            this.logger.log(`No PocketBase migrations for category ${category}; starting with an empty schema`);
         }
         await this.initializePocketbaseData(sandboxId, pbInfo);
         const started = await this.startPocketbase(sandboxId, pbInfo);

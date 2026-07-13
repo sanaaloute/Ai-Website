@@ -123,7 +123,7 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
         const slug = this.sanitize(params.projectName);
         const domain = (params.customDomain || `${slug}.${(0, env_1.env)().deployBaseDomain}`).replace(/^https?:\/\//, '');
         const container = this.container(slug);
-        const image = `lovecode/site-${slug}:${Date.now()}`;
+        const image = `aiwebsite/site-${slug}:${Date.now()}`;
         const volume = `${container}-data`;
         const workspace = path.join((0, env_1.env)().deployWorkspaceDir, slug);
         const tls = this.useTls(domain);
@@ -164,7 +164,7 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
                         'Vite + PocketBase (multi-container) sites should use DEPLOY_PROVIDER=coolify.',
                 };
             }
-            const build = await docker(['build', '-t', image, '--label', 'lovecode.managed=true', '--label', `lovecode.site=${slug}`, workspace], { timeoutMs: (0, env_1.env)().siteBuildTimeoutSeconds * 1000 });
+            const build = await docker(['build', '-t', image, '--label', 'aiwebsite.managed=true', '--label', `aiwebsite.site=${slug}`, workspace], { timeoutMs: (0, env_1.env)().siteBuildTimeoutSeconds * 1000 });
             if (build.code !== 0) {
                 throw new Error(`docker build failed: ${build.stderr || build.stdout}`);
             }
@@ -244,9 +244,9 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
             '-v',
             `${volume}:/app/data`,
             '--label',
-            'lovecode.managed=true',
+            'aiwebsite.managed=true',
             '--label',
-            `lovecode.site=${slug}`,
+            `aiwebsite.site=${slug}`,
             '--label',
             'traefik.enable=true',
             '--label',

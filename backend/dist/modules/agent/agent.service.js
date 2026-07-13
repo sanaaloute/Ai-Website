@@ -23,6 +23,7 @@ const template_service_1 = require("./services/template.service");
 const agent_persistence_service_1 = require("./services/agent-persistence.service");
 const database_seeder_service_1 = require("./services/database-seeder.service");
 const agent_mcp_tool_service_1 = require("./services/agent-mcp-tool.service");
+const cancellation_1 = require("../../lib/cancellation");
 let AgentService = AgentService_1 = class AgentService {
     constructor(aiGateway, e2b, providerKeys, promptLoader, modelResolver, templateService, persistence, databaseSeeder, agentMcpToolService) {
         this.aiGateway = aiGateway;
@@ -70,6 +71,7 @@ let AgentService = AgentService_1 = class AgentService {
             agentMcpToolService: this.agentMcpToolService,
             logger: this.logger,
             emit,
+            signal: options.signal,
         };
         const threadId = options.threadId ?? `agent-${options.userId ?? 'anon'}-${(0, crypto_1.randomUUID)()}`;
         let finalResponse = '';
@@ -102,6 +104,7 @@ let AgentService = AgentService_1 = class AgentService {
                 streamMode: 'updates',
                 configurable: { deps, thread_id: threadId },
                 recursionLimit: 50,
+                signal: options.signal,
             });
             for await (const chunk of stream) {
                 if (options.signal?.aborted) {
@@ -193,8 +196,14 @@ let AgentService = AgentService_1 = class AgentService {
             }
         }
         catch (e) {
-            const message = e instanceof Error ? e.message : String(e);
-            this.logger.error(`Graph execution error: ${message}`);
+            const cancelled = (0, cancellation_1.isCancellation)(e) || options.signal?.aborted;
+            const message = cancelled ? 'Cancelled by user' : e instanceof Error ? e.message : String(e);
+            if (!cancelled) {
+                this.logger.error(`Graph execution error: ${message}`);
+            }
+            else {
+                this.logger.log('Graph execution cancelled by user');
+            }
             const errorEvent = { type: 'error', data: { message } };
             await emit(errorEvent);
             yield errorEvent;
@@ -205,7 +214,7 @@ let AgentService = AgentService_1 = class AgentService {
                 await this.persistence.finishGeneration({
                     generationId,
                     threadId,
-                    status: 'failed',
+                    status: cancelled ? 'cancelled' : 'failed',
                     error: message,
                     state: runningState,
                 });

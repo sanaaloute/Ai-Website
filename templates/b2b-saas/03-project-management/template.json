@@ -1,0 +1,11 @@
+{
+  "id": "b2b-saas-project-management",
+  "name": "TaskPilot — Project Management",
+  "category": "b2b-saas",
+  "subcategory": "project-management",
+  "description": "Project management landing page template for B2B SaaS: hero with team metrics, logo cloud, features, stats, testimonials, pricing, FAQ and CTA.",
+  "tags": ["project-management", "tasks", "sprints", "b2b", "saas"],
+  "framework": "nextjs",
+  "styling": "tailwindcss",
+  "primaryColor": "262 83% 58%"
+}

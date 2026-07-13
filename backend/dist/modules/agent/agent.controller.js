@@ -181,15 +181,25 @@ let AgentController = AgentController_1 = class AgentController {
         const { unsubscribe } = this.agentJobService.subscribeToEvents(jobId, (event) => {
             sseWrite(res, event);
             if (event.type === 'done' || event.type === 'error') {
+                clearInterval(heartbeat);
                 unsubscribe();
                 if (!res.writableEnded)
                     res.end();
             }
         });
+        const heartbeat = setInterval(() => {
+            if (res.writableEnded) {
+                clearInterval(heartbeat);
+                return;
+            }
+            res.write(':heartbeat\n\n');
+            res.flush?.();
+        }, 15000);
         const checkInterval = setInterval(async () => {
             const currentState = await job.getState();
             if (currentState === 'completed' || currentState === 'failed') {
                 clearInterval(checkInterval);
+                clearInterval(heartbeat);
                 unsubscribe();
                 if (!res.writableEnded)
                     res.end();
@@ -197,6 +207,7 @@ let AgentController = AgentController_1 = class AgentController {
         }, 5000);
         res.req.on('close', () => {
             clearInterval(checkInterval);
+            clearInterval(heartbeat);
             unsubscribe();
         });
     }

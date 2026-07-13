@@ -27,7 +27,7 @@ export declare class AgentPersistenceService extends BaseCheckpointSaver {
     finishGeneration(input: {
         generationId?: string | null;
         threadId: string;
-        status: 'completed' | 'failed';
+        status: 'completed' | 'failed' | 'cancelled';
         error?: string;
         summary?: string;
         previewUrl?: string;

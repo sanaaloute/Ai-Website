@@ -17,14 +17,14 @@ export declare class AiGatewayService {
     chatCompletionsStream(messages: Array<{
         role: string;
         content: string | unknown[];
-    }>, model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string) => void | Promise<void>): Promise<string>;
+    }>, model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string) => void | Promise<void>, signal?: AbortSignal): Promise<string>;
     chatCompletionsWithToolsStream(messages: Array<{
         role: string;
         content: string | null;
         tool_call_id?: string;
         name?: string;
         tool_calls?: ToolCall[];
-    }>, tools: ToolDefinition[], model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string, kind: 'thinking' | 'code') => void | Promise<void>, onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>, onFileStart?: (path: string) => void | Promise<void>): Promise<{
+    }>, tools: ToolDefinition[], model: string | string[], apiKey?: AiKeyInput, onToken?: (token: string, kind: 'thinking' | 'code') => void | Promise<void>, onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>, onFileStart?: (path: string) => void | Promise<void>, signal?: AbortSignal): Promise<{
         content: string | null;
         toolCalls: ToolCall[];
         toolResults: ToolExecutionResult[];

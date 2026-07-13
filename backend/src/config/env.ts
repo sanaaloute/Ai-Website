@@ -88,6 +88,12 @@ export interface Env {
   context7ApiKey?: string;
   mcpDocsEnabled: boolean;
   mcpDocsCacheTtlSeconds: number;
+
+  // Template marketplace
+  templatesDir?: string;
+  templateRepo: string;
+  templateRepoRef: string;
+  githubToken?: string;
 }
 
 export function buildEnv(): Env {
@@ -195,6 +201,11 @@ export function buildEnv(): Env {
     context7ApiKey: getEnv('CONTEXT7_API_KEY'),
     mcpDocsEnabled: (getEnv('MCP_DOCS_ENABLED') ?? 'true') === 'true',
     mcpDocsCacheTtlSeconds: parseInt(getEnv('MCP_DOCS_CACHE_TTL_SECONDS') ?? '3600', 10),
+
+    templatesDir: getEnv('TEMPLATES_DIR'),
+    templateRepo: getEnv('TEMPLATE_REPO') ?? '',
+    templateRepoRef: getEnv('TEMPLATE_REPO_REF') ?? 'main',
+    githubToken: getEnv('GITHUB_TOKEN'),
   };
 }
 

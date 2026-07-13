@@ -6,11 +6,10 @@ export interface Env {
     corsCredentials: boolean;
     appUrl: string;
     siteUrl: string;
-    lovecodeApiKeySiteUrl: string;
+    aiWebsiteApiKeySiteUrl: string;
     aiBaseUrl: string;
     aiApiKey: string;
     aiDefaultModel: string;
-    aiReflectionModel: string;
     e2bApiKey: string;
     sandboxProvider: string;
     projectsDbPath: string;
@@ -53,6 +52,10 @@ export interface Env {
     context7ApiKey?: string;
     mcpDocsEnabled: boolean;
     mcpDocsCacheTtlSeconds: number;
+    templatesDir?: string;
+    templateRepo: string;
+    templateRepoRef: string;
+    githubToken?: string;
 }
 export declare function buildEnv(): Env;
 export declare function env(): Env;

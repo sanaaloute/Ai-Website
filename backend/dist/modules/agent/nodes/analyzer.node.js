@@ -88,7 +88,7 @@ async function analyzerNode(state, deps) {
     try {
         resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('analyzer'), aiCredentials, async (token) => {
             await deps.emit({ type: 'token', data: { content: token } });
-        });
+        }, deps.signal);
         const parsed = extractJson(resultText);
         if (parsed) {
             result = parsed;

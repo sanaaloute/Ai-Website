@@ -24,13 +24,30 @@ const FRAMEWORK_LIBRARY_IDS = {
 };
 const SHORTCUT_LIBRARY_IDS = {
     shadcn: '/shadcn-ui/ui',
-    tailwind: '/tailwindlabs/tailwindcss',
+    tailwind: '/tailwindlabs/tailwindcss.com',
     framer_motion: '/grx7/framer-motion',
     zod: '/colinhacks/zod',
     react_hook_form: '/react-hook-form/react-hook-form',
     supabase_js: '/supabase/supabase-js',
     stripe: '/stripe/stripe-js',
 };
+function extractRedirectUrl(err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes('library_redirected'))
+        return null;
+    const jsonStart = message.indexOf('{');
+    if (jsonStart < 0)
+        return null;
+    try {
+        const body = JSON.parse(message.slice(jsonStart));
+        return typeof body.redirectUrl === 'string' && body.redirectUrl.length > 0
+            ? body.redirectUrl
+            : null;
+    }
+    catch {
+        return null;
+    }
+}
 let DocsMcpServerService = DocsMcpServerService_1 = class DocsMcpServerService {
     constructor() {
         this.logger = new common_1.Logger(DocsMcpServerService_1.name);
@@ -107,15 +124,35 @@ let DocsMcpServerService = DocsMcpServerService_1 = class DocsMcpServerService {
             if (cached) {
                 return { content: [{ type: 'text', text: cached }] };
             }
-            const normalizedId = args.libraryId.replace(/^\//, '');
-            const v1Url = `https://context7.com/api/v1/${normalizedId}?tokens=${tokens}&topic=${encodeURIComponent(args.query)}`;
+            let libraryId = args.libraryId;
             let text;
-            try {
-                text = await this.fetchText(v1Url);
+            let lastError;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const normalizedId = libraryId.replace(/^\//, '');
+                const v1Url = `https://context7.com/api/v1/${normalizedId}?tokens=${tokens}&topic=${encodeURIComponent(args.query)}`;
+                try {
+                    try {
+                        text = await this.fetchText(v1Url);
+                    }
+                    catch (v1Err) {
+                        const v2Url = `https://context7.com/api/v2/context?libraryId=${encodeURIComponent(libraryId)}&query=${encodeURIComponent(args.query)}&tokens=${tokens}`;
+                        text = await this.fetchText(v2Url);
+                    }
+                    break;
+                }
+                catch (err) {
+                    lastError = err;
+                    const redirectUrl = extractRedirectUrl(err);
+                    if (redirectUrl && attempt === 0) {
+                        this.logger.log(`Context7 library ${libraryId} redirected to ${redirectUrl}; retrying`);
+                        libraryId = redirectUrl;
+                        continue;
+                    }
+                    throw err;
+                }
             }
-            catch (v1Err) {
-                const v2Url = `https://context7.com/api/v2/context?libraryId=${encodeURIComponent(args.libraryId)}&query=${encodeURIComponent(args.query)}&tokens=${tokens}`;
-                text = await this.fetchText(v2Url);
+            if (text === undefined) {
+                throw lastError instanceof Error ? lastError : new Error(String(lastError));
             }
             this.setCache(cacheKey, text);
             return { content: [{ type: 'text', text }] };

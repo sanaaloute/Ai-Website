@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens — change these HSL values to re-skin the whole template.
+ * Format: H S% L%  (no hsl() wrapper, Tailwind adds it).
+ */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+
+  --primary: 0 72% 51%; /* red */
+  --primary-foreground: 0 0% 100%;
+
+  --muted: 0 20% 96%;
+  --muted-foreground: 215 16% 47%;
+
+  --border: 10 25% 91%;
+  --radius: 0.75rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}

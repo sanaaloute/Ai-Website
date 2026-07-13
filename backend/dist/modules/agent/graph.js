@@ -25,12 +25,16 @@ const a11y_reviewer_node_1 = require("./nodes/a11y-reviewer.node");
 const e2e_test_generator_node_1 = require("./nodes/e2e-test-generator.node");
 const security_reviewer_node_1 = require("./nodes/security-reviewer.node");
 const seo_meta_node_1 = require("./nodes/seo-meta.node");
+const cancellation_1 = require("../../lib/cancellation");
+const MAX_NODE_ATTEMPTS = 3;
 function wrapNode(name, fn) {
     return async (state, config) => {
         const deps = config?.configurable?.deps;
         if (!deps) {
             throw new Error(`Missing graph dependencies for node "${name}"`);
         }
+        const signal = deps.signal ?? config?.signal;
+        (0, cancellation_1.throwIfCancelled)(signal);
         deps.logger.debug(`Running node: ${name}`);
         const nodeDeps = {
             ...deps,
@@ -39,7 +43,52 @@ function wrapNode(name, fn) {
                 data: { ...(event.data ?? {}), node: name },
             }),
         };
-        return fn(state, nodeDeps);
+        let lastError;
+        let failedResult = null;
+        for (let attempt = 1; attempt <= MAX_NODE_ATTEMPTS; attempt++) {
+            (0, cancellation_1.throwIfCancelled)(signal);
+            try {
+                const result = await fn(state, nodeDeps);
+                if (result && typeof result.error === 'string' && result.error) {
+                    failedResult = result;
+                    lastError = new Error(result.error);
+                    if (attempt < MAX_NODE_ATTEMPTS) {
+                        await nodeDeps.emit({
+                            type: 'status',
+                            data: {
+                                status: 'retrying',
+                                message: `${name} failed, retrying (${attempt + 1}/${MAX_NODE_ATTEMPTS})...`,
+                            },
+                        });
+                        deps.logger.warn(`Node ${name} reported failure (attempt ${attempt}/${MAX_NODE_ATTEMPTS}): ${result.error}`);
+                        await (0, cancellation_1.sleepWithSignal)(1000 * attempt, signal);
+                        continue;
+                    }
+                }
+                return result;
+            }
+            catch (e) {
+                if ((0, cancellation_1.isCancellation)(e))
+                    throw e;
+                lastError = e;
+                if (attempt < MAX_NODE_ATTEMPTS) {
+                    const message = e instanceof Error ? e.message : String(e);
+                    await nodeDeps.emit({
+                        type: 'status',
+                        data: {
+                            status: 'retrying',
+                            message: `${name} failed, retrying (${attempt + 1}/${MAX_NODE_ATTEMPTS})...`,
+                        },
+                    });
+                    deps.logger.warn(`Node ${name} threw (attempt ${attempt}/${MAX_NODE_ATTEMPTS}): ${message}`);
+                    await (0, cancellation_1.sleepWithSignal)(1000 * attempt, signal);
+                    continue;
+                }
+            }
+        }
+        if (failedResult)
+            return failedResult;
+        throw lastError instanceof Error ? lastError : new Error(String(lastError));
     };
 }
 function routeAfterAnalyzer(state) {

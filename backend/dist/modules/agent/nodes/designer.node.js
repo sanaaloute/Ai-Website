@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.designerNode = designerNode;
 const types_1 = require("../../../types");
 const tools_1 = require("../tools");
+const template_selector_node_1 = require("./template-selector.node");
 function extractJson(text) {
     try {
         return JSON.parse(text);
@@ -67,6 +68,9 @@ async function designerNode(state, deps) {
         { role: 'user', content: (0, types_1.promptToString)((0, types_1.buildPromptContent)(`Analyzer output: ${context}`, state.prompt)) },
     ];
     try {
+        if (state.workflow === 'new_app' && state.sandboxId) {
+            (0, template_selector_node_1.startTemplateCopy)(deps, state.sandboxId, state.websiteCategory || 'generic');
+        }
         await deps.emit({
             type: 'status',
             data: { status: 'analyzing', message: 'Creating design system spec...' },

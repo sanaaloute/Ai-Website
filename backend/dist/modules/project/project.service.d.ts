@@ -1,5 +1,5 @@
 import { StorageService } from "../../lib/storage.service";
-export interface LovecodeDeploymentMetadata {
+export interface AiWebsiteDeploymentMetadata {
     platform?: string;
     githubRepoUrl?: string;
     vercelProjectId?: string;
@@ -8,17 +8,17 @@ export interface LovecodeDeploymentMetadata {
     pocketbaseUrl?: string;
     pocketbaseAdminUrl?: string;
 }
-export interface LovecodeProjectMetadata {
+export interface AiWebsiteProjectMetadata {
     uuid?: string;
     name?: string;
     siteTitle?: string;
 }
-export interface UpsertLovecodeJsonOptions {
-    project?: LovecodeProjectMetadata;
-    deployment?: LovecodeDeploymentMetadata;
+export interface UpsertAiWebsiteJsonOptions {
+    project?: AiWebsiteProjectMetadata;
+    deployment?: AiWebsiteDeploymentMetadata;
     snapshot?: Record<string, unknown>;
 }
-interface LovecodeJson {
+interface AiWebsiteJson {
     project: {
         uuid: string;
         name: string;
@@ -39,10 +39,10 @@ export declare class ProjectService {
     private readonly storage;
     private readonly logger;
     constructor(storage: StorageService);
-    upsertLovecodeJson(userId: string, projectId: string, options?: UpsertLovecodeJsonOptions): Promise<{
+    upsertAiWebsiteJson(userId: string, projectId: string, options?: UpsertAiWebsiteJsonOptions): Promise<{
         content: string;
         snapshot: Record<string, unknown>;
     } | null>;
-    readLovecodeJson(userId: string, projectId: string): Promise<LovecodeJson | null>;
+    readAiWebsiteJson(userId: string, projectId: string): Promise<AiWebsiteJson | null>;
 }
 export {};

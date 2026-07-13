@@ -306,7 +306,7 @@ let GithubService = GithubService_1 = class GithubService {
         }
         const newTree = (await treeRes.json());
         const commitBody = {
-            message: 'Update from LoveCode',
+            message: 'Update from AI-Website',
             tree: newTree.sha,
         };
         if (baseCommitSha)
@@ -385,7 +385,7 @@ let GithubService = GithubService_1 = class GithubService {
     sanitizeRepoName(name) {
         const trimmed = name.trim().replace(/\s+/g, '-');
         const safe = trimmed.replace(/[^A-Za-z0-9._-]/g, '-').replace(/-+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
-        return safe || 'lovecode-app';
+        return safe || 'ai-website-app';
     }
 };
 exports.GithubService = GithubService;

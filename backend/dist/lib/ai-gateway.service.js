@@ -12,6 +12,7 @@ const common_1 = require("@nestjs/common");
 const env_1 = require("../config/env");
 const types_1 = require("../types");
 const llm_providers_1 = require("./llm-providers");
+const cancellation_1 = require("./cancellation");
 class CodeContentExtractor {
     constructor() {
         this.buffer = '';
@@ -208,7 +209,7 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
         this.logger.error(`All chatCompletions models failed: ${errors.join('; ')}`);
         throw new Error(`All models failed: ${errors.join('; ')}`);
     }
-    async chatCompletionsStream(messages, model, apiKey, onToken) {
+    async chatCompletionsStream(messages, model, apiKey, onToken, signal) {
         const candidates = this.normalizeCandidates(model, apiKey);
         const errors = [];
         for (const candidate of candidates) {
@@ -221,9 +222,11 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
             };
             for (const [i, m] of candidate.models.entries()) {
                 try {
+                    (0, cancellation_1.throwIfCancelled)(signal);
                     const res = await fetch(url, {
                         method: 'POST',
                         headers,
+                        signal: (0, cancellation_1.combineAbortSignals)(signal),
                         body: JSON.stringify({
                             model: m,
                             messages,
@@ -245,6 +248,7 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
                     let buffer = '';
                     let fullText = '';
                     while (true) {
+                        (0, cancellation_1.throwIfCancelled)(signal);
                         const { done, value } = await reader.read();
                         if (done)
                             break;
@@ -282,6 +286,9 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
                     return fullText;
                 }
                 catch (err) {
+                    if ((0, cancellation_1.isCancellation)(err) || signal?.aborted) {
+                        throw (0, cancellation_1.isCancellation)(err) ? err : new cancellation_1.CancelledError();
+                    }
                     const msg = err instanceof Error ? err.message : String(err);
                     errors.push(`${candidate.provider}/${m}: ${msg}`);
                     this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} error: ${msg}`);
@@ -291,7 +298,7 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
         this.logger.error(`All chatCompletionsStream models failed: ${errors.join('; ')}`);
         throw new Error(`All models failed: ${errors.join('; ')}`);
     }
-    async chatCompletionsWithToolsStream(messages, tools, model, apiKey, onToken, onToolCall, onFileStart) {
+    async chatCompletionsWithToolsStream(messages, tools, model, apiKey, onToken, onToolCall, onFileStart, signal) {
         const candidates = this.normalizeCandidates(model, apiKey);
         const errors = [];
         for (const candidate of candidates) {
@@ -304,9 +311,11 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
             };
             for (const [i, m] of candidate.models.entries()) {
                 try {
+                    (0, cancellation_1.throwIfCancelled)(signal);
                     const res = await fetch(url, {
                         method: 'POST',
                         headers,
+                        signal: (0, cancellation_1.combineAbortSignals)(signal),
                         body: JSON.stringify({
                             model: m,
                             messages,
@@ -366,6 +375,7 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
                         }
                     };
                     while (true) {
+                        (0, cancellation_1.throwIfCancelled)(signal);
                         const { done, value } = await reader.read();
                         if (done)
                             break;
@@ -476,6 +486,9 @@ let AiGatewayService = AiGatewayService_1 = class AiGatewayService {
                     return { content: content || null, toolCalls, toolResults };
                 }
                 catch (err) {
+                    if ((0, cancellation_1.isCancellation)(err) || signal?.aborted) {
+                        throw (0, cancellation_1.isCancellation)(err) ? err : new cancellation_1.CancelledError();
+                    }
                     const msg = err instanceof Error ? err.message : String(err);
                     errors.push(`${candidate.provider}/${m}: ${msg}`);
                     this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} error: ${msg}`);

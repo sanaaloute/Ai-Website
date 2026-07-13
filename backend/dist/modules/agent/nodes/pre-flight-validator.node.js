@@ -120,7 +120,7 @@ async function preFlightValidatorNode(state, deps) {
     try {
         const resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('pre_flight_validator'), aiCredentials, async (token) => {
             await deps.emit({ type: 'token', data: { content: token } });
-        });
+        }, deps.signal);
         const result = extractJson(resultText) || {};
         const correctedSteps = Array.isArray(result.corrected_steps)
             ? result.corrected_steps

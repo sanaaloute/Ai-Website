@@ -1,0 +1,99 @@
+{
+  "category": "b2b-saas",
+  "label": "B2B SaaS",
+  "description": "Landing page templates for B2B SaaS products. Each template is a standalone Next.js (App Router) + TypeScript + Tailwind CSS project — clone, npm install, and run.",
+  "framework": "nextjs",
+  "styling": "tailwindcss",
+  "templates": [
+    {
+      "id": "b2b-saas-analytics-platform",
+      "name": "PulseMetrics — Analytics Platform",
+      "path": "01-analytics-platform",
+      "subcategory": "analytics",
+      "description": "Product analytics landing page: dashboard hero mockup, funnels, retention, revenue analytics positioning.",
+      "tags": ["analytics", "dashboard", "data"],
+      "primaryColor": "243 75% 59%"
+    },
+    {
+      "id": "b2b-saas-crm-sales-pipeline",
+      "name": "DealFlow — CRM & Sales Pipeline",
+      "path": "02-crm-sales-pipeline",
+      "subcategory": "crm",
+      "description": "CRM and sales pipeline landing page for B2B sales teams: pipeline management, sequences, forecasting.",
+      "tags": ["crm", "sales", "pipeline"],
+      "primaryColor": "214 89% 56%"
+    },
+    {
+      "id": "b2b-saas-project-management",
+      "name": "TaskPilot — Project Management",
+      "path": "03-project-management",
+      "subcategory": "project-management",
+      "description": "Project management landing page for product & engineering teams: boards, sprints, roadmaps, automations.",
+      "tags": ["project-management", "tasks", "teams"],
+      "primaryColor": "262 83% 58%"
+    },
+    {
+      "id": "b2b-saas-marketing-automation",
+      "name": "BrightWave — Marketing Automation",
+      "path": "04-marketing-automation",
+      "subcategory": "marketing",
+      "description": "Marketing automation landing page for growth teams: campaigns, lead scoring, journeys, A/B testing.",
+      "tags": ["marketing", "automation", "email"],
+      "primaryColor": "32 95% 55%"
+    },
+    {
+      "id": "b2b-saas-devops-monitoring",
+      "name": "UptimeCloud — DevOps Monitoring",
+      "path": "05-devops-monitoring",
+      "subcategory": "devops",
+      "description": "Monitoring & observability landing page for DevOps/SRE teams: uptime, logs, traces, alerting.",
+      "tags": ["devops", "monitoring", "observability"],
+      "primaryColor": "160 84% 39%"
+    },
+    {
+      "id": "b2b-saas-hr-people-ops",
+      "name": "PeopleHub — HR & People Ops",
+      "path": "06-hr-people-ops",
+      "subcategory": "hr",
+      "description": "HR & people operations landing page: onboarding, time off, performance reviews, payroll sync.",
+      "tags": ["hr", "people-ops", "payroll"],
+      "primaryColor": "346 77% 58%"
+    },
+    {
+      "id": "b2b-saas-billing-invoicing",
+      "name": "InvoiceFlow — Billing & Invoicing",
+      "path": "07-billing-invoicing",
+      "subcategory": "fintech",
+      "description": "Billing & invoicing landing page for finance teams: invoices, subscriptions, dunning, payments.",
+      "tags": ["billing", "invoicing", "fintech"],
+      "primaryColor": "173 80% 40%"
+    },
+    {
+      "id": "b2b-saas-customer-support",
+      "name": "SupportDesk — Customer Support",
+      "path": "08-customer-support",
+      "subcategory": "support",
+      "description": "Helpdesk landing page for support teams: shared inbox, live chat, knowledge base, SLAs.",
+      "tags": ["support", "helpdesk", "tickets"],
+      "primaryColor": "199 89% 48%"
+    },
+    {
+      "id": "b2b-saas-security-compliance",
+      "name": "ShieldOps — Security & Compliance",
+      "path": "09-security-compliance",
+      "subcategory": "security",
+      "description": "Security & compliance landing page: threat detection, SOC 2/ISO automation, audit logs.",
+      "tags": ["security", "compliance", "audit"],
+      "primaryColor": "0 72% 51%"
+    },
+    {
+      "id": "b2b-saas-ai-workflow-automation",
+      "name": "NeuralWorks — AI Workflow Automation",
+      "path": "10-ai-workflow-automation",
+      "subcategory": "ai-automation",
+      "description": "AI workflow automation landing page: visual builder, AI agents, integrations, approvals.",
+      "tags": ["ai", "automation", "workflows"],
+      "primaryColor": "292 84% 61%"
+    }
+  ]
+}

@@ -91,7 +91,7 @@ async function e2eTestGeneratorNode(state, deps) {
             { role: 'system', content: systemPrompt },
             { role: 'user', content: context },
         ];
-        const rawCode = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('e2e_test_generator'), state.aiCredentials);
+        const rawCode = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('e2e_test_generator'), state.aiCredentials, undefined, deps.signal);
         const testCode = extractCode(rawCode);
         const testDir = `/tmp/e2e-tests-${sandboxId}`;
         await fs_1.promises.mkdir(testDir, { recursive: true });

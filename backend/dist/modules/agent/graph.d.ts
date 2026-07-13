@@ -10,6 +10,7 @@ import { TemplateService } from './services/template.service';
 import { AgentPersistenceService } from './services/agent-persistence.service';
 import { DatabaseSeederService } from './services/database-seeder.service';
 import { AgentMcpToolService } from './services/agent-mcp-tool.service';
+import type { TemplateCopyResult } from './nodes/template-selector.node';
 export interface GraphDependencies {
     aiGateway: AiGatewayService;
     e2b: E2BService;
@@ -21,5 +22,10 @@ export interface GraphDependencies {
     agentMcpToolService: AgentMcpToolService;
     logger: Logger;
     emit: (event: AgentEvent) => void | Promise<void>;
+    signal?: AbortSignal;
+    templateCopy?: {
+        category: string;
+        promise: Promise<TemplateCopyResult>;
+    };
 }
 export declare function buildAgentGraph(checkpointer?: BaseCheckpointSaver): CompiledStateGraph<AgentState, Partial<AgentState>>;

@@ -224,7 +224,7 @@ let VercelService = VercelService_1 = class VercelService {
     sanitizeProjectName(name) {
         const lowered = name.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
         const trimmed = lowered.replace(/^-+|-+$/g, '').slice(0, 100);
-        return trimmed || 'lovecode-app';
+        return trimmed || 'ai-website-app';
     }
     ensureUrl(domain) {
         const trimmed = domain.trim();

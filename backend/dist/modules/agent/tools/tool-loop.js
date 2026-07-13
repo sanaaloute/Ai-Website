@@ -6,6 +6,7 @@ const file_manifest_1 = require("./file-manifest");
 const stream_writer_1 = require("./stream-writer");
 const tool_definitions_1 = require("./tool-definitions");
 const tool_executor_1 = require("./tool-executor");
+const cancellation_1 = require("../../../lib/cancellation");
 function createAgentContext(state, deps) {
     const sandboxProvider = new sandbox_provider_1.SandboxProvider(deps.e2b, state.sandboxId, state.projectId);
     const streamWriter = new stream_writer_1.CallbackStreamWriter((event) => {
@@ -41,18 +42,19 @@ async function runToolLoop(deps, state, buildTools, messages, nodeType, aiCreden
     let finalContent = '';
     let iteration = 0;
     const executeSingleToolCall = async (toolCall) => {
-        const result = await (0, tool_executor_1.executeToolCall)(toolCall, tools);
+        const result = await (0, tool_executor_1.executeToolCall)(toolCall, tools, deps.signal);
         deps.logger.debug(`[${nodeType}] tool result: ${result.name} = ${result.content.slice(0, 200)}`);
         return result;
     };
     while (iteration < maxIterations) {
         iteration++;
+        (0, cancellation_1.throwIfCancelled)(deps.signal);
         deps.logger.debug(`[${nodeType}] tool loop iteration ${iteration}`);
         const { content, toolCalls, toolResults } = await deps.aiGateway.chatCompletionsWithToolsStream(messages, toolDefinitions, deps.modelResolver.resolveSequence(nodeType), aiCredentials, async (token, kind) => {
             await deps.emit({ type: 'token', data: { content: token, kind } });
         }, async (toolCall) => executeSingleToolCall(toolCall), async (path) => {
             await deps.emit({ type: 'file_start', data: { path } });
-        });
+        }, deps.signal);
         if (content) {
             finalContent = content;
             deps.logger.debug(`[${nodeType}] content preview: ${content.slice(0, 200)}`);

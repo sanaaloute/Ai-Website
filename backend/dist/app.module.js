@@ -23,6 +23,7 @@ const auth_module_1 = require("./modules/auth/auth.module");
 const admin_module_1 = require("./modules/admin/admin.module");
 const pocketbase_module_1 = require("./modules/pocketbase/pocketbase.module");
 const job_queue_module_1 = require("./modules/job-queue/job-queue.module");
+const templates_module_1 = require("./modules/templates/templates.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -44,6 +45,7 @@ exports.AppModule = AppModule = __decorate([
             admin_module_1.AdminModule,
             pocketbase_module_1.PocketbaseModule,
             job_queue_module_1.JobQueueModule,
+            templates_module_1.TemplatesModule,
         ],
     })
 ], AppModule);

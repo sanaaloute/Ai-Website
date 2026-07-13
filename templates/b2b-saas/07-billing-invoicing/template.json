@@ -1,0 +1,11 @@
+{
+  "id": "b2b-saas-billing-invoicing",
+  "name": "InvoiceFlow — Billing & Invoicing",
+  "category": "b2b-saas",
+  "subcategory": "fintech",
+  "description": "Billing & invoicing landing page template for B2B fintech: hero with finance metrics, logo cloud, features, stats, testimonials, pricing, FAQ and CTA.",
+  "tags": ["billing", "invoicing", "fintech", "payments", "saas"],
+  "framework": "nextjs",
+  "styling": "tailwindcss",
+  "primaryColor": "173 80% 40%"
+}

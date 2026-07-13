@@ -16,6 +16,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PocketbaseModule } from './modules/pocketbase/pocketbase.module';
 import { JobQueueModule } from './modules/job-queue/job-queue.module';
+import { TemplatesModule } from './modules/templates/templates.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { JobQueueModule } from './modules/job-queue/job-queue.module';
     AdminModule,
     PocketbaseModule,
     JobQueueModule,
+    TemplatesModule,
   ],
 })
 export class AppModule {}

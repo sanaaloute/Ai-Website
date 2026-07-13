@@ -1,8 +1,39 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.startTemplateCopy = startTemplateCopy;
 exports.templateSelectorNode = templateSelectorNode;
 const tools_1 = require("../tools");
 const e2b_service_1 = require("../../../lib/e2b.service");
+const cancellation_1 = require("../../../lib/cancellation");
+async function runTemplateCopy(deps, sandboxId, category) {
+    let resolvedCategory = category;
+    let templateFiles = await deps.templateService.getTemplateFiles(resolvedCategory);
+    if (!Object.keys(templateFiles).length) {
+        deps.logger.warn(`No template found for category ${resolvedCategory}, using generic`);
+        templateFiles = await deps.templateService.getGenericTemplate();
+        resolvedCategory = 'generic';
+    }
+    const framework = await deps.templateService.getTemplateKind(resolvedCategory);
+    const templateEntries = Object.entries(templateFiles)
+        .filter(([filePath]) => !(0, e2b_service_1.isForbiddenPath)(filePath))
+        .map(([filePath, content]) => ({ relativePath: filePath, content }));
+    const written = await deps.e2b.writeFilesBatch(sandboxId, templateEntries);
+    return {
+        category: resolvedCategory,
+        framework,
+        templateFiles,
+        writtenCount: written.length,
+    };
+}
+function startTemplateCopy(deps, sandboxId, category) {
+    if (deps.templateCopy)
+        return;
+    deps.logger.log(`Starting template copy in parallel for category '${category}'`);
+    deps.templateCopy = {
+        category,
+        promise: runTemplateCopy(deps, sandboxId, category),
+    };
+}
 function renderColor(token) {
     return `- **${token.name}**: ${token.value} — ${token.usage}`;
 }
@@ -55,30 +86,39 @@ async function templateSelectorNode(state, deps) {
     let category = state.websiteCategory || 'generic';
     const tools = new tools_1.SandboxProvider(deps.e2b, state.sandboxId, state.projectId);
     try {
+        (0, cancellation_1.throwIfCancelled)(deps.signal);
         await tools.ensureAlive(state.userId);
-        let templateFiles = await deps.templateService.getTemplateFiles(category);
-        if (!Object.keys(templateFiles).length) {
-            deps.logger.warn(`No template found for category ${category}, using generic`);
-            templateFiles = await deps.templateService.getGenericTemplate();
-            category = 'generic';
-        }
-        const framework = await deps.templateService.getTemplateKind(category);
+        let templateFiles;
+        let framework;
         let loadedCount = 0;
-        let failedCount = 0;
-        const templateEntries = Object.entries(templateFiles)
-            .filter(([filePath]) => !(0, e2b_service_1.isForbiddenPath)(filePath))
-            .map(([filePath, content]) => ({ relativePath: filePath, content }));
+        const failedCount = 0;
+        const pendingCopy = deps.templateCopy;
+        deps.templateCopy = undefined;
+        if (pendingCopy) {
+            deps.logger.log(`Awaiting parallel template copy for category '${pendingCopy.category}'`);
+        }
+        let copyResult;
         try {
-            const written = await deps.e2b.writeFilesBatch(state.sandboxId, templateEntries);
-            loadedCount = written.length;
-            for (const [filePath, content] of Object.entries(templateFiles)) {
-                await deps.emit((0, tools_1.createFileUpdateEvent)(filePath, content, 'created'));
-            }
+            copyResult = pendingCopy
+                ? await pendingCopy.promise
+                : await runTemplateCopy(deps, state.sandboxId, category);
         }
         catch (e) {
-            const message = e instanceof Error ? e.message : String(e);
-            deps.logger.error(`Template copy failed: ${message}`);
-            throw new Error(`Template copy failed: ${message}`);
+            if (pendingCopy) {
+                const message = e instanceof Error ? e.message : String(e);
+                deps.logger.warn(`Parallel template copy failed (${message}); retrying inline`);
+                copyResult = await runTemplateCopy(deps, state.sandboxId, category);
+            }
+            else {
+                throw e;
+            }
+        }
+        category = copyResult.category;
+        templateFiles = copyResult.templateFiles;
+        framework = copyResult.framework;
+        loadedCount = copyResult.writtenCount;
+        for (const [filePath, content] of Object.entries(templateFiles)) {
+            await deps.emit((0, tools_1.createFileUpdateEvent)(filePath, content, 'created'));
         }
         const dbSchema = await deps.templateService.getDbSchema(category);
         if (state.designSpec) {

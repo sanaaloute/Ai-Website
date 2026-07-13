@@ -39,7 +39,7 @@ Rules:
     try {
         const resultText = await deps.aiGateway.chatCompletionsStream(messages, deps.modelResolver.resolveSequence('answer_generator'), aiCredentials, async (token) => {
             await deps.emit({ type: 'token', data: { content: token } });
-        });
+        }, deps.signal);
         return {
             chatAnswer: resultText,
             messages: [{ role: 'assistant', content: resultText }],
