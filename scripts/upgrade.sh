@@ -36,7 +36,9 @@ command -v docker >/dev/null 2>&1 || die "docker is not installed."
 docker compose version >/dev/null 2>&1 || die "the 'docker compose' plugin is not installed."
 
 if [[ "$GIT_PULL" -eq 1 && -d "$ROOT/.git" ]]; then
-  if [[ -n "$(git -C "$ROOT" status --porcelain)" ]]; then
+  # Only tracked-file changes should block the pull; untracked runtime artifacts
+  # on the server (e.g. certbot data) must not prevent upgrades.
+  if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]]; then
     warn "Working tree has local changes — skipping git pull (use --no-git-pull to silence)."
   else
     log "Pulling latest code (fast-forward only)..."
