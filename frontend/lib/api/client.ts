@@ -751,12 +751,11 @@ export async function syncCheckoutSession(body: {
 // ─── Plans / entitlements ─────────────────────────────────────────────────
 
 export type PlanFeatureId =
-  | 'ai_editing'
-  | 'zip_download'
   | 'github_push'
   | 'db_integration'
   | 'deploy'
-  | 'custom_domain';
+  | 'custom_domain'
+  | 'templates';
 
 export interface PlanLimits {
   generationsPerMonth: number | null;
@@ -1012,14 +1011,6 @@ export async function createZipRaw(body: {
     method: 'POST',
     body: JSON.stringify(body),
   }));
-}
-
-export async function downloadRepo(repoUrl: string) {
-  return safeFetchBlob(
-    apiUrl(`/download-repo?repo_url=${encodeURIComponent(repoUrl)}`),
-    { method: 'GET' },
-    'downloadRepo'
-  );
 }
 
 // ─── Sandbox Renew ──────────────────────────────────────────────────────

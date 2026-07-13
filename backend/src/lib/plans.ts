@@ -8,12 +8,11 @@
 export type PlanId = 'trial' | 'basic' | 'standard' | 'pro';
 
 export type PlanFeature =
-  | 'ai_editing'
-  | 'zip_download'
   | 'github_push'
   | 'db_integration'
   | 'deploy'
-  | 'custom_domain';
+  | 'custom_domain'
+  | 'templates';
 
 export interface PlanLimits {
   /** null = unlimited */
@@ -43,22 +42,20 @@ export interface PlanDef {
 }
 
 export const FEATURE_LABELS: Record<PlanFeature, string> = {
-  ai_editing: 'AI editing',
-  zip_download: 'Download ZIP',
   github_push: 'Push to GitHub',
   db_integration: 'Database integration',
   deploy: 'One-click deploy',
   custom_domain: 'Custom domain',
+  templates: 'Pre-built templates',
 };
 
 /** Smallest paid plan that unlocks each feature (for upgrade prompts). */
 export const FEATURE_REQUIRED_PLAN: Record<PlanFeature, PlanId> = {
-  ai_editing: 'standard',
-  zip_download: 'standard',
-  github_push: 'standard',
+  github_push: 'basic',
   db_integration: 'pro',
-  deploy: 'pro',
+  deploy: 'basic',
   custom_domain: 'pro',
+  templates: 'standard',
 };
 
 const HOUR = 3600;
@@ -73,7 +70,7 @@ export const PLANS: Record<PlanId, PlanDef> = {
     limits: {
       generationsPerMonth: null,
       generationsLifetime: 3,
-      sandboxSecondsPerMonth: 1 * HOUR,
+      sandboxSecondsPerMonth: 10 * HOUR,
       maxProjects: 1,
     },
   },
@@ -82,11 +79,11 @@ export const PLANS: Record<PlanId, PlanDef> = {
     label: 'Basic',
     priceMonthly: 9.9,
     priceYearly: 108.9,
-    features: [],
+    features: ['github_push', 'deploy'],
     limits: {
       generationsPerMonth: 10,
       generationsLifetime: null,
-      sandboxSecondsPerMonth: 5 * HOUR,
+      sandboxSecondsPerMonth: 200 * HOUR,
       maxProjects: 3,
     },
   },
@@ -95,11 +92,11 @@ export const PLANS: Record<PlanId, PlanDef> = {
     label: 'Standard',
     priceMonthly: 19.9,
     priceYearly: 218.9,
-    features: ['ai_editing', 'zip_download', 'github_push'],
+    features: ['github_push', 'deploy', 'templates'],
     limits: {
       generationsPerMonth: 50,
       generationsLifetime: null,
-      sandboxSecondsPerMonth: 30 * HOUR,
+      sandboxSecondsPerMonth: 500 * HOUR,
       maxProjects: null,
     },
   },
@@ -108,11 +105,11 @@ export const PLANS: Record<PlanId, PlanDef> = {
     label: 'Pro',
     priceMonthly: 39.9,
     priceYearly: 438.9,
-    features: ['ai_editing', 'zip_download', 'github_push', 'db_integration', 'deploy', 'custom_domain'],
+    features: ['github_push', 'db_integration', 'deploy', 'custom_domain', 'templates'],
     limits: {
       generationsPerMonth: null,
       generationsLifetime: null,
-      sandboxSecondsPerMonth: 100 * HOUR,
+      sandboxSecondsPerMonth: 700 * HOUR,
       maxProjects: null,
     },
   },

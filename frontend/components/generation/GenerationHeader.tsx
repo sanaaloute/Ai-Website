@@ -108,7 +108,6 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
     openUpgradeDialog({ feature, quota: null, requiredPlan, message });
   };
 
-  const zipLocked = !hasFeature('zip_download');
   const pushLocked = !hasFeature('github_push');
   const deployLocked = !hasFeature('deploy');
   const pbAdminUrl = pocketbaseInfo?.adminUrl;
@@ -236,33 +235,15 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
         <button
           type="button"
           onClick={() => {
-            if (zipLocked) {
-              promptUpgrade(
-                'zip_download',
-                'standard',
-                'Downloading your project as a ZIP requires the Standard plan or higher.'
-              );
-              return;
-            }
             void downloadZip();
           }}
-          disabled={!zipLocked && (!sandboxData || isDownloadingZip)}
+          disabled={!sandboxData || isDownloadingZip}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-35"
-          title={
-            zipLocked
-              ? 'Download ZIP requires the Standard plan'
-              : isDownloadingZip
-                ? 'Preparing…'
-                : 'Download ZIP'
-          }
+          title={isDownloadingZip ? 'Preparing…' : 'Download ZIP'}
         >
-          {zipLocked ? (
-            <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300/80" aria-hidden />
-          ) : (
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="shrink-0">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-            </svg>
-          )}
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="shrink-0">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+          </svg>
           <span className="hidden sm:inline">{isDownloadingZip ? 'DL…' : 'Download'}</span>
         </button>
         <button
@@ -271,8 +252,8 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
             if (pushLocked) {
               promptUpgrade(
                 'github_push',
-                'standard',
-                'Pushing your project to GitHub requires the Standard plan or higher.'
+                'basic',
+                'Pushing your project to GitHub requires the Basic plan or higher.'
               );
               return;
             }
@@ -282,7 +263,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-purple/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
           title={
             pushLocked
-              ? 'Push to GitHub requires the Standard plan'
+              ? 'Push to GitHub requires the Basic plan'
               : !integrationReadiness.ready
                 ? integrationReadiness.primaryReason || 'Workflow not ready'
                 : undefined
@@ -301,8 +282,8 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
             if (deployLocked) {
               promptUpgrade(
                 'deploy',
-                'pro',
-                'One-click deploy requires the Pro plan.'
+                'basic',
+                'One-click deploy requires the Basic plan or higher.'
               );
               return;
             }
@@ -310,7 +291,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           }}
           disabled={!deployLocked && integrationBusy !== null}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-          title={deployLocked ? 'One-click deploy requires the Pro plan' : undefined}
+          title={deployLocked ? 'One-click deploy requires the Basic plan' : undefined}
         >
           {deployLocked ? (
             <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300/80" aria-hidden />

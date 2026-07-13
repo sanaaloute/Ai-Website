@@ -219,12 +219,6 @@ export default function PricingSection() {
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-zinc-500">
-        <span>{t("trustNoCard")}</span>
-        <span>{t("trustCancel")}</span>
-        <span>{t("trustRefund")}</span>
-      </div>
-
       {checkoutError && (
         <p className="text-xs text-red-300">{checkoutError}</p>
       )}

@@ -63,7 +63,7 @@ export async function downloadZip(deps: DownloadZipDeps): Promise<void> {
       const data = (await response.json().catch(() => ({}))) as {
         error?: string;
         code?: string;
-        feature?: 'ai_editing' | 'zip_download' | 'github_push' | 'db_integration' | 'deploy' | 'custom_domain' | null;
+        feature?: 'github_push' | 'db_integration' | 'deploy' | 'custom_domain' | 'templates' | null;
         requiredPlan?: 'basic' | 'standard' | 'pro';
         message?: string;
       };

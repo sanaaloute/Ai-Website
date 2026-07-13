@@ -82,9 +82,10 @@
         "cta": "Empezar gratis",
         "features": [
           "3 generaciones",
-          "1 hora de sandbox al mes",
+          "10 horas de sandbox al mes",
           "1 proyecto guardado",
-          "Edición visual"
+          "Edición visual",
+          "Descargar ZIP"
         ]
       },
       "basic": {
@@ -93,9 +94,12 @@
         "cta": "Elegir Básico",
         "features": [
           "10 generaciones al mes",
-          "5 horas de sandbox al mes",
+          "200 horas de sandbox al mes",
           "3 proyectos guardados",
-          "Edición visual"
+          "Edición visual",
+          "Descargar ZIP",
+          "Subir a GitHub",
+          "Despliegue con un clic"
         ]
       },
       "standard": {
@@ -104,12 +108,13 @@
         "cta": "Elegir Estándar",
         "features": [
           "50 generaciones al mes",
-          "30 horas de sandbox al mes",
+          "500 horas de sandbox al mes",
           "Proyectos guardados ilimitados",
           "Edición visual",
-          "Edición con IA",
           "Descargar ZIP",
-          "Subir a GitHub"
+          "Subir a GitHub",
+          "Despliegue con un clic",
+          "Plantillas prediseñadas"
         ]
       },
       "pro": {
@@ -118,9 +123,10 @@
         "cta": "Elegir Pro",
         "features": [
           "Generaciones ilimitadas",
-          "100 horas de sandbox al mes",
+          "700 horas de sandbox al mes",
           "Proyectos guardados ilimitados",
           "Todo lo incluido en Estándar",
+          "Plantillas prediseñadas",
           "Integración de base de datos",
           "Despliegue con un clic",
           "Dominio personalizado"

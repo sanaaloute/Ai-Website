@@ -2,11 +2,11 @@
 
 import { useRouter } from "@/i18n/navigation";
 import { motion } from "framer-motion";
-import { Download, ExternalLink, Wand2 } from "lucide-react";
+import { ExternalLink, Wand2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { TemplatePresetRow } from "@/lib/templates/types";
-import { useTemplateDownloadTrigger } from "@/components/templates/TemplatesPageShell";
-import { createAgentSession } from "@/lib/api/client";
+import { createAgentSession, extractPlanLimitError } from "@/lib/api/client";
+import { useEntitlementsStore } from "@/stores/entitlementsStore";
 
 type Props = {
   preset: TemplatePresetRow;
@@ -18,12 +18,9 @@ export default function TemplateCard({ preset, animateDelay }: Props) {
   const t = useTranslations("templates");
   const tPreset = useTranslations("presets");
   const router = useRouter();
-  const downloadTrigger = useTemplateDownloadTrigger();
   const title = tPreset.has(preset.id + "_title") ? tPreset(preset.id + "_title") : preset.title;
   const description = tPreset.has(preset.id + "_desc") ? tPreset(preset.id + "_desc") : preset.short_description;
   const screenshotUrl = `https://v1.screenshot.11ty.dev/${encodeURIComponent(preset.website_url)}/opengraph/`;
-  const downloadApiUrl = `/api/download-repo?repoUrl=${encodeURIComponent(preset.git_repo_url)}`;
-  const repoName = preset.git_repo_url.split('/').pop()?.replace(/\.git$/, '') || 'repo';
 
   const handleEditWithAi = async () => {
     const result = await createAgentSession({
@@ -31,6 +28,12 @@ export default function TemplateCard({ preset, animateDelay }: Props) {
       templatePrompt: preset.suggested_prompt,
     });
     if (!result.ok) {
+      // Plan-gated: pre-built templates require Standard or Pro.
+      const planLimit = extractPlanLimitError(result);
+      if (planLimit) {
+        useEntitlementsStore.getState().openUpgradeDialog(planLimit);
+        return;
+      }
       // Fallback: navigate without a session. The generation page will show an empty workspace.
       router.push("/generation");
       return;
@@ -95,25 +98,6 @@ export default function TemplateCard({ preset, animateDelay }: Props) {
         </div>
 
         <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-2">
-          {downloadTrigger ? (
-            <button
-              type="button"
-              onClick={() => downloadTrigger(preset.git_repo_url, repoName)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
-            >
-              <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {t("download")}
-            </button>
-          ) : (
-            <a
-              href={downloadApiUrl}
-              download
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-zinc-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
-            >
-              <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {t("download")}
-            </a>
-          )}
           <button
             type="button"
             onClick={handleEditWithAi}

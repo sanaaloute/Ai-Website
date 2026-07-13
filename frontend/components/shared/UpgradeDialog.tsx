@@ -6,12 +6,11 @@ import { Link } from "@/i18n/navigation";
 import { useEntitlementsStore } from "@/stores/entitlementsStore";
 
 const FEATURE_LABELS: Record<string, string> = {
-  ai_editing: "AI editing",
-  zip_download: "Download ZIP",
   github_push: "Push to GitHub",
   db_integration: "Database integration",
   deploy: "One-click deploy",
   custom_domain: "Custom domain",
+  templates: "Pre-built templates",
 };
 
 const PLAN_LABELS: Record<string, string> = {

@@ -82,9 +82,10 @@
         "cta": "Start free",
         "features": [
           "3 generations",
-          "1 sandbox hour per month",
+          "10 sandbox hours per month",
           "1 saved project",
-          "Visual editing"
+          "Visual editing",
+          "Download ZIP"
         ]
       },
       "basic": {
@@ -93,9 +94,12 @@
         "cta": "Choose Basic",
         "features": [
           "10 generations per month",
-          "5 sandbox hours per month",
+          "200 sandbox hours per month",
           "3 saved projects",
-          "Visual editing"
+          "Visual editing",
+          "Download ZIP",
+          "Push to GitHub",
+          "One-click deploy"
         ]
       },
       "standard": {
@@ -104,12 +108,13 @@
         "cta": "Choose Standard",
         "features": [
           "50 generations per month",
-          "30 sandbox hours per month",
+          "500 sandbox hours per month",
           "Unlimited saved projects",
           "Visual editing",
-          "AI editing",
           "Download ZIP",
-          "Push to GitHub"
+          "Push to GitHub",
+          "One-click deploy",
+          "Pre-built templates"
         ]
       },
       "pro": {
@@ -118,9 +123,10 @@
         "cta": "Choose Pro",
         "features": [
           "Unlimited generations",
-          "100 sandbox hours per month",
+          "700 sandbox hours per month",
           "Unlimited saved projects",
           "Everything in Standard",
+          "Pre-built templates",
           "Database integration",
           "One-click deploy",
           "Custom domain"

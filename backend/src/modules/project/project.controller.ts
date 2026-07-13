@@ -5,16 +5,12 @@ import {
   Patch,
   Delete,
   Body,
-  Query,
   UseGuards,
-  Res,
   HttpStatus,
   HttpException,
   Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
 import { AuthGuard } from '@/common/guards/auth.guard';
-import { OptionalAuthGuard } from '@/common/guards/optional-auth.guard';
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { User, ProjectSummary } from '@/types';
 import { StorageService } from '@/lib/storage.service';
@@ -291,7 +287,6 @@ export class ProjectController {
   @Post('create-zip')
   async createZip(@CurrentUser() user: User, @Body() body: { sandboxId?: string; projectId?: string; projectName?: string }) {
     if (!body.projectId) throw new HttpException({ success: false, error: 'projectId required' }, HttpStatus.BAD_REQUEST);
-    await this.entitlements.assertFeature(user.id, 'zip_download');
     const signedUrl = await this.storage.getSignedZipUrl(user.id, body.projectId);
     return {
       success: true,
@@ -299,14 +294,5 @@ export class ProjectController {
       fileName: `${body.projectName ?? 'project'}.zip`,
       message: 'ZIP created successfully',
     };
-  }
-
-  @Get('download-repo')
-  @UseGuards(OptionalAuthGuard)
-  async downloadRepo(@Query('repo_url') repoUrl: string, @Res() res: Response) {
-    if (!repoUrl) throw new HttpException({ success: false, error: 'repo_url required' }, HttpStatus.BAD_REQUEST);
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', 'attachment; filename=repo.zip');
-    res.send(Buffer.from(`stub zip for ${repoUrl}`));
   }
 }

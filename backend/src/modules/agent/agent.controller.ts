@@ -85,9 +85,14 @@ export class AgentController {
     @Body() body: Record<string, unknown>,
   ) {
     const prompt = this.validatePrompt(body.prompt);
+    const templateRepo = typeof body.templateRepo === 'string' ? body.templateRepo : undefined;
+    if (templateRepo) {
+      // Starting from a pre-built template is a Standard+ feature.
+      await this.entitlements.assertFeature(user.id, 'templates');
+    }
     const sessionData: Omit<AgentSessionData, 'userId'> = {
       prompt: prompt ?? undefined,
-      templateRepo: typeof body.templateRepo === 'string' ? body.templateRepo : undefined,
+      templateRepo,
       templatePrompt: typeof body.templatePrompt === 'string' ? body.templatePrompt : undefined,
       projectName: typeof body.projectName === 'string' ? body.projectName : undefined,
     };
@@ -127,16 +132,11 @@ export class AgentController {
         let prompt: AgentSessionData['prompt'] | undefined;
         let sessionId: string | undefined;
 
-        // Plan gating: fresh generations consume the monthly quota; edit-mode
-        // runs additionally require the AI editing feature (Standard+).
-        // Resumes of an interrupted run are free continuations.
+        // Plan gating: fresh generations consume the plan quota. Resumes of
+        // an interrupted run are free continuations.
         const resumeReview = this.validateResumeReview(body.resumeReview);
         const isContinuation = body.resume === true || resumeReview !== undefined;
         if (!isContinuation) {
-          const intent = typeof body.intent === 'string' ? body.intent : undefined;
-          if (intent !== 'new_app') {
-            await this.entitlements.assertFeature(user.id, 'ai_editing');
-          }
           await this.entitlements.consumeGeneration(user.id);
         }
 
@@ -476,7 +476,6 @@ export class AgentController {
   @Post('analyze-edit-intent')
   @UseGuards(AuthGuard, ApiKeyGuard)
   async analyzeEditIntent(@CurrentUser() user: User, @Body() body: AnalyzeEditIntentDto) {
-    await this.entitlements.assertFeature(user.id, 'ai_editing');
     const aiCredentials = await this.fetchUserCredentials(user.id);
     const searchPlan = await this.ai.analyzeEditIntent(
       body.prompt,
