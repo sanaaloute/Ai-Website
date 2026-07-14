@@ -380,7 +380,7 @@ export function useCloudProjectOpen(deps: CloudProjectOpenDeps) {
     },
     [
       projectOpeningBusy,
-      sandboxData?.sandboxId,
+      sandboxData,
       searchParams,
       router,
       createSandbox,

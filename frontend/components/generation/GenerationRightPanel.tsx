@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { MousePointerClick, Code2, Eye, RefreshCw, ExternalLink, Clock } from 'lucide-react';
@@ -58,23 +58,28 @@ function formatElapsed(totalSeconds: number): string {
  * generation stops and starts again.
  */
 function GenerationTimer({ isGenerating }: { isGenerating: boolean }) {
-  const startedAtRef = useRef<number | null>(null);
+  const [startMs, setStartMs] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
+  // Start/stop the clock when generation toggles. The timestamp can only be
+  // captured after commit, so this stays in an effect by design.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isGenerating) {
-      startedAtRef.current = null;
+      setStartMs(null);
       return;
     }
-    startedAtRef.current = Date.now();
-    setNowMs(Date.now());
+    const now = Date.now();
+    setStartMs(now);
+    setNowMs(now);
     const intervalId = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(intervalId);
   }, [isGenerating]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  if (!isGenerating || startedAtRef.current === null) return null;
+  if (!isGenerating || startMs === null) return null;
 
-  const elapsedSeconds = Math.max(0, Math.floor((nowMs - startedAtRef.current) / 1000));
+  const elapsedSeconds = Math.max(0, Math.floor((nowMs - startMs) / 1000));
 
   return (
     <div

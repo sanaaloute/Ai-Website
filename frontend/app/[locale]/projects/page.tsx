@@ -24,12 +24,6 @@ import { AppLoaderFullscreen } from '@/components/shared/AppLoader';
 import { listProjects, createSandbox, openProject, deleteProject as apiDeleteProject, killSandbox } from '@/lib/api/client';
 import { useLandingAuthStore } from '@/stores/landingAuthStore';
 
-type ProjectsResponse = {
-  success?: boolean;
-  projects?: CloudProjectListItem[];
-  error?: string;
-};
-
 type FilterTab = 'all' | 'deployed' | 'undeployed';
 
 const CURRENT_SESSION_PROJECT_KEY = 'ai-website:currentProjectId:v1';
@@ -124,9 +118,12 @@ export default function ProjectsPage() {
     }
   }, []);
 
+  // Initial data fetch on mount; loadProjects sets state after the async call resolves.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     void loadProjects();
   }, [loadProjects]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const openProjectInGeneration = useCallback(
     async (project: CloudProjectListItem) => {
@@ -292,13 +289,13 @@ export default function ProjectsPage() {
                   <Wand2 className="h-4 w-4" aria-hidden />
                   Start New Project
                 </Link>
-                <a
+                <Link
                   href="/templates"
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-glow-purple/40 hover:bg-white/5 hover:text-white"
                 >
                   <LayoutTemplate className="h-4 w-4" aria-hidden />
                   Explore templates
-                </a>
+                </Link>
               </div>
             </div>
 

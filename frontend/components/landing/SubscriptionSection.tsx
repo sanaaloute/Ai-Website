@@ -171,7 +171,7 @@ export default function SubscriptionSection({
           </button>
           {showUpgrade && (
             <Link
-              href="/#pricing"
+              href="/pricing"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary via-primary-soft to-primary-accent px-4 py-2.5 text-xs font-semibold text-white shadow-soft-glow transition hover:-translate-y-0.5"
             >
               <ArrowUpCircle size={16} />

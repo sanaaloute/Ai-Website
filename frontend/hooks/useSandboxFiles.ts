@@ -100,6 +100,7 @@ export function useSandboxFiles(deps: UseSandboxFilesDeps) {
       });
     },
     [
+      createSandboxRef,
       sandboxData,
       sandboxFileRecoverRef,
       setSandboxFiles,
@@ -129,6 +130,8 @@ export function useSandboxFiles(deps: UseSandboxFilesDeps) {
       createSandbox: createSandboxRef.current!,
     });
   }, [
+    attachE2bSandboxRef,
+    createSandboxRef,
     latestPreviewErrorRef,
     lastPreviewErrorTextRef,
     lastPreviewErrorAtRef,

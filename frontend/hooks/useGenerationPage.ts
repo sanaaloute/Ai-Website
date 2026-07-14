@@ -149,7 +149,6 @@ export function useGenerationPage() {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let lastProgressAt = Date.now();
 
       const readChunkWithTimeout = async (): Promise<ReadableStreamReadResult<Uint8Array>> => {
         return await Promise.race([
@@ -165,7 +164,6 @@ export function useGenerationPage() {
       while (true) {
         const { done, value } = await readChunkWithTimeout();
         if (done) break;
-        lastProgressAt = Date.now();
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -244,6 +242,7 @@ export function useGenerationPage() {
         message: `Failed to install packages: ${message}`,
       }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- depend only on gen.setCodeApplicationState; the full gen object changes on every progress update and would re-create this callback constantly
   }, [sandbox.sandboxData, chatAddChatMessage, gen.setCodeApplicationState]);
 
   // ── Refs ──
@@ -576,6 +575,7 @@ export function useGenerationPage() {
       }
     };
   }, [
+    pathname,
     sandboxDataForRef,
     cloud.projectOpeningBusy,
     sandboxIsLandingBoot,
@@ -828,6 +828,7 @@ export function useGenerationPage() {
     } catch {
       // ignore malformed ai-website.json
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- depend only on chat.setConversationContext; the full chat object changes on every streamed message and would re-run this effect constantly
   }, [files.sandboxFiles, chat.conversationContext.currentProject, chat.setConversationContext]);
 
   // Chat messages are appended (length increases) rather than mutated in place,

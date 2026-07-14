@@ -70,8 +70,7 @@ function isTimeoutError(error: unknown): boolean {
 
 async function fetchWithAuthRetry<T>(
   fetcher: () => Promise<SafeFetchResult<T>>,
-  input: RequestInfo | URL,
-  context?: string
+  input: RequestInfo | URL
 ): Promise<SafeFetchResult<T>> {
   const result = await fetcher();
 
@@ -155,7 +154,7 @@ export async function safeFetchJson<T = unknown>(
       return { ok: true, data: data as T, status: response.status };
     };
 
-    return await fetchWithAuthRetry(doFetch, input, context);
+    return await fetchWithAuthRetry(doFetch, input);
   } catch (networkError) {
     const error: SafeFetchError = {
       ok: false,
@@ -209,7 +208,7 @@ export async function safeFetchBlob(
       return { ok: true, data: blob, status: response.status };
     };
 
-    return await fetchWithAuthRetry(doFetch, input, context);
+    return await fetchWithAuthRetry(doFetch, input);
   } catch (networkError) {
     const error: SafeFetchError = {
       ok: false,

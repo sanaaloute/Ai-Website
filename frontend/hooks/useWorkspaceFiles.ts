@@ -54,7 +54,9 @@ export function useWorkspaceFiles() {
 
   // When files appear and there is no saved tab preference, switch to Code so
   // the Explorer is visible. This fixes the "Explorer disappears" issue after
-  // reload / Supabase project open.
+  // reload / Supabase project open. Reads localStorage, so it must stay in an
+  // effect rather than running during render.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const hasFiles = Object.keys(sandboxFiles).length > 0;
     const savedTab = readSavedTab();
@@ -63,8 +65,11 @@ export function useWorkspaceFiles() {
       writeSavedTab('generation');
     }
   }, [sandboxFiles, activeTab]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Auto-expand all folders whenever the file set changes
+  // Auto-expand all folders whenever the file set changes. Merges into the
+  // user-controlled set, so this cannot be a pure derivation.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const allFolders = extractFolderPaths(sandboxFiles);
     if (allFolders.size === 0) return;
@@ -74,6 +79,7 @@ export function useWorkspaceFiles() {
       return merged;
     });
   }, [sandboxFiles]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const toggleFolder = useCallback((folderPath: string) => {
     setExpandedFolders((prev) => {

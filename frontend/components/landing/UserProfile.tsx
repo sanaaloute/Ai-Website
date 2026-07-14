@@ -8,7 +8,6 @@ import { signOut } from "@/lib/auth/backendAuth";
 import { saveProfile, loadProfile, getBillingPortal } from "@/lib/api/client";
 import { PROFILE_PHONE_REGEX } from "@/lib/profile/phone";
 import {
-  formatAvatarStorageError,
   type ProfilePayload,
   type SubscriptionPayload
 } from "./UserProfile.types";
@@ -90,9 +89,12 @@ export default function UserProfile() {
     }
   }, []);
 
+  // Initial data fetch on mount; load sets state after the async call resolves.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     void load();
   }, [load]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSave = async () => {
     setError(null);

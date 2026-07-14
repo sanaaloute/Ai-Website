@@ -10,7 +10,8 @@
     "pricing": "Tarifs",
     "projects": "Projets",
     "templates": "Modèles",
-    "github": "GitHub",
+    "howItWorks": "Comment ça marche",
+    "contact": "Contact",
     "getApiKey": "Obtenir une clé API",
     "profile": "Profil",
     "login": "Connexion / Inscription",
@@ -31,7 +32,6 @@
     "generate": "Générer",
     "provider": "Fournisseur",
     "shuffleIdeas": "Générer plus d'idées",
-    "startFromRealWebsite": "Commencer par un vrai site web",
     "noticeLoginRequired": "Connectez-vous ou créez un compte pour continuer.",
     "noticeApiKeyRequired": "Clé API GitHub requise avant de générer depuis la page d'accueil.",
     "noticeApiKeyInvalid": "Une clé API GitHub est requise.",
@@ -134,6 +134,14 @@
       }
     }
   },
+  "contact": {
+    "overline": "Contact",
+    "heading": "Contactez-nous",
+    "subheading": "Une question, un retour ou une idée de partenariat ? Nous serions ravis de vous entendre.",
+    "emailLabel": "Envoyez-nous un e-mail",
+    "emailValue": "hello@ai-web-builder.com",
+    "responseTime": "Nous répondons généralement sous un jour ouvré."
+  },
   "download": {
     "overline": "Application de bureau",
     "heading": "SoftChat — Constructeur d'applications IA de bureau",
@@ -153,7 +161,8 @@
     "brandTagline": "Construisez ce que vous aimez",
     "templates": "Modèles",
     "pricing": "Tarifs",
-    "github": "GitHub",
+    "howItWorks": "Comment ça marche",
+    "contact": "Contact",
     "home": "Accueil",
     "projects": "Projets",
     "copyright": "© {year} AI-Website. Tous droits réservés."

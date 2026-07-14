@@ -315,7 +315,7 @@ async function readAgentStream(
       try {
         const event = JSON.parse(line.slice(6)) as AgentStreamEvent;
         lastEventAt = Date.now();
-        // eslint-disable-next-line no-console
+         
         console.log('[useAgentStream event]', event.type, event.type === 'token' ? (event.data.content?.length ?? 0) : '');
         onEvent?.(event);
 

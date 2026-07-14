@@ -10,7 +10,8 @@
     "pricing": "Pricing",
     "projects": "Projects",
     "templates": "Templates",
-    "github": "GitHub",
+    "howItWorks": "How it works",
+    "contact": "Contact",
     "getApiKey": "Get API Key",
     "profile": "Profile",
     "login": "Log in / Register",
@@ -31,7 +32,6 @@
     "generate": "Generate",
     "provider": "Provider",
     "shuffleIdeas": "Generate more ideas",
-    "startFromRealWebsite": "Start from a real website",
     "noticeLoginRequired": "Log in or create an account to continue.",
     "noticeApiKeyRequired": "GitHub API key required before generating from homepage.",
     "noticeApiKeyInvalid": "GitHub API key is required.",
@@ -134,6 +134,14 @@
       }
     }
   },
+  "contact": {
+    "overline": "Contact",
+    "heading": "Get in touch",
+    "subheading": "Have a question, feedback, or a partnership idea? We'd love to hear from you.",
+    "emailLabel": "Email us",
+    "emailValue": "hello@ai-web-builder.com",
+    "responseTime": "We usually reply within one business day."
+  },
   "download": {
     "overline": "Desktop app",
     "heading": "SoftChat — Desktop AI app builder",
@@ -153,7 +161,8 @@
     "brandTagline": "Build what you love",
     "templates": "Templates",
     "pricing": "Pricing",
-    "github": "GitHub",
+    "howItWorks": "How it works",
+    "contact": "Contact",
     "home": "Home",
     "projects": "Projects",
     "copyright": "© {year} AI-Website. All rights reserved."

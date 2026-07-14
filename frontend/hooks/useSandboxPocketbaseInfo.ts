@@ -48,10 +48,13 @@ export function useSandboxPocketbaseInfo(sandboxId: string | null | undefined) {
     }
   }, [sandboxId]);
 
-  // Auto-fetch when sandboxId becomes available
+  // Auto-fetch when sandboxId becomes available; fetchInfo sets state after
+  // the async call resolves.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     void fetchInfo();
   }, [fetchInfo]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return {
     info,

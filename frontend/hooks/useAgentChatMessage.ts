@@ -7,8 +7,6 @@ import type { GenerationProgress } from './useGenerationProgress';
 import {
   getErrorMessage,
   getVisibleUserMessage,
-  isInsufficientQuotaError,
-  isInsufficientQuotaByCode,
   classifyGatewayError,
 } from '@/lib/generation/pageUtils';
 
@@ -90,14 +88,12 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
     aiEnabled,
     ensureAiWebsiteApiKey,
     aiWebsiteKeySite,
-    sandboxData,
     setSandboxData,
     sandboxDataRef,
     createSandbox,
     aiChatInput,
     chatMessages,
     addChatMessage,
-    setChatMessages,
     setAiChatInput,
     setGenerationTaskStartedAtMs,
     setGenerationProgress,
@@ -151,11 +147,9 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
       setAiChatInput('');
 
       // Start sandbox creation in parallel if needed
-      let sandboxCreating = false;
       const hasSandbox = Boolean(sandboxDataRef.current?.sandboxId);
       let createdSandboxId: string | null = null;
       if (!hasSandbox) {
-        sandboxCreating = true;
         addChatMessage('Creating sandbox while I plan your app...', 'system');
         try {
           const newSandbox = await createSandbox(true);
@@ -451,17 +445,16 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
       }
     },
     [
+      deps.projectId,
       aiEnabled,
       ensureAiWebsiteApiKey,
       aiWebsiteKeySite,
-      sandboxData,
       setSandboxData,
       sandboxDataRef,
       createSandbox,
       aiChatInput,
       chatMessages,
       addChatMessage,
-      setChatMessages,
       setAiChatInput,
       setGenerationTaskStartedAtMs,
       setGenerationProgress,
@@ -475,7 +468,6 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
       maybeSetIframeSrc,
       setIsLandingBoot,
       send,
-      abort,
     ]
   );
 

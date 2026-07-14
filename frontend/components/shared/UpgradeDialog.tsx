@@ -64,7 +64,7 @@ export function UpgradeDialog() {
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Link
-                href="/#pricing"
+                href="/pricing"
                 onClick={closeUpgradeDialog}
                 className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-primary via-primary-soft to-primary-accent px-4 py-2.5 text-sm font-semibold text-white shadow-soft-glow transition hover:-translate-y-0.5"
               >

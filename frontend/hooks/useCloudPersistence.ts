@@ -174,7 +174,7 @@ export function useCloudPersistence(deps: CloudPersistenceDeps) {
         cloudSaveInFlightRef.current = false;
       }
     },
-    [latestSnapshotRef, hasMeaningfulSnapshot, setActiveProjectId, cloudSaveInFlightRef, lastCloudSnapshotHashRef]
+    [latestSnapshotRef, hasMeaningfulSnapshot, cloudSaveInFlightRef, lastCloudSnapshotHashRef, addChatMessage]
   );
 
   const persistProjectDurably = useCallback(

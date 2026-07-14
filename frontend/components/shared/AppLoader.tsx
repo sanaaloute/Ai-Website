@@ -231,6 +231,8 @@ export function useAutoProgress({
 }) {
   const [value, setValue] = useState(0);
 
+  // Restart from zero each time the loader is (re)enabled, then tick on an interval.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!enabled) return;
     setValue(0);
@@ -239,6 +241,7 @@ export function useAutoProgress({
     }, Math.max(150, Math.round(intervalMs)));
     return () => window.clearInterval(timer);
   }, [enabled, intervalMs, step]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return value;
 }

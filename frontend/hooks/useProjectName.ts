@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import type { ChatMessage } from '@/hooks/useWorkspaceChat';
-import type { GenerationProgress, CodeApplicationState } from '@/hooks/useGenerationProgress';
+import type { CodeApplicationState } from '@/hooks/useGenerationProgress';
 import type { CloudProjectListItem } from '@/lib/generation/types';
 import type { StoredChatMessageV1 } from '@/lib/generation/storedChatTypes';
 import { REMOTE_SNAPSHOT_EMPTY_STRUCTURE } from '@/lib/generation/remoteSandboxSnapshot';

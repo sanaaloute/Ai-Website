@@ -13,12 +13,9 @@ import {
   pickRandomIdeas,
   type PromptIdea
 } from "@/lib/promptIdeas";
-import { listFeaturedTemplates } from "@/lib/templates/presets";
-import TemplateCard from "@/components/templates/TemplateCard";
 import { getAiWebsiteApiKey, createAgentSession } from "@/lib/api/client";
 import { getCurrentUser, type AuthUser } from "@/lib/auth/backendAuth";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
-import PricingSection from "@/components/landing/PricingSection";
 
 type ApiKeyCheckResult =
   | { ok: true; hasApiKey: boolean; keyPreview: string | null }
@@ -322,23 +319,6 @@ export default function PromptInput() {
           </button>
         </div>
       </motion.div>
-
-      {/* Pricing */}
-      <div id="pricing" className="mt-16 w-full scroll-mt-24">
-        <PricingSection />
-      </div>
-
-      {/* Featured templates */}
-      <div className="mt-16 w-full">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-          {t("startFromRealWebsite")}
-        </p>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {listFeaturedTemplates().map((preset) => (
-            <TemplateCard key={preset.id} preset={preset} />
-          ))}
-        </div>
-      </div>
     </section>
   );
 }

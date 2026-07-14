@@ -362,7 +362,7 @@ export async function agentStream(body: {
     issues: string[];
     todos?: Array<{ id: string; content: string; status: string }>;
   };
-}, signal?: AbortSignal) {
+}) {
   return apiPost<{ success: boolean; jobId: string; status: string }>(
     '/agent-stream',
     { ...body, idempotencyKey: body.idempotencyKey ?? generateIdempotencyKey() },

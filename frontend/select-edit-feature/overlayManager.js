@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars -- concatenated into one bundle; symbols are used across files (see scripts/build-editor-bridge.js) */
 /* ---------- overlay & DOM management ------------------------------------- */
 
 function makeOverlay(overlayClass) {

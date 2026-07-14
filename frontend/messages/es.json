@@ -10,7 +10,8 @@
     "pricing": "Precios",
     "projects": "Proyectos",
     "templates": "Plantillas",
-    "github": "GitHub",
+    "howItWorks": "Cómo funciona",
+    "contact": "Contacto",
     "getApiKey": "Obtener clave API",
     "profile": "Perfil",
     "login": "Iniciar sesión / Registrarse",
@@ -31,7 +32,6 @@
     "generate": "Generar",
     "provider": "Proveedor",
     "shuffleIdeas": "Generar más ideas",
-    "startFromRealWebsite": "Empieza desde un sitio real",
     "noticeLoginRequired": "Inicia sesión o crea una cuenta para continuar.",
     "noticeApiKeyRequired": "Se requiere clave API de GitHub antes de generar desde la página de inicio.",
     "noticeApiKeyInvalid": "Se requiere clave API de GitHub.",
@@ -134,6 +134,14 @@
       }
     }
   },
+  "contact": {
+    "overline": "Contacto",
+    "heading": "Ponte en contacto",
+    "subheading": "¿Tienes una pregunta, un comentario o una idea de colaboración? Nos encantaría saber de ti.",
+    "emailLabel": "Escríbenos por correo",
+    "emailValue": "hello@ai-web-builder.com",
+    "responseTime": "Normalmente respondemos en un día laborable."
+  },
   "download": {
     "overline": "Aplicación de escritorio",
     "heading": "SoftChat — Constructor de apps con IA para escritorio",
@@ -153,7 +161,8 @@
     "brandTagline": "Construye lo que amas",
     "templates": "Plantillas",
     "pricing": "Precios",
-    "github": "GitHub",
+    "howItWorks": "Cómo funciona",
+    "contact": "Contacto",
     "home": "Inicio",
     "projects": "Proyectos",
     "copyright": "© {year} AI-Website. Todos los derechos reservados."

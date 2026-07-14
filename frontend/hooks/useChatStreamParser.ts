@@ -348,7 +348,6 @@ export function useChatStreamParser(deps: ChatStreamParserDeps) {
           setGenerationProgress(prev => {
             const oldStreamedCode = prev.streamedCode;
             const newStreamedCode = oldStreamedCode + textToFlush;
-            const oldLength = oldStreamedCode.length;
 
             const updatedState: GenerationProgress = {
               ...prev,

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
 import type { GenerationProgress, CodeApplicationState } from '@/hooks/useGenerationProgress';
@@ -295,7 +296,10 @@ export function useCloudActions(deps: CloudActionsDeps) {
     setLastGithubRepoUrl,
   });
 
-  openCloudProjectRef.current = cloudProjectOpen.openCloudProject;
+  // Keep the latest openCloudProject callback on the ref for late-bound callers.
+  useEffect(() => {
+    openCloudProjectRef.current = cloudProjectOpen.openCloudProject;
+  });
 
   return {
     loadCloudProjects: cloudProjectList.loadCloudProjects,

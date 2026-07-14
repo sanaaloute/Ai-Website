@@ -1,7 +1,7 @@
 "use client";
 
-import { Github } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 export default function Footer() {
   const t = useTranslations("footer");
@@ -16,24 +16,24 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-5 text-sm">
-          <a href="/templates" className="transition hover:text-white">
+          <Link href="/templates" className="transition hover:text-white">
             {t("templates")}
-          </a>
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 transition hover:text-white"
-          >
-            <Github size={14} />
-            <span>{t("github")}</span>
-          </a>
-          <a href="/" className="transition hover:text-white">
+          </Link>
+          <Link href="/how-it-works" className="transition hover:text-white">
+            {t("howItWorks")}
+          </Link>
+          <Link href="/pricing" className="transition hover:text-white">
+            {t("pricing")}
+          </Link>
+          <Link href="/contact" className="transition hover:text-white">
+            {t("contact")}
+          </Link>
+          <Link href="/" className="transition hover:text-white">
             {t("home")}
-          </a>
-          <a href="/projects" className="transition hover:text-white">
+          </Link>
+          <Link href="/projects" className="transition hover:text-white">
             {t("projects")}
-          </a>
+          </Link>
         </div>
 
         <div className="text-sm text-zinc-600">

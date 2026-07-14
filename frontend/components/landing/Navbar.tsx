@@ -21,13 +21,13 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
     { label: t("home"), href: "/" },
     { label: t("projects"), href: "/projects" },
     { label: t("templates"), href: "/templates" },
-    { label: t("pricing"), href: "#pricing" },
-    { label: t("github"), href: "https://github.com", external: true },
+    { label: t("howItWorks"), href: "/how-it-works" },
+    { label: t("pricing"), href: "/pricing" },
+    { label: t("contact"), href: "/contact" },
   ];
   const [menuOpen, setMenuOpen] = useState(false);
   const isAuthenticated = useLandingAuthStore((s) => s.isAuthenticated);
   const profileAvatarUrl = useLandingAuthStore((s) => s.profileAvatarUrl);
-  const profileDisplayName = useLandingAuthStore((s) => s.profileDisplayName);
   const loginDialogOpen = useLandingAuthStore((s) => s.loginDialogOpen);
   const openLoginDialog = useLandingAuthStore((s) => s.openLoginDialog);
   const closeLoginDialog = useLandingAuthStore((s) => s.closeLoginDialog);
@@ -98,12 +98,13 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
             <div className="hidden flex-nowrap items-center gap-2 lg:flex">
               <LanguageSwitcher />
               {isAuthenticated ? (
-                <a
+                <Link
                   href="/profile"
                   title={t("profile")}
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-background-soft text-zinc-300 transition hover:border-primary/50 hover:text-white`}
                 >
                   {profileAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- user-provided avatar URL from the backend; next/image would require arbitrary remotePatterns
                     <img
                       src={profileAvatarUrl}
                       alt=""
@@ -112,7 +113,7 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
                   ) : (
                     <User size={16} className="shrink-0" aria-hidden />
                   )}
-                </a>
+                </Link>
               ) : (
                 <button
                   type="button"
@@ -170,13 +171,14 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
                       </a>
                     ))}
                     {isAuthenticated && (
-                      <a
+                      <Link
                         href="/profile"
                         title={t("profile")}
                         onClick={() => setMenuOpen(false)}
                         className="flex min-w-0 items-center gap-2 rounded-lg px-3 py-2.5 text-zinc-300 transition hover:bg-white/5 hover:text-white"
                       >
                         {profileAvatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- user-provided avatar URL from the backend; next/image would require arbitrary remotePatterns
                           <img
                             src={profileAvatarUrl}
                             alt=""
@@ -186,7 +188,7 @@ export default function Navbar({ compact = false }: { compact?: boolean }) {
                           <User size={16} className="shrink-0" aria-hidden />
                         )}
                         <span className="min-w-0 truncate">{t("profile")}</span>
-                      </a>
+                      </Link>
                     )}
                     {!isAuthenticated && (
                       <button

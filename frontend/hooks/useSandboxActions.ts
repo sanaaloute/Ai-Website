@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
 import type { GenerationProgress } from '@/hooks/useGenerationProgress';
@@ -107,7 +107,6 @@ export function useSandboxActions(deps: SandboxActionsDeps) {
     setPreviewError,
     setPreviewHealthIssue,
     setActiveTab,
-    chatMessages,
     setChatMessages,
     conversationContext,
     setConversationContext,
@@ -244,9 +243,11 @@ export function useSandboxActions(deps: SandboxActionsDeps) {
   });
 
   // Wire up circular refs after all callbacks are defined
-  fetchSandboxFilesRef.current = fetchSandboxFiles;
-  createSandboxRef.current = createSandbox;
-  attachE2bSandboxRef.current = attachE2bSandbox;
+  useEffect(() => {
+    fetchSandboxFilesRef.current = fetchSandboxFiles;
+    createSandboxRef.current = createSandbox;
+    attachE2bSandboxRef.current = attachE2bSandbox;
+  });
 
   const renameSandboxFile = useCallback(
     async (oldPath: string, newName: string) => {

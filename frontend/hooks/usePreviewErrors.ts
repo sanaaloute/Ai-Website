@@ -251,7 +251,9 @@ export function usePreviewErrors(deps: PreviewErrorsDeps) {
     ]
   );
 
-  submitPreviewErrorForFixRef.current = submitPreviewErrorForFix;
+  useEffect(() => {
+    submitPreviewErrorForFixRef.current = submitPreviewErrorForFix;
+  });
 
   const submitPreviewHealthForFix = useCallback(
     async (issueText: string) => {
@@ -283,7 +285,9 @@ export function usePreviewErrors(deps: PreviewErrorsDeps) {
     ]
   );
 
-  submitPreviewHealthForFixRef.current = submitPreviewHealthForFix;
+  useEffect(() => {
+    submitPreviewHealthForFixRef.current = submitPreviewHealthForFix;
+  });
 
   const handleFixPreviewError = useCallback(() => {
     if (!previewError?.trim()) return;
@@ -329,11 +333,18 @@ export function usePreviewErrors(deps: PreviewErrorsDeps) {
     lastPreviewErrorAtRef.current = 0;
     setPreviewError(null);
     setPreviewHealthIssue(null);
-  }, [sandboxData?.sandboxId]);
+  }, [
+    sandboxData?.sandboxId,
+    lastPreviewErrorAtRef,
+    lastPreviewErrorTextRef,
+    latestPreviewErrorRef,
+    setPreviewError,
+    setPreviewHealthIssue,
+  ]);
 
   useEffect(() => {
     latestPreviewErrorRef.current = previewError;
-  }, [previewError]);
+  }, [previewError, latestPreviewErrorRef]);
 
   return {
     submitPreviewErrorForFixRef,

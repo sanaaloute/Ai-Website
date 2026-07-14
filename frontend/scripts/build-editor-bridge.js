@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS Node build script */
 /**
  * Bundles the visual-editing client scripts that run inside the sandbox preview
  * iframe into a single file that the backend injects into every template.

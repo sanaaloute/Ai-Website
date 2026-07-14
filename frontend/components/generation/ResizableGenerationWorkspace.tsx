@@ -21,6 +21,10 @@ export function ResizableGenerationWorkspace({
   const dragStartXRef = useRef(0);
   const dragStartWidthRef = useRef(DEFAULT_CHAT_WIDTH);
 
+  // Hydrate the saved width after mount. Reading localStorage in an effect
+  // (instead of the useState initializer) keeps SSR and the first client
+  // render identical and avoids hydration mismatches.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -35,6 +39,7 @@ export function ResizableGenerationWorkspace({
       // ignore storage errors
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     isDraggingRef.current = true;

@@ -112,10 +112,14 @@ export function GenerationCognitionLoader({
   const [autoValue, setAutoValue] = useState(0);
   const resolvedTaskId = taskId ?? `${title}::${subtitle ?? ""}::${statusLine ?? ""}`;
 
+  // Reset the simulated progress whenever a new task starts. This must run
+  // before the interval effect below so the bar restarts from zero.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!autoProgress || typeof progress === "number") return;
     setAutoValue(0);
   }, [autoProgress, progress, resolvedTaskId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!autoProgress || typeof progress === "number") return;

@@ -30,9 +30,17 @@ export default function HowItWorks() {
 
   return (
     <section id="how-it-works" className="scroll-mt-24 space-y-8">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white">
-        {t("overline")}
-      </p>
+      <div className="space-y-3">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white">
+          {t("overline")}
+        </p>
+        <h1 className="max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          {t("heading")}
+        </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-zinc-400">
+          {t("subheading")}
+        </p>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         {steps.map((step) => (

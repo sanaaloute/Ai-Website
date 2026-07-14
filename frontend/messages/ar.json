@@ -10,7 +10,8 @@
     "pricing": "الأسعار",
     "projects": "المشاريع",
     "templates": "القوالب",
-    "github": "GitHub",
+    "howItWorks": "كيف يعمل",
+    "contact": "اتصل بنا",
     "getApiKey": "احصل على مفتاح API",
     "profile": "الملف الشخصي",
     "login": "تسجيل الدخول / التسجيل",
@@ -31,7 +32,6 @@
     "generate": "إنشاء",
     "provider": "المزود",
     "shuffleIdeas": "توليد المزيد من الأفكار",
-    "startFromRealWebsite": "ابدأ من موقع حقيقي",
     "noticeLoginRequired": "سجل الدخول أو أنشئ حساباً للمتابعة.",
     "noticeApiKeyRequired": "مفتاح GitHub API مطلوب قبل التوليد من الصفحة الرئيسية.",
     "noticeApiKeyInvalid": "مفتاح GitHub API مطلوب.",
@@ -134,6 +134,14 @@
       }
     }
   },
+  "contact": {
+    "overline": "اتصل بنا",
+    "heading": "تواصل معنا",
+    "subheading": "هل لديك سؤال أو ملاحظة أو فكرة شراكة؟ يسعدنا أن نسمع منك.",
+    "emailLabel": "راسلنا عبر البريد",
+    "emailValue": "hello@ai-web-builder.com",
+    "responseTime": "نرد عادةً خلال يوم عمل واحد."
+  },
   "download": {
     "overline": "تطبيق سطح المكتب",
     "heading": "SoftChat — منشئ تطبيقات سطح المكتب بالذكاء الاصطناعي",
@@ -153,7 +161,8 @@
     "brandTagline": "ابنِ ما تحب",
     "templates": "القوالب",
     "pricing": "الأسعار",
-    "github": "GitHub",
+    "howItWorks": "كيف يعمل",
+    "contact": "اتصل بنا",
     "home": "الرئيسية",
     "projects": "المشاريع",
     "copyright": "© {year} AI-Website. جميع الحقوق محفوظة."

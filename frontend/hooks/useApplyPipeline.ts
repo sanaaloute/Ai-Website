@@ -1,7 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { appConfig } from '@/config/app.config';
 import type { SavedGeneratedProjectV1 } from '@/lib/generation/types';
-import type { AnalyzerIssue } from '@/lib/generation/types';
 import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
 import type { GenerationProgress, ApplyPipelineState, CodeApplicationState, GenerationFile } from '@/hooks/useGenerationProgress';
@@ -38,7 +37,7 @@ export interface ApplyPipelineDeps {
 export function useApplyPipeline(deps: ApplyPipelineDeps) {
   const {
     applyPipelineStateRef, transitionApplyPipelineState, setCodeApplicationState, setGenerationProgress,
-    sandboxData, chatMessages, conversationContext, iframeRef, latestSandboxDataRef, latestPreviewErrorRef,
+    chatMessages, conversationContext, iframeRef, latestSandboxDataRef, latestPreviewErrorRef,
     setHasSavedGeneratedProject, setPreviewHealthIssue, setActiveTab,
     addChatMessage, setConversationContext, log, displayStructure,
     fetchSandboxFiles, waitForPreviewHealthy, probePreviewHealth,
@@ -71,7 +70,7 @@ export function useApplyPipeline(deps: ApplyPipelineDeps) {
       ),
     }));
     return { applyDeadlineAt: undefined };
-  }, [applyPipelineStateRef, transitionApplyPipelineState, setCodeApplicationState]);
+  }, [applyPipelineStateRef, transitionApplyPipelineState, setCodeApplicationState, setGenerationProgress]);
 
   const handleApplySuccess = useCallback(async (
     finalData: unknown, code: string, isEdit: boolean, effectiveSandboxData: SandboxData | null | undefined
@@ -298,7 +297,7 @@ export function useApplyPipeline(deps: ApplyPipelineDeps) {
     setCodeApplicationState({ stage: 'complete' });
     setTimeout(() => { setCodeApplicationState({ stage: null }); }, 3000);
   }, [
-    transitionApplyPipelineState, setCodeApplicationState, sandboxData, chatMessages, conversationContext,
+    transitionApplyPipelineState, setCodeApplicationState, setGenerationProgress, chatMessages, conversationContext,
     iframeRef, latestSandboxDataRef, latestPreviewErrorRef, setHasSavedGeneratedProject, setPreviewHealthIssue,
     setActiveTab, addChatMessage, setConversationContext, log, displayStructure, fetchSandboxFiles,
     waitForPreviewHealthy, probePreviewHealth, ensureProjectNameForAction, persistProjectDurably,

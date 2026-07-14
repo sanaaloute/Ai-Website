@@ -3,7 +3,7 @@ import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
 import type { GenerationProgress } from '@/hooks/useGenerationProgress';
 import { attachE2bSandbox as _attachE2bSandbox } from '@/lib/generation/sandboxActions';
-import { getErrorMessage, type JsonEnvelope } from '@/lib/generation/pageUtils';
+import { getErrorMessage } from '@/lib/generation/pageUtils';
 import { mapSandboxFilesToGenerationFiles } from '@/hooks/useCloudPersistence';
 import { setLastCreatedSandbox } from '@/lib/sandbox/sandboxClientSession';
 import { replaceGenerationSearchParams } from '@/lib/generation/urlUtils';
@@ -120,16 +120,13 @@ export function useSandboxCreation(deps: UseSandboxCreationDeps) {
     setE2bSandboxesFetched,
     setE2bAttachBusy,
     searchParams,
-    router,
     sandboxCreationRef,
     latestSandboxDataRef,
     restoreSavedProjectOnceRef,
-    iframeRef,
     persistSnapshotToCloud,
     requestAutoRestorePreferredProject,
     displayStructure,
     log,
-    promptInput,
     setPromptInput,
     fetchSandboxFilesRef,
   } = deps;
@@ -376,6 +373,8 @@ export function useSandboxCreation(deps: UseSandboxCreationDeps) {
       }
     },
     [
+      fetchSandboxFilesRef,
+      setSandboxData,
       sandboxCreationRef,
       latestSandboxDataRef,
       sandboxData,
@@ -399,15 +398,14 @@ export function useSandboxCreation(deps: UseSandboxCreationDeps) {
       updateStatus,
       setScreenshotError,
       searchParams,
-      router,
       displayStructure,
       log,
       addChatMessage,
-      iframeRef,
     ]
   );
 
   const attachE2bSandbox = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- part of the public signature; callers pass { forceReconnect }
     async (targetSandboxId: string, options?: { forceReconnect?: boolean }) => {
       await _attachE2bSandbox(targetSandboxId, {
         sandboxData,
@@ -427,6 +425,8 @@ export function useSandboxCreation(deps: UseSandboxCreationDeps) {
       });
     },
     [
+      fetchSandboxFilesRef,
+      latestSandboxDataRef,
       sandboxData,
       setSandboxData,
       persistSnapshotToCloud,
@@ -439,7 +439,6 @@ export function useSandboxCreation(deps: UseSandboxCreationDeps) {
       addChatMessage,
       requestAutoRestorePreferredProject,
       searchParams,
-      router,
     ]
   );
 

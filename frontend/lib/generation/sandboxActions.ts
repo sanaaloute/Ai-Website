@@ -1,7 +1,7 @@
 import React from 'react';
 import type { SandboxData } from '@/hooks/useWorkspaceSandbox';
 import type { ChatMessage } from '@/hooks/useWorkspaceChat';
-import { attachSandbox, getSandboxFiles, installPackages as apiInstallPackages, restartPreview as apiRestartPreview } from '@/lib/api/client';
+import { attachSandbox, getSandboxFiles, restartPreview as apiRestartPreview } from '@/lib/api/client';
 import { getErrorMessage } from '@/lib/generation/pageUtils';
 import type { GenerationProgress } from '@/hooks/useGenerationProgress';
 import { assertCurrentSandboxId, assertCurrentSandboxIdStrict, getCurrentSandboxId, setLastCreatedSandbox } from '@/lib/sandbox/sandboxClientSession';
@@ -206,10 +206,6 @@ export async function fetchSandboxFiles(
     return;
   }
 
-  const filesQs = effectiveSandboxId
-    ? `?sandboxId=${encodeURIComponent(effectiveSandboxId)}`
-    : '';
-
   try {
     const result = effectiveSandboxId
       ? await getSandboxFiles(effectiveSandboxId)
@@ -383,78 +379,4 @@ export async function reloadPreview(deps: ReloadPreviewDeps): Promise<void> {
     fromHomeScreen: true,
     preserveProjectContext: true,
   });
-}
-
-export interface InstallPackagesDeps {
-  sandboxData: SandboxData | null;
-  addChatMessage: (content: string, type: ChatMessage['type'], metadata?: ChatMessage['metadata']) => void;
-}
-
-async function installPackages(
-  packages: string[],
-  deps: InstallPackagesDeps
-): Promise<void> {
-  const { sandboxData, addChatMessage } = deps;
-
-  if (!sandboxData) {
-    addChatMessage('No active sandbox. Create a sandbox first!', 'system');
-    return;
-  }
-
-  try {
-    const response = await apiInstallPackages(sandboxData.sandboxId, packages);
-
-    if (!response.ok) {
-      throw new Error(`Failed to install packages: ${response.statusText}`);
-    }
-
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-
-    while (reader) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-
-            switch (data.type) {
-              case 'command':
-                if (!data.command.includes('npm install')) {
-                  addChatMessage(data.command, 'command', { commandType: 'input' });
-                }
-                break;
-              case 'output':
-                addChatMessage(data.message, 'command', { commandType: 'output' });
-                break;
-              case 'error':
-                if (data.message && data.message !== 'undefined') {
-                  addChatMessage(data.message, 'command', { commandType: 'error' });
-                }
-                break;
-              case 'warning':
-                addChatMessage(data.message, 'command', { commandType: 'output' });
-                break;
-              case 'success':
-                addChatMessage(`${data.message}`, 'system');
-                break;
-              case 'status':
-                addChatMessage(data.message, 'system');
-                break;
-            }
-          } catch (e) {
-            console.error('Failed to parse SSE data:', e);
-            addChatMessage('Warning: package install stream parse error, some output may be missing.', 'system');
-          }
-        }
-      }
-    }
-  } catch (error: unknown) {
-    addChatMessage(`Failed to install packages: ${getErrorMessage(error)}`, 'system');
-  }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useMemo, useRef } from 'react';
 import { AppLoaderFullscreen } from '@/components/shared/AppLoader';
 import { HeaderProvider } from '@/components/shared/header/HeaderContext';
 import { GenerationLoadingStates } from '@/components/generation/GenerationLoadingStates';

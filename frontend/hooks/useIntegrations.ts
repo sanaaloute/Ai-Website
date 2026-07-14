@@ -163,91 +163,99 @@ export function useIntegrations(deps: IntegrationsDeps) {
 
   const collectSandboxFilesForExport = useCallback(
     async (retryCount: number = 0): Promise<{ path: string; content: string }[]> => {
-      const exportSandboxId = sandboxData?.sandboxId;
-      if (exportSandboxId && !assertCurrentSandboxIdStrict(exportSandboxId, 'collectSandboxFilesForExport')) {
-        throw new Error('Sandbox has changed. Please retry the export.');
-      }
-      const result = exportSandboxId
-        ? await getSandboxFiles(exportSandboxId, 1000)
-        : { ok: false as const, status: 400, statusText: 'Bad Request', error: 'Missing sandboxId' };
-
-      const data = result.ok
-        ? result.data
-        : {
-            success: false as const,
-            files: undefined,
-            error: result.error,
-            code: undefined,
-          };
-
-      if (result.ok && data.success && data.files) {
-        const files = Object.entries(data.files).map(([path, content]) => ({
-          path,
-          content: content ?? '',
-        }));
-        // Inject user's website title into index.html for deployment
-        const siteTitle = conversationContext.siteTitle || conversationContext.currentProject || 'My App';
-        const indexHtmlIdx = files.findIndex((f) => f.path === 'index.html' || f.path === '/index.html');
-        if (indexHtmlIdx >= 0) {
-          const html = files[indexHtmlIdx].content;
-          const titled = html.replace(/<title>.*?<\/title>/i, `<title>${escapeHtml(siteTitle)}</title>`);
-          files[indexHtmlIdx] = { ...files[indexHtmlIdx], content: titled };
+      // Recursive worker kept inside the callback so the sandbox-restore retry
+      // never references the callback binding before it is initialized.
+      const collectAttempt = async (
+        attempt: number
+      ): Promise<{ path: string; content: string }[]> => {
+        const exportSandboxId = sandboxData?.sandboxId;
+        if (exportSandboxId && !assertCurrentSandboxIdStrict(exportSandboxId, 'collectSandboxFilesForExport')) {
+          throw new Error('Sandbox has changed. Please retry the export.');
         }
-        // Always merge the PocketBase deployment overlay (nginx, docker-compose,
-        // PocketBase migrations/Dockerfile) into the repo. PocketBase is a core
-        // part of every generated project, so it is not optional.
-        try {
-          const pbProjectName = conversationContext.currentProject || 'ai-website-app';
-          const pbDeployment = await preparePocketbaseDeploy({
-            projectName: pbProjectName,
-            domain: pbProjectName,
-          });
-          if (pbDeployment.ok && pbDeployment.data.files?.length) {
-            const existingPaths = new Set(files.map((f) => f.path));
-            for (const file of pbDeployment.data.files) {
-              if (existingPaths.has(file.path)) {
-                // Deployment overlay takes precedence for deployment-critical files.
-                const idx = files.findIndex((f) => f.path === file.path);
-                if (idx >= 0) files[idx] = file;
-              } else {
-                files.push(file);
+        const result = exportSandboxId
+          ? await getSandboxFiles(exportSandboxId, 1000)
+          : { ok: false as const, status: 400, statusText: 'Bad Request', error: 'Missing sandboxId' };
+
+        const data = result.ok
+          ? result.data
+          : {
+              success: false as const,
+              files: undefined,
+              error: result.error,
+              code: undefined,
+            };
+
+        if (result.ok && data.success && data.files) {
+          const files = Object.entries(data.files).map(([path, content]) => ({
+            path,
+            content: content ?? '',
+          }));
+          // Inject user's website title into index.html for deployment
+          const siteTitle = conversationContext.siteTitle || conversationContext.currentProject || 'My App';
+          const indexHtmlIdx = files.findIndex((f) => f.path === 'index.html' || f.path === '/index.html');
+          if (indexHtmlIdx >= 0) {
+            const html = files[indexHtmlIdx].content;
+            const titled = html.replace(/<title>.*?<\/title>/i, `<title>${escapeHtml(siteTitle)}</title>`);
+            files[indexHtmlIdx] = { ...files[indexHtmlIdx], content: titled };
+          }
+          // Always merge the PocketBase deployment overlay (nginx, docker-compose,
+          // PocketBase migrations/Dockerfile) into the repo. PocketBase is a core
+          // part of every generated project, so it is not optional.
+          try {
+            const pbProjectName = conversationContext.currentProject || 'ai-website-app';
+            const pbDeployment = await preparePocketbaseDeploy({
+              projectName: pbProjectName,
+              domain: pbProjectName,
+            });
+            if (pbDeployment.ok && pbDeployment.data.files?.length) {
+              const existingPaths = new Set(files.map((f) => f.path));
+              for (const file of pbDeployment.data.files) {
+                if (existingPaths.has(file.path)) {
+                  // Deployment overlay takes precedence for deployment-critical files.
+                  const idx = files.findIndex((f) => f.path === file.path);
+                  if (idx >= 0) files[idx] = file;
+                } else {
+                  files.push(file);
+                }
               }
             }
+          } catch (pbErr) {
+            console.warn('[collectSandboxFilesForExport] Could not merge PocketBase overlay:', pbErr);
           }
-        } catch (pbErr) {
-          console.warn('[collectSandboxFilesForExport] Could not merge PocketBase overlay:', pbErr);
+
+          return files;
         }
 
-        return files;
-      }
-
-      const status = result.ok ? 200 : result.status;
-      const sandboxMissing = status === 404 || status === 410;
-      if (sandboxMissing && retryCount < 1) {
-        addChatMessage('Sandbox expired/unavailable. Restoring last generation for export…', 'system');
-        try {
-          requestAutoRestorePreferredProject();
-          const newSandbox = await createSandbox({
-            fromHomeScreen: true,
-            preserveProjectContext: true,
-          });
-          if (conversationContext.lastGeneratedCode) {
-            const isEdit = conversationContext.appliedCode.length > 0;
-            if (newSandbox) {
-              await applyGeneratedCode(conversationContext.lastGeneratedCode, isEdit, newSandbox as SandboxData);
+        const status = result.ok ? 200 : result.status;
+        const sandboxMissing = status === 404 || status === 410;
+        if (sandboxMissing && attempt < 1) {
+          addChatMessage('Sandbox expired/unavailable. Restoring last generation for export…', 'system');
+          try {
+            requestAutoRestorePreferredProject();
+            const newSandbox = await createSandbox({
+              fromHomeScreen: true,
+              preserveProjectContext: true,
+            });
+            if (conversationContext.lastGeneratedCode) {
+              const isEdit = conversationContext.appliedCode.length > 0;
+              if (newSandbox) {
+                await applyGeneratedCode(conversationContext.lastGeneratedCode, isEdit, newSandbox as SandboxData);
+              }
+            } else {
+              await new Promise((r) => setTimeout(r, 500));
             }
-          } else {
-            await new Promise((r) => setTimeout(r, 500));
+            await new Promise((r) => setTimeout(r, 1200));
+          } catch {
+            // If restore fails, fall through to original error.
           }
-          await new Promise((r) => setTimeout(r, 1200));
-        } catch {
-          // If restore fails, fall through to original error.
+
+          return collectAttempt(attempt + 1);
         }
 
-        return collectSandboxFilesForExport(retryCount + 1);
-      }
+        throw new Error(data.error || 'Could not read sandbox files.');
+      };
 
-      throw new Error(data.error || 'Could not read sandbox files.');
+      return collectAttempt(retryCount);
     },
     [sandboxData, addChatMessage, requestAutoRestorePreferredProject, createSandbox, conversationContext, applyGeneratedCode]
   );
@@ -829,6 +837,8 @@ export function useIntegrations(deps: IntegrationsDeps) {
       collectSandboxFilesForExport,
       setGithubPushResult,
       slugifyExportName,
+      addChatMessage,
+      sandboxData,
       conversationContext.currentProject,
       setLastGithubRepoUrl,
       runVercelDeploy,

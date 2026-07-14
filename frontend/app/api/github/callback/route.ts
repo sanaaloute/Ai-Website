@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    // eslint-disable-next-line no-console
+     
     console.error('[GitHub callback proxy] upstream error:', message);
     return NextResponse.json(
       { success: false, error: `GitHub callback proxy failed: ${message}` },

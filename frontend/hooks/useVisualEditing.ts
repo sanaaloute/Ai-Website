@@ -65,23 +65,23 @@ export function useVisualEditing(deps: VisualEditingDeps) {
       w.postMessage({ type: 'deactivate-dyad-component-selector' }, '*');
       w.postMessage({ type: 'deactivate-dyad-visual-editing' }, '*');
     }
-  }, [visualSelectMode, sandboxData?.url]);
+  }, [visualSelectMode, sandboxData?.url, iframeRef]);
 
   const handlePreviewIframeLoad = useCallback(() => {
     lastPreviewIframeLoadAtRef.current = Date.now();
     setPreviewIframeRefAtom(iframeRef.current);
     // Re-activate selector after iframe navigations/reloads.
     syncVisualSelectModeToIframe();
-  }, [setPreviewIframeRefAtom, syncVisualSelectModeToIframe]);
+  }, [setPreviewIframeRefAtom, syncVisualSelectModeToIframe, iframeRef, lastPreviewIframeLoadAtRef]);
 
   useEffect(() => {
     visualEditingSelectedRef.current = visualEditingSelectedComponent;
-  }, [visualEditingSelectedComponent]);
+  }, [visualEditingSelectedComponent, visualEditingSelectedRef]);
 
   useEffect(() => {
     setPreviewIframeRefAtom(iframeRef.current);
     return () => setPreviewIframeRefAtom(null);
-  }, [sandboxData?.url, setPreviewIframeRefAtom]);
+  }, [sandboxData?.url, setPreviewIframeRefAtom, iframeRef]);
 
   useEffect(() => {
     if (!visualSelectMode) {
@@ -235,6 +235,16 @@ export function useVisualEditing(deps: VisualEditingDeps) {
     setPreviewError,
     setPreviewHealthIssue,
     visualEditingSelectedComponent?.name,
+    addChatMessageRef,
+    iframeRef,
+    lastPreviewErrorAtRef,
+    lastPreviewErrorTextRef,
+    lastPreviewReadyAtRef,
+    latestPreviewErrorRef,
+    latestSandboxDataRef,
+    sandboxData?.sandboxId,
+    submitPreviewErrorForFixRef,
+    visualEditingSelectedRef,
   ]);
 
   return {

@@ -50,6 +50,8 @@ export function VercelDeployDialog({
   const isUpdate = !!existingAppUuid;
   const debounceRef = useRef<number | null>(null);
 
+  // Initialize the form whenever the dialog (re)opens with fresh props.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
     if (existingDomainUrl) {
@@ -63,6 +65,7 @@ export function VercelDeployDialog({
     }
     setDomainCheck({});
   }, [open, projectName, existingDomainUrl]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const checkDomain = useCallback(async (value: string) => {
     const trimmed = value.trim().toLowerCase().replace(/^https?:\/\//, "");

@@ -10,7 +10,8 @@
     "pricing": "价格",
     "projects": "项目",
     "templates": "模板",
-    "github": "GitHub",
+    "howItWorks": "工作流程",
+    "contact": "联系我们",
     "getApiKey": "获取 API 密钥",
     "profile": "个人资料",
     "login": "登录 / 注册",
@@ -31,7 +32,6 @@
     "generate": "生成",
     "provider": "提供商",
     "shuffleIdeas": "生成更多创意",
-    "startFromRealWebsite": "从真实网站开始",
     "noticeLoginRequired": "登录或创建账户以继续。",
     "noticeApiKeyRequired": "在从主页生成之前需要 GitHub API 密钥。",
     "noticeApiKeyInvalid": "需要提供 GitHub API 密钥。",
@@ -134,6 +134,14 @@
       }
     }
   },
+  "contact": {
+    "overline": "联系我们",
+    "heading": "保持联系",
+    "subheading": "有问题、反馈或合作意向？我们很乐意听到你的声音。",
+    "emailLabel": "发送邮件",
+    "emailValue": "hello@ai-web-builder.com",
+    "responseTime": "我们通常会在一个工作日内回复。"
+  },
   "download": {
     "overline": "桌面应用",
     "heading": "SoftChat — 桌面端 AI 应用构建器",
@@ -153,7 +161,8 @@
     "brandTagline": "构建你所热爱的",
     "templates": "模板",
     "pricing": "价格",
-    "github": "GitHub",
+    "howItWorks": "工作流程",
+    "contact": "联系我们",
     "home": "首页",
     "projects": "项目",
     "copyright": "© {year} AI-Website。保留所有权利。"

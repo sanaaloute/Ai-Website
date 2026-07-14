@@ -1,6 +1,5 @@
 import React from 'react';
 import type { ChatMessage } from '@/hooks/useWorkspaceChat';
-import { getPreviewErrorSignature } from '@/lib/generation/pageUtils';
 
 export interface SubmitPreviewErrorForFixDeps {
   autoPreviewRepairInFlightRef: React.MutableRefObject<boolean>;
