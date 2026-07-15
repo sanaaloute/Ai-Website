@@ -5,15 +5,15 @@
 # Prisma migrations run automatically via the backend container entrypoint when
 # it is recreated.
 #
-# Shared-host notes: only the AI-Website containers, the single host nginx site
-# (installed once, then certbot-managed) and certbot are ever touched. Other
-# sites and services on the host are never modified.
+# Shared-host notes: the neoshop-api-gateway CONTAINER owns ports 80/443. This
+# script only re-detects the gateway network so recreated containers rejoin it,
+# and refreshes our server blocks in the gateway if the config changed.
 #
 # Usage on prod:  bash scripts/upgrade.sh [--no-cache] [--no-git-pull] [--request-cert]
 #   --no-cache      rebuild images without using the Docker layer cache
 #   --no-git-pull   skip the fast-forward git pull
 #   --request-cert  if no certificate exists, obtain one via Let's Encrypt
-#                   (certbot --nginx --redirect; needs DNS pointing here + sudo)
+#                   (webroot served by the gateway; needs DNS + sudo)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -40,6 +40,9 @@ done
 command -v docker >/dev/null 2>&1 || die "docker is not installed."
 docker compose version >/dev/null 2>&1 || die "the 'docker compose' plugin is not installed."
 
+log "Detecting shared gateway..."
+ensure_gateway_network
+
 if [[ "$GIT_PULL" -eq 1 && -d "$ROOT/.git" ]]; then
   # Only tracked-file changes should block the pull; untracked runtime artifacts
   # on the server must not prevent upgrades.
@@ -59,21 +62,27 @@ else
   docker compose build
 fi
 
-# First run on a new host: install the nginx site (later runs leave the
-# certbot-managed file untouched).
-ensure_host_config
-reload_nginx
-
-if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
-  if request_certs "$(letsencrypt_email)"; then
-    ok "Certificates obtained; certbot enabled HTTPS + redirect in the site config."
-  else
-    warn "Certbot failed — keeping the current host nginx config."
-  fi
-fi
-
 log "Recreating changed services..."
 docker compose up -d --remove-orphans
 
 wait_for_backend || warn "Backend health check failed — see logs above."
+
+# Refresh the gateway server blocks (picks up repo config changes).
+if certs_exist; then
+  install_gateway_config https || true
+else
+  install_gateway_config http || true
+fi
+
+if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
+  if request_certs "$(letsencrypt_email)"; then
+    ok "Certificates obtained."
+    if check_gateway_cert_mount; then
+      install_gateway_config https || true
+    fi
+  else
+    warn "Certbot failed — staying on the HTTP gateway config."
+  fi
+fi
+
 show_status

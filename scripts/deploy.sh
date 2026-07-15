@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
-# Full production deploy on the SHARED host (other services already run here;
-# host nginx + certbot own ports 80/443).
-#   1) docker compose down          (tear existing app containers down)
-#   2) docker compose build         (build FRESH images)
-#   3) prisma migrate deploy        (run DB migrations, fail-fast)
-#   4) install the host nginx site  (first deploy only; certbot edits it later)
-#   5) optionally obtain Let's Encrypt certs via certbot --nginx (--request-cert)
-#   6) docker compose up -d         (create and start the app containers)
-#
-# This script only ever touches: the AI-Website containers, the single host
-# nginx site /etc/nginx/sites-available/ai-website, and certbot. Other sites
-# and services on the host are never modified.
+# Full production deploy on the SHARED host. The neoshop-api-gateway CONTAINER
+# owns ports 80/443 — this script never touches host nginx or public ports.
+#   1) detect the gateway container + its Docker network
+#   2) docker compose down          (tear existing app containers down)
+#   3) docker compose build         (build FRESH images)
+#   4) prisma migrate deploy        (run DB migrations, fail-fast)
+#   5) docker compose up -d         (create and start the app containers)
+#   6) install our server blocks into the gateway (auto-detected config dir)
+#   7) optionally obtain Let's Encrypt certs via host certbot (--request-cert)
+#      and switch the gateway config to HTTPS
 #
 # Prisma migrations also run automatically in the backend container entrypoint
 # (Dockerfile CMD: `npx prisma migrate deploy && node dist/main`); the explicit
@@ -19,7 +17,7 @@
 # Usage on prod:  bash scripts/deploy.sh [--no-cache] [--request-cert]
 #   --no-cache      rebuild images without using the Docker layer cache
 #   --request-cert  if no certificate exists, obtain one via Let's Encrypt
-#                   (certbot --nginx --redirect; needs DNS pointing here + sudo)
+#                   (webroot served by the gateway; needs DNS + sudo)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -40,6 +38,9 @@ done
 
 command -v docker >/dev/null 2>&1 || die "docker is not installed."
 docker compose version >/dev/null 2>&1 || die "the 'docker compose' plugin is not installed."
+
+log "Detecting shared gateway..."
+ensure_gateway_network
 
 log "Stopping existing app containers..."
 docker compose down --remove-orphans
@@ -66,23 +67,30 @@ MSG
 fi
 ok "Migrations applied."
 
-# Host nginx site (first deploy installs the HTTP bootstrap; later runs leave
-# the certbot-managed file untouched). Nginx must serve the :80 block before
-# certbot --nginx can answer the ACME challenge.
-ensure_host_config
-reload_nginx
-
-if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
-  if request_certs "$(letsencrypt_email)"; then
-    ok "Certificates obtained; certbot enabled HTTPS + redirect in the site config."
-    log "Tip: enable HSTS in $HOST_NGINX_AVAILABLE once HTTPS is confirmed (search 'HSTS')."
-  else
-    warn "Certbot failed — continuing in HTTP mode. Check DNS A records and that port 80 reaches this host's nginx."
-  fi
-fi
-
 log "Creating and starting all services..."
 docker compose up -d
 
 wait_for_backend || warn "Backend health check failed — see logs above."
+
+# Front door: install our server blocks into the gateway. HTTPS when certs
+# already exist, HTTP bootstrap otherwise (needed to answer ACME challenges).
+if certs_exist; then
+  install_gateway_config https || true
+else
+  install_gateway_config http || true
+fi
+
+# Optionally obtain certificates, then upgrade the gateway config to HTTPS.
+if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
+  if request_certs "$(letsencrypt_email)"; then
+    ok "Certificates obtained."
+    if check_gateway_cert_mount; then
+      install_gateway_config https || true
+    fi
+  else
+    warn "Certbot failed — staying on the HTTP gateway config."
+    warn "Check: DNS A records point here and port 80 reaches the gateway."
+  fi
+fi
+
 show_status

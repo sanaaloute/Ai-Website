@@ -1,17 +1,17 @@
 # AI-Website app stack — shared host edition.
 #
-# The host runs other services too. Host nginx (Debian sites-available layout,
-# certbot-managed) is the single public entry point on 80/443; this stack never
-# binds public ports. Containers bind 127.0.0.1 only, and the host nginx site
-# (nginx/ai-website.http.conf, installed by scripts/deploy.sh) proxies to them:
+# The host runs other services too, and the neoshop-api-gateway CONTAINER owns
+# 0.0.0.0:80/443 (host nginx cannot bind them). This stack therefore:
+#   - never publishes public ports (127.0.0.1 bindings are debug-only),
+#   - joins the gateway's Docker network so the gateway can reverse-proxy our
+#     domains to the containers by DNS alias:
+#       ai-web-builder.com / www  -> http://ai-website-frontend:3000
+#       /api/, /health, /live, /ready -> http://ai-website-backend:4000
+#       admin.ai-web-builder.com  -> http://ai-website-admin:3000
 #
-#   ai-web-builder.com / www  -> 127.0.0.1:3000 (frontend)
-#   /api/, /health, /live, /ready -> 127.0.0.1:4000 (backend)
-#   admin.ai-web-builder.com  -> 127.0.0.1:3001 (admin)
-#
-# These loopback ports don't conflict with the other services on the host
-# (e.g. neoshop containers publish nothing on 3000/3001/4000). Container names
-# are prefixed (ai-website-*) to stay collision-free on the shared host.
+# The gateway server blocks live in nginx/gateway/*.conf; scripts/deploy.sh
+# auto-detects the gateway's mounted config dir and installs them (see
+# nginx/README.md).
 name: ai-website
 
 services:
@@ -27,7 +27,9 @@ services:
       timeout: 5s
       retries: 3
     restart: unless-stopped
-    # No ports: reachable only inside the compose network.
+    networks:
+      # Internal only — never exposed to the shared gateway network.
+      - internal
 
   backend:
     image: ai-web-builder-backend
@@ -36,7 +38,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      # Bind to loopback only — host nginx is the single entry point.
+      # Debug access from the host only. Public traffic arrives via the
+      # shared gateway network (alias: ai-website-backend).
       - "127.0.0.1:4000:4000"
     env_file:
       - ./.env
@@ -62,6 +65,11 @@ services:
       retries: 5
       start_period: 60s
     restart: unless-stopped
+    networks:
+      internal:
+      gateway:
+        aliases:
+          - ai-website-backend
 
   frontend:
     image: ai-web-builder-frontend
@@ -74,7 +82,7 @@ services:
         NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-}
         NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL: ${NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL:-}
     ports:
-      # Bind to loopback only — host nginx proxies public traffic here.
+      # Debug access from the host only (alias for the gateway: ai-website-frontend).
       - "127.0.0.1:3000:3000"
     environment:
       # Runtime-only variables (server components)
@@ -83,6 +91,11 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      internal:
+      gateway:
+        aliases:
+          - ai-website-frontend
 
   admin:
     image: ai-web-builder-admin
@@ -94,12 +107,29 @@ services:
         # Internal Docker routing keeps admin→backend traffic inside the network
         BACKEND_API_URL: ${BACKEND_API_URL:-http://backend:4000}
     ports:
-      # Bind to loopback only — host nginx serves admin on its own subdomain.
+      # Debug access from the host only (alias for the gateway: ai-website-admin).
+      # Note: container listens on 3000; 3001 is only the host-side debug port.
       - "127.0.0.1:3001:3000"
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      internal:
+      gateway:
+        aliases:
+          - ai-website-admin
+
+networks:
+  # Private stack network (backend <-> redis, admin <-> backend, ...).
+  internal:
+    driver: bridge
+  # Shared network owned by the nginx gateway container (neoshop-api-gateway).
+  # Created/managed outside this compose project. scripts/deploy.sh auto-detects
+  # the gateway's network and exports GATEWAY_NETWORK; you can also pin it in .env.
+  gateway:
+    external: true
+    name: ${GATEWAY_NETWORK:-neoshop_default}
 
 volumes:
   redis_data:

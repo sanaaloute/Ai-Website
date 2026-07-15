@@ -1,30 +1,50 @@
-# Nginx — shared host setup
+# Nginx — shared gateway setup
 
-This EC2 runs **multiple services**. Host nginx (Debian `sites-available`
-layout, certbot-managed) is the single public entry point on 80/443 — the same
-way the existing `api.barkosem.com` site works. AI-Website adds **one more
-site** and never touches other sites or public ports.
+This EC2 runs **multiple services**, and the `neoshop-api-gateway` **container**
+owns `0.0.0.0:80/443` (host nginx cannot bind them — leave it stopped/disabled;
+the old `/etc/nginx/sites-*` files are unused). The gateway is the single public
+entry point; AI-Website plugs into it.
 
 Traffic flow:
 
 ```
-internet → host nginx (:80/:443)
-             ├─ api.barkosem.com          → 127.0.0.1:80    (existing site, untouched)
-             ├─ ai-web-builder.com / www  → 127.0.0.1:3000  (frontend container)
-             │   /api/*, /health, /live, /ready → 127.0.0.1:4000  (backend container)
-             └─ admin.ai-web-builder.com  → 127.0.0.1:3001  (admin container)
+internet → neoshop-api-gateway (:80/:443)
+             ├─ api.barkosem.com          → neoshop services (untouched)
+             ├─ ai-web-builder.com / www  → ai-website-frontend:3000 ─┐
+             │   /api/*, /health, /live, /ready → ai-website-backend:4000 ─┤ shared
+             └─ admin.ai-web-builder.com  → ai-website-admin:3000 ────────┘ Docker network
 ```
 
-The app containers bind **loopback only**, so they cannot conflict with the
-other Docker services (which publish nothing on 3000/3001/4000). Container
-names are prefixed (`ai-website-*`) to stay collision-free on the shared host.
+The app containers join the gateway's Docker network (auto-detected by
+`scripts/deploy.sh`, overridable via `GATEWAY_NETWORK` in `.env`) with DNS
+aliases `ai-website-frontend`, `ai-website-backend`, `ai-website-admin`. The
+scripts also auto-detect the gateway's **mounted nginx config dir** (via
+`docker inspect` mounts) and install our server blocks there as
+`ai-website.conf` — no manual copying in the normal case.
 
 Files in this repo:
 
-- `ai-website.http.conf` — the site config. Installed **once** by
-  `scripts/deploy.sh` to `/etc/nginx/sites-available/ai-website`, then left
-  untouched: `certbot --nginx` edits the installed copy in place to add the
-  HTTPS blocks + redirect ("managed by Certbot"), exactly like the other sites.
+- `gateway/ai-website.http.conf` — HTTP bootstrap (serves the app + ACME
+  challenges on port 80; no cert needed).
+- `gateway/ai-website.https.conf` — full config: 80 → 443 redirect + HTTPS
+  server blocks. Installed automatically once certificates exist.
+
+Both use `resolver 127.0.0.11` + variable `proxy_pass`, so the gateway reloads
+fine even when this stack is down, and survives container IP changes.
+
+## One-time gateway prerequisites
+
+The gateway container needs these host paths mounted (add to the gateway's
+compose file / run flags if missing, then recreate it once):
+
+```yaml
+volumes:
+  - /var/www/certbot:/var/www/certbot        # ACME HTTP-01 webroot (cert issuance/renewal)
+  - /etc/letsencrypt:/etc/letsencrypt:ro     # certificates (HTTPS step)
+```
+
+The deploy scripts check for these mounts and print exact instructions when
+one is missing.
 
 ## 1) Deploy the app stack
 
@@ -32,15 +52,16 @@ Files in this repo:
 bash scripts/deploy.sh
 ```
 
-On first deploy the script installs the site, reloads nginx, and the app is
-reachable over HTTP:
+This builds and starts the containers, then installs the HTTP bootstrap config
+into the gateway and reloads it. Verify:
 
 ```bash
 curl -H 'Host: ai-web-builder.com' http://localhost/nginx-health   # ok
+curl -I http://ai-web-builder.com/                                 # 200 from the frontend
 ```
 
-If a config already exists, the script never overwrites it (certbot may have
-edited it).
+If the gateway's config dir can't be auto-detected, the script prints its
+mounts and the exact manual `cp` + reload commands.
 
 ## 2) Enable HTTPS (after DNS A records point to this instance)
 
@@ -50,23 +71,20 @@ Set `LETSENCRYPT_EMAIL` in `.env`, then:
 sudo bash scripts/deploy.sh --request-cert
 ```
 
-This runs `certbot --nginx --redirect` for `ai-web-builder.com`,
-`www.ai-web-builder.com` and `admin.ai-web-builder.com` — the same flow the
-existing sites use. Manual equivalent:
+This obtains certificates for `ai-web-builder.com`, `www.ai-web-builder.com`
+and `admin.ai-web-builder.com` via host certbot (webroot, served by the
+gateway), then swaps the gateway config to the HTTPS version and reloads.
+
+Renewal: certbot renews on the host via its systemd timer. Add a deploy hook
+so the gateway picks up renewed certificates:
 
 ```bash
-sudo certbot --nginx --redirect \
-  -d ai-web-builder.com -d www.ai-web-builder.com -d admin.ai-web-builder.com \
-  --email you@example.com --agree-tos --no-eff-email
+sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-gateway.sh >/dev/null <<'EOF'
+#!/bin/sh
+docker exec neoshop-api-gateway nginx -s reload
+EOF
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-gateway.sh
 ```
-
-After HTTPS works, enable HSTS: edit `/etc/nginx/sites-available/ai-website`,
-uncomment the `Strict-Transport-Security` lines (search "HSTS"), then
-`sudo nginx -t && sudo systemctl reload nginx`.
-
-Renewal: the host already has certbot's systemd timer (used by the existing
-sites); the nginx plugin reloads nginx automatically after renewal. Nothing to
-do.
 
 ## 3) Day-to-day upgrades
 
@@ -74,6 +92,7 @@ do.
 bash scripts/upgrade.sh        # git pull, rebuild, recreate changed services
 ```
 
-> The deploy/upgrade scripts only manage the AI-Website containers, the single
-> `ai-website` site, and certbot. They require passwordless sudo for the nginx
-> / certbot steps (or run them with `sudo`).
+> The deploy/upgrade scripts only manage the AI-Website containers, the
+> `ai-website.conf` file inside the gateway's config dir, and (with
+> `--request-cert`) host certbot. They never touch other services, host nginx,
+> or public ports.
