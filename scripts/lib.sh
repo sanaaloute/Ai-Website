@@ -2,15 +2,16 @@
 # Shared helpers for scripts/deploy.sh and scripts/upgrade.sh.
 # This file is SOURCED by those scripts, not executed directly.
 #
-# Nginx runs on the HOST (not in Docker). The app containers bind to 127.0.0.1
-# and the host nginx reverse-proxies public traffic to them:
-#   ai-web-builder.com / www  -> 127.0.0.1:3000 (frontend)
-#   /api/, /health, /live, /ready -> 127.0.0.1:4000 (backend)
-#   admin.ai-web-builder.com  -> 127.0.0.1:3001 (admin)
-#
-# Host nginx config is host-managed: scripts install a sane default ONLY when no
-# config exists yet, then leave it alone. Certificates are obtained via the host
-# certbot using the webroot that host nginx serves.
+# Shared-host architecture:
+#   - Host nginx (Debian sites-available layout, certbot-managed) is the single
+#     public entry point on 80/443 and already fronts other services (e.g.
+#     api.barkosem.com). This stack adds ONE more site and never touches other
+#     sites or public ports.
+#   - App containers bind 127.0.0.1 only: frontend :3000, backend :4000,
+#     admin :3001. Host nginx reverse-proxies our domains to them.
+#   - The site config (nginx/ai-website.http.conf) is installed ONCE, then left
+#     untouched: certbot --nginx edits the installed copy in place to add HTTPS
+#     (same "managed by Certbot" flow as the existing sites on the host).
 
 # ── logging ──────────────────────────────────────────────────────────────────
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
@@ -18,24 +19,17 @@ ok()   { printf '\033[1;32m✓\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31m✗\033[0m %s\n' "$*" >&2; exit 1; }
 
-# ── host nginx + certificate paths ───────────────────────────────────────────
+# ── domains, certificates, host nginx paths ──────────────────────────────────
 DOMAIN="ai-web-builder.com"
 CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 CERT_FULLCHAIN="$CERT_DIR/fullchain.pem"
 CERT_KEY="$CERT_DIR/privkey.pem"
 
-# Host nginx config locations. Debian/Ubuntu sites-available/sites-enabled is the
-# default; install_host_config falls back to conf.d (nginx.org / RHEL layout).
 HOST_NGINX_AVAILABLE="/etc/nginx/sites-available/ai-website"
 HOST_NGINX_ENABLED="/etc/nginx/sites-enabled/ai-website"
-HOST_NGINX_CONFD="/etc/nginx/conf.d/ai-website.conf"
 
-# Repo sources installed on first boot (the host owns them afterwards).
-SRC_HTTP_CONF="$ROOT/nginx-host.http.conf"   # HTTP-only bootstrap (no cert needed)
-SRC_HTTPS_CONF="$ROOT/nginx-host.conf"       # full config: 80 -> 443 redirect + 443
-
-# ACME HTTP-01 webroot served by host nginx (see nginx-host*.conf).
-ACME_WEBROOT="/var/www/certbot"
+# Repo source installed on first deploy (the host owns it afterwards).
+SRC_HOST_CONF="$ROOT/nginx/ai-website.http.conf"
 
 certs_exist() { [[ -f "$CERT_FULLCHAIN" && -f "$CERT_KEY" ]]; }
 
@@ -50,104 +44,57 @@ need_sudo() {
   return 1
 }
 
+# Read a KEY=value from the repo .env without sourcing it (secrets-safe).
+env_from_file() {
+  local key="$1"
+  [[ -f "$ROOT/.env" ]] || return 1
+  grep -E "^${key}=" "$ROOT/.env" \
+    | head -n1 | cut -d= -f2- | tr -d '"' | tr -d "'" | tr -d '[:space:]'
+}
+
 # Resolve the Let's Encrypt contact email from env or .env.
 letsencrypt_email() {
   if [[ -n "${LETSENCRYPT_EMAIL:-}" ]]; then printf '%s' "$LETSENCRYPT_EMAIL"; return; fi
   if [[ -n "${CERTBOT_EMAIL:-}" ]]; then printf '%s' "$CERTBOT_EMAIL"; return; fi
-  if [[ -f "$ROOT/.env" ]]; then
-    grep -E '^(LETSENCRYPT_EMAIL|CERTBOT_EMAIL)=' "$ROOT/.env" \
-      | head -n1 | cut -d= -f2- | tr -d '"' | tr -d "'" | tr -d '[:space:]'
-  fi
+  env_from_file LETSENCRYPT_EMAIL || env_from_file CERTBOT_EMAIL || true
 }
 
-host_config_installed() { [[ -e "$HOST_NGINX_ENABLED" || -f "$HOST_NGINX_AVAILABLE" || -f "$HOST_NGINX_CONFD" ]]; }
+host_config_installed() { [[ -e "$HOST_NGINX_ENABLED" || -f "$HOST_NGINX_AVAILABLE" ]]; }
 
-# Install one of the repo host configs into sites-available and symlink it into
-# sites-enabled. mode: http | https. Non-fatal without sudo (host-managed).
-install_host_config() {
-  local mode="$1" src
-  case "$mode" in
-    http)  src="$SRC_HTTP_CONF" ;;
-    https) src="$SRC_HTTPS_CONF" ;;
-    *)     die "install_host_config: unknown mode '$mode'" ;;
-  esac
-  [[ -f "$src" ]] || die "Missing host nginx config: $src"
+# Install the HTTP site ONLY when absent. certbot --nginx edits the installed
+# file in place afterwards, so an existing config is never overwritten.
+ensure_host_config() {
+  if host_config_installed; then
+    ok "Host nginx config already present (left untouched)."
+    return 0
+  fi
   need_sudo || return 0
   if ! command -v nginx >/dev/null 2>&1; then
     warn "nginx is not installed on the host. One-time setup, then re-run deploy:"
-    warn "  sudo apt update && sudo apt install -y nginx certbot"
-    warn "  sudo mkdir -p /var/www/certbot"
+    warn "  sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx"
     return 0
   fi
-  # Layout: Debian/Ubuntu sites-enabled (preferred) vs conf.d (nginx.org / RHEL).
-  if [[ -d /etc/nginx/sites-available ]] || grep -qE 'include[[:space:]]+/etc/nginx/sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
-    sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-    log "Installing host nginx config ($mode) -> $HOST_NGINX_AVAILABLE"
-    sudo install -m 0644 "$src" "$HOST_NGINX_AVAILABLE"
-    sudo ln -sfn "$HOST_NGINX_AVAILABLE" "$HOST_NGINX_ENABLED"
-  else
-    sudo mkdir -p /etc/nginx/conf.d
-    log "Installing host nginx config ($mode) -> $HOST_NGINX_CONFD"
-    sudo install -m 0644 "$src" "$HOST_NGINX_CONFD"
-  fi
+  [[ -f "$SRC_HOST_CONF" ]] || die "Missing host nginx config: $SRC_HOST_CONF"
+  sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+  log "Installing host nginx site -> $HOST_NGINX_AVAILABLE"
+  sudo install -m 0644 "$SRC_HOST_CONF" "$HOST_NGINX_AVAILABLE"
+  sudo ln -sfn "$HOST_NGINX_AVAILABLE" "$HOST_NGINX_ENABLED"
+  ok "Host nginx site installed (HTTP). Enable HTTPS with: sudo bash scripts/deploy.sh --request-cert"
 }
 
-# Ensure a host nginx config exists so ACME + the site work. Host-managed after
-# first boot: if a config is already present we leave it untouched.
-configure_nginx_mode() {
-  if host_config_installed; then
-    if certs_exist; then
-      ok "Host nginx config present and certificates found (HTTPS)."
-    else
-      warn "Host nginx config present; no certificate yet (HTTP only)."
-    fi
-    return 0
-  fi
-  # First boot only: install a config. HTTPS if a cert already exists, else HTTP.
-  if certs_exist; then
-    install_host_config https
-  else
-    install_host_config http
-  fi
-}
-
-# After a successful --request-cert, switch from the HTTP bootstrap to the full
-# HTTPS config. Only acts when a certificate now exists.
-enable_https_config() {
-  certs_exist || { warn "No certificate found — keeping the current host nginx config."; return 0; }
-  install_host_config https
-}
-
-# Obtain certificates via host certbot (webroot). Host nginx must already serve
-# /.well-known/acme-challenge/ from $ACME_WEBROOT on port 80.
+# Obtain certificates via the certbot nginx plugin — the same flow already used
+# by the other sites on this host. --redirect makes certbot add the HTTP→HTTPS
+# redirect block automatically. Requires the site config installed + nginx live
+# and DNS pointing to this host.
 request_certs() {
   local email="$1"
   [[ -z "$email" ]] && die "No Let's Encrypt email. Set LETSENCRYPT_EMAIL (or CERTBOT_EMAIL) in .env."
-  command -v certbot >/dev/null 2>&1 || die "certbot is not installed on the host (sudo apt install certbot)."
+  command -v certbot >/dev/null 2>&1 || die "certbot is not installed on the host (sudo apt install certbot python3-certbot-nginx)."
   need_sudo || return 1
-  sudo mkdir -p "$ACME_WEBROOT"
-  log "Requesting Let's Encrypt certificates (webroot)..."
-  sudo certbot certonly --webroot \
-    -w "$ACME_WEBROOT" \
+  log "Requesting Let's Encrypt certificates (certbot --nginx)..."
+  sudo certbot --nginx --redirect \
     -d "$DOMAIN" -d "www.$DOMAIN" -d "admin.$DOMAIN" \
     --email "$email" --agree-tos --no-eff-email --non-interactive
-}
-
-# Block until the backend container reports healthy (uses container_name: backend).
-wait_for_backend() {
-  log "Waiting for backend to become healthy..."
-  local status
-  for _ in $(seq 1 60); do
-    status="$(docker inspect -f '{{.State.Health.Status}}' backend 2>/dev/null || true)"
-    if [[ "$status" == "healthy" ]]; then
-      ok "Backend is healthy."
-      return 0
-    fi
-    sleep 2
-  done
-  warn "Backend did not become healthy in time. Recent logs:"
-  docker compose logs --tail=60 backend || true
-  return 1
 }
 
 # Reload the HOST nginx; start (and enable) it if it is not running.
@@ -169,14 +116,32 @@ reload_nginx() {
   fi
 }
 
+# Block until the backend container reports healthy.
+wait_for_backend() {
+  log "Waiting for backend to become healthy..."
+  local cid status
+  for _ in $(seq 1 60); do
+    cid="$(docker compose ps -q backend 2>/dev/null || true)"
+    status="$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || true)"
+    if [[ "$status" == "healthy" ]]; then
+      ok "Backend is healthy."
+      return 0
+    fi
+    sleep 2
+  done
+  warn "Backend did not become healthy in time. Recent logs:"
+  docker compose logs --tail=60 backend || true
+  return 1
+}
+
 show_status() {
   echo
   docker compose ps
   echo
   if certs_exist; then
-    ok "Site is live at https://$DOMAIN"
+    ok "Site should be live at https://$DOMAIN (and https://admin.$DOMAIN)."
   else
-    ok "App containers are up; host nginx should serve http://$DOMAIN (HTTP only — no certificate yet)."
+    ok "App containers are up; host nginx serves http://$DOMAIN (HTTP only — no certificate yet)."
     log "To enable HTTPS: set LETSENCRYPT_EMAIL in .env, ensure DNS points here, then run:"
     log "  sudo bash scripts/deploy.sh --request-cert"
   fi

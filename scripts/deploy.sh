@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Full production deploy.
-#   1) docker compose down          (tear existing containers down)
+# Full production deploy on the SHARED host (other services already run here;
+# host nginx + certbot own ports 80/443).
+#   1) docker compose down          (tear existing app containers down)
 #   2) docker compose build         (build FRESH images)
 #   3) prisma migrate deploy        (run DB migrations, fail-fast)
-#   4) configure host nginx (HTTP bootstrap, or HTTPS if certificates exist)
-#   5) docker compose up -d         (create and start the app containers)
+#   4) install the host nginx site  (first deploy only; certbot edits it later)
+#   5) optionally obtain Let's Encrypt certs via certbot --nginx (--request-cert)
+#   6) docker compose up -d         (create and start the app containers)
 #
-# Nginx runs on the HOST (not in Docker) and proxies to the app containers on
-# 127.0.0.1 (frontend :3000, backend :4000, admin :3001).
+# This script only ever touches: the AI-Website containers, the single host
+# nginx site /etc/nginx/sites-available/ai-website, and certbot. Other sites
+# and services on the host are never modified.
 #
 # Prisma migrations also run automatically in the backend container entrypoint
 # (Dockerfile CMD: `npx prisma migrate deploy && node dist/main`); the explicit
@@ -15,7 +18,8 @@
 #
 # Usage on prod:  bash scripts/deploy.sh [--no-cache] [--request-cert]
 #   --no-cache      rebuild images without using the Docker layer cache
-#   --request-cert  if no certificate exists, obtain one via Let's Encrypt first
+#   --request-cert  if no certificate exists, obtain one via Let's Encrypt
+#                   (certbot --nginx --redirect; needs DNS pointing here + sudo)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,7 +41,7 @@ done
 command -v docker >/dev/null 2>&1 || die "docker is not installed."
 docker compose version >/dev/null 2>&1 || die "the 'docker compose' plugin is not installed."
 
-log "Stopping existing containers..."
+log "Stopping existing app containers..."
 docker compose down --remove-orphans
 
 if [[ "$NO_CACHE" -eq 1 ]]; then
@@ -62,26 +66,23 @@ MSG
 fi
 ok "Migrations applied."
 
-# If requested and no cert yet, ensure host nginx serves HTTP (to answer ACME),
-# obtain the certificate via host certbot, then switch the host config to HTTPS.
+# Host nginx site (first deploy installs the HTTP bootstrap; later runs leave
+# the certbot-managed file untouched). Nginx must serve the :80 block before
+# certbot --nginx can answer the ACME challenge.
+ensure_host_config
+reload_nginx
+
 if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
-  configure_nginx_mode            # installs the HTTP bootstrap if no config exists
-  reload_nginx                    # start/reload host nginx so the webroot is live
-  sleep 2
   if request_certs "$(letsencrypt_email)"; then
-    ok "Certificates obtained."
-    enable_https_config           # install the full HTTPS host config
+    ok "Certificates obtained; certbot enabled HTTPS + redirect in the site config."
+    log "Tip: enable HSTS in $HOST_NGINX_AVAILABLE once HTTPS is confirmed (search 'HSTS')."
   else
-    warn "Certbot failed — continuing in HTTP mode. Check DNS A records and that port 80 is reachable."
+    warn "Certbot failed — continuing in HTTP mode. Check DNS A records and that port 80 reaches this host's nginx."
   fi
 fi
-
-log "Configuring nginx mode..."
-configure_nginx_mode
 
 log "Creating and starting all services..."
 docker compose up -d
 
-reload_nginx
 wait_for_backend || warn "Backend health check failed — see logs above."
 show_status

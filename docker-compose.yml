@@ -1,7 +1,23 @@
+# AI-Website app stack — shared host edition.
+#
+# The host runs other services too. Host nginx (Debian sites-available layout,
+# certbot-managed) is the single public entry point on 80/443; this stack never
+# binds public ports. Containers bind 127.0.0.1 only, and the host nginx site
+# (nginx/ai-website.http.conf, installed by scripts/deploy.sh) proxies to them:
+#
+#   ai-web-builder.com / www  -> 127.0.0.1:3000 (frontend)
+#   /api/, /health, /live, /ready -> 127.0.0.1:4000 (backend)
+#   admin.ai-web-builder.com  -> 127.0.0.1:3001 (admin)
+#
+# These loopback ports don't conflict with the other services on the host
+# (e.g. neoshop containers publish nothing on 3000/3001/4000). Container names
+# are prefixed (ai-website-*) to stay collision-free on the shared host.
+name: ai-website
+
 services:
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: ai-website-redis
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -11,10 +27,11 @@ services:
       timeout: 5s
       retries: 3
     restart: unless-stopped
+    # No ports: reachable only inside the compose network.
 
   backend:
     image: ai-web-builder-backend
-    container_name: backend
+    container_name: ai-website-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -48,7 +65,7 @@ services:
 
   frontend:
     image: ai-web-builder-frontend
-    container_name: frontend
+    container_name: ai-website-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -69,7 +86,7 @@ services:
 
   admin:
     image: ai-web-builder-admin
-    container_name: admin
+    container_name: ai-website-admin
     build:
       context: ./admin
       dockerfile: Dockerfile
