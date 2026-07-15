@@ -1,50 +1,39 @@
-# Nginx — shared gateway setup
+# Kong gateway — AI-Website routes
 
-This EC2 runs **multiple services**, and the `neoshop-api-gateway` **container**
-owns `0.0.0.0:80/443` (host nginx cannot bind them — leave it stopped/disabled;
-the old `/etc/nginx/sites-*` files are unused). The gateway is the single public
-entry point; AI-Website plugs into it.
+This EC2 runs **multiple services**, and the `neoshop-api-gateway` container —
+**Kong Gateway** — owns `0.0.0.0:80/443` (Kong proxy ports 8000/8443). Host
+nginx is unused (leave it disabled). Kong is configured through its **Admin
+API** (container port 8001, reachable from the host via the container IP) —
+the deploy scripts do this automatically; no config files, mounts, or reloads,
+and everything persists in Kong's database across container recreates.
 
 Traffic flow:
 
 ```
-internet → neoshop-api-gateway (:80/:443)
+internet → neoshop-api-gateway (Kong :80/:443)
              ├─ api.barkosem.com          → neoshop services (untouched)
-             ├─ ai-web-builder.com / www  → ai-website-frontend:3000 ─┐
-             │   /api/*, /health, /live, /ready → ai-website-backend:4000 ─┤ shared
-             └─ admin.ai-web-builder.com  → ai-website-admin:3000 ────────┘ Docker network
+             ├─ ai-web-builder.com / www  → service ai-website-frontend:3000 ─┐
+             │   /api, /health, /live, /ready → service ai-website-backend:4000 ┤ shared
+             └─ admin.ai-web-builder.com  → service ai-website-admin:3000 ──────┘ Docker network
 ```
 
 The app containers join the gateway's Docker network (auto-detected by
 `scripts/deploy.sh`, overridable via `GATEWAY_NETWORK` in `.env`) with DNS
-aliases `ai-website-frontend`, `ai-website-backend`, `ai-website-admin`. The
-scripts also auto-detect the gateway's **mounted nginx config dir** (via
-`docker inspect` mounts) and install our server blocks there as
-`ai-website.conf` — no manual copying in the normal case.
+aliases `ai-website-frontend`, `ai-website-backend`, `ai-website-admin`. Kong
+resolves those aliases through Docker DNS at request time.
 
-Files in this repo:
+What the scripts manage in Kong (idempotent upserts):
 
-- `gateway/ai-website.http.conf` — HTTP bootstrap (serves the app + ACME
-  challenges on port 80; no cert needed).
-- `gateway/ai-website.https.conf` — full config: 80 → 443 redirect + HTTPS
-  server blocks. Installed automatically once certificates exist.
+| Service | Upstream | Route | Match |
+|---|---|---|---|
+| `ai-website-frontend` | `http://ai-website-frontend:3000` | `ai-website-web` | hosts `ai-web-builder.com`, `www…`, path `/` |
+| `ai-website-backend` | `http://ai-website-backend:4000` (15-min SSE timeouts) | `ai-website-api` | same hosts, paths `/api`, `/health`, `/live`, `/ready` |
+| `ai-website-admin` | `http://ai-website-admin:3000` | `ai-website-admin` | host `admin.ai-web-builder.com`, path `/` |
+| `ai-website-acme` | `http://<host-bridge-ip>:8888` | `ai-website-acme` | our hosts, path `/.well-known/acme-challenge`, HTTP only |
 
-Both use `resolver 127.0.0.11` + variable `proxy_pass`, so the gateway reloads
-fine even when this stack is down, and survives container IP changes.
-
-## One-time gateway prerequisites
-
-The gateway container needs these host paths mounted (add to the gateway's
-compose file / run flags if missing, then recreate it once):
-
-```yaml
-volumes:
-  - /var/www/certbot:/var/www/certbot        # ACME HTTP-01 webroot (cert issuance/renewal)
-  - /etc/letsencrypt:/etc/letsencrypt:ro     # certificates (HTTPS step)
-```
-
-The deploy scripts check for these mounts and print exact instructions when
-one is missing.
+All routes use `strip_path: false` + `preserve_host: true` (path and Host pass
+through unchanged, like a plain nginx `proxy_pass`). Longer prefixes win over
+`/`, so API traffic never hits the frontend route.
 
 ## 1) Deploy the app stack
 
@@ -52,16 +41,16 @@ one is missing.
 bash scripts/deploy.sh
 ```
 
-This builds and starts the containers, then installs the HTTP bootstrap config
-into the gateway and reloads it. Verify:
+Builds and starts the containers, then upserts the Kong services/routes and
+probes through Kong. Verify:
 
 ```bash
-curl -H 'Host: ai-web-builder.com' http://localhost/nginx-health   # ok
-curl -I http://ai-web-builder.com/                                 # 200 from the frontend
+curl -H 'Host: ai-web-builder.com' http://localhost/health   # 200 from the backend
+curl -I http://ai-web-builder.com/                           # 200 from the frontend
 ```
 
-If the gateway's config dir can't be auto-detected, the script prints its
-mounts and the exact manual `cp` + reload commands.
+If the Admin API isn't reachable, set `KONG_ADMIN_URL` in `.env`
+(e.g. `http://<kong-container-ip>:8001`) and re-run.
 
 ## 2) Enable HTTPS (after DNS A records point to this instance)
 
@@ -71,20 +60,17 @@ Set `LETSENCRYPT_EMAIL` in `.env`, then:
 sudo bash scripts/deploy.sh --request-cert
 ```
 
-This obtains certificates for `ai-web-builder.com`, `www.ai-web-builder.com`
-and `admin.ai-web-builder.com` via host certbot (webroot, served by the
-gateway), then swaps the gateway config to the HTTPS version and reloads.
+How it works (no mounts, no gateway changes):
 
-Renewal: certbot renews on the host via its systemd timer. Add a deploy hook
-so the gateway picks up renewed certificates:
-
-```bash
-sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-gateway.sh >/dev/null <<'EOF'
-#!/bin/sh
-docker exec neoshop-api-gateway nginx -s reload
-EOF
-sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-gateway.sh
-```
+1. A Kong route forwards `/.well-known/acme-challenge` on our domains to
+   `certbot --standalone` on the host (port 8888, used only during issuance).
+2. certbot issues into `/etc/letsencrypt` on the host.
+3. The cert + key are uploaded to Kong via the Admin API
+   (`PUT /certificates/ai-web-builder.com`, SNIs: apex, www, admin) — Kong
+   starts serving TLS immediately.
+4. A renewal hook (`/etc/letsencrypt/renewal-hooks/deploy/ai-website-kong.sh`)
+   re-uploads renewed certs automatically; manual equivalent:
+   `sudo bash scripts/kong-cert-upload.sh`.
 
 ## 3) Day-to-day upgrades
 
@@ -92,7 +78,18 @@ sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-gateway.sh
 bash scripts/upgrade.sh        # git pull, rebuild, recreate changed services
 ```
 
-> The deploy/upgrade scripts only manage the AI-Website containers, the
-> `ai-website.conf` file inside the gateway's config dir, and (with
-> `--request-cert`) host certbot. They never touch other services, host nginx,
-> or public ports.
+## Notes & troubleshooting
+
+- **DB-less Kong**: if Kong runs without a database (writes to the Admin API
+  are refused), merge `gateway/kong-routes.yml` into the gateway's declarative
+  config file and reload Kong instead.
+- **DNS caching**: Kong caches upstream DNS per the Docker TTL. After a stack
+  recreate, traffic can take a couple of minutes to stabilize; `docker restart
+  neoshop-api-gateway` forces immediate re-resolution (brief blip for all
+  services — usually unnecessary).
+- **Admin API exposure**: port 8001 is reachable from every container on the
+  shared network (Kong's default). That's a property of the existing gateway
+  setup, not something these scripts change — consider restricting it in the
+  gateway's own config.
+- Inspect what Kong serves: `curl -s http://<kong-ip>:8001/services` and
+  `.../routes` (the scripts print the resolved Admin API URL when checks fail).

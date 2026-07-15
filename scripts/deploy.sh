@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Full production deploy on the SHARED host. The neoshop-api-gateway CONTAINER
-# owns ports 80/443 — this script never touches host nginx or public ports.
+# Full production deploy on the SHARED host. The neoshop-api-gateway container
+# (Kong Gateway) owns ports 80/443 — this script never touches host nginx or
+# public ports; it configures Kong through its Admin API.
 #   1) detect the gateway container + its Docker network
 #   2) docker compose down          (tear existing app containers down)
 #   3) docker compose build         (build FRESH images)
 #   4) prisma migrate deploy        (run DB migrations, fail-fast)
 #   5) docker compose up -d         (create and start the app containers)
-#   6) install our server blocks into the gateway (auto-detected config dir)
-#   7) optionally obtain Let's Encrypt certs via host certbot (--request-cert)
-#      and switch the gateway config to HTTPS
+#   6) upsert Kong services + routes for our domains (Admin API)
+#   7) optionally obtain Let's Encrypt certs via certbot --standalone reached
+#      through a Kong ACME route, upload the cert to Kong (--request-cert)
 #
 # Prisma migrations also run automatically in the backend container entrypoint
 # (Dockerfile CMD: `npx prisma migrate deploy && node dist/main`); the explicit
@@ -17,7 +18,7 @@
 # Usage on prod:  bash scripts/deploy.sh [--no-cache] [--request-cert]
 #   --no-cache      rebuild images without using the Docker layer cache
 #   --request-cert  if no certificate exists, obtain one via Let's Encrypt
-#                   (webroot served by the gateway; needs DNS + sudo)
+#                   (needs DNS pointing here + sudo)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -72,24 +73,19 @@ docker compose up -d
 
 wait_for_backend || warn "Backend health check failed — see logs above."
 
-# Front door: install our server blocks into the gateway. HTTPS when certs
-# already exist, HTTP bootstrap otherwise (needed to answer ACME challenges).
-if certs_exist; then
-  install_gateway_config https || true
-else
-  install_gateway_config http || true
-fi
+# Front door: Kong services + routes (idempotent; persist in Kong's database).
+ensure_kong_routes || warn "Kong is not configured — the site will not be reachable. See messages above."
 
-# Optionally obtain certificates, then upgrade the gateway config to HTTPS.
-if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
+# TLS: upload the existing cert (keeps Kong in sync), or obtain one first.
+if certs_exist; then
+  kong_upload_cert || true
+elif [[ "$REQUEST_CERT" -eq 1 ]]; then
   if request_certs "$(letsencrypt_email)"; then
     ok "Certificates obtained."
-    if check_gateway_cert_mount; then
-      install_gateway_config https || true
-    fi
+    kong_upload_cert && install_cert_renewal_hook
   else
-    warn "Certbot failed — staying on the HTTP gateway config."
-    warn "Check: DNS A records point here and port 80 reaches the gateway."
+    warn "Certbot failed — staying on HTTP. Check that DNS A records point here"
+    warn "and that port 80 reaches Kong (curl -H 'Host: $DOMAIN' http://localhost/nginx-health is not used; try /health)."
   fi
 fi
 

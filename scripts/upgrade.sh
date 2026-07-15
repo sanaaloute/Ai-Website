@@ -5,15 +5,15 @@
 # Prisma migrations run automatically via the backend container entrypoint when
 # it is recreated.
 #
-# Shared-host notes: the neoshop-api-gateway CONTAINER owns ports 80/443. This
-# script only re-detects the gateway network so recreated containers rejoin it,
-# and refreshes our server blocks in the gateway if the config changed.
+# Shared-host notes: the neoshop-api-gateway container (Kong) owns ports 80/443.
+# This script re-detects the gateway network so recreated containers rejoin it,
+# and re-upserts our Kong services/routes (idempotent).
 #
 # Usage on prod:  bash scripts/upgrade.sh [--no-cache] [--no-git-pull] [--request-cert]
 #   --no-cache      rebuild images without using the Docker layer cache
 #   --no-git-pull   skip the fast-forward git pull
 #   --request-cert  if no certificate exists, obtain one via Let's Encrypt
-#                   (webroot served by the gateway; needs DNS + sudo)
+#                   (needs DNS pointing here + sudo)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -67,21 +67,18 @@ docker compose up -d --remove-orphans
 
 wait_for_backend || warn "Backend health check failed — see logs above."
 
-# Refresh the gateway server blocks (picks up repo config changes).
-if certs_exist; then
-  install_gateway_config https || true
-else
-  install_gateway_config http || true
-fi
+# Kong services + routes (idempotent; persists in Kong's database).
+ensure_kong_routes || warn "Kong is not configured — the site will not be reachable. See messages above."
 
-if [[ "$REQUEST_CERT" -eq 1 && ! -f "$CERT_FULLCHAIN" ]]; then
+# TLS: upload the existing cert (keeps Kong in sync), or obtain one first.
+if certs_exist; then
+  kong_upload_cert || true
+elif [[ "$REQUEST_CERT" -eq 1 ]]; then
   if request_certs "$(letsencrypt_email)"; then
     ok "Certificates obtained."
-    if check_gateway_cert_mount; then
-      install_gateway_config https || true
-    fi
+    kong_upload_cert && install_cert_renewal_hook
   else
-    warn "Certbot failed — staying on the HTTP gateway config."
+    warn "Certbot failed — staying on HTTP. Check that DNS A records point here."
   fi
 fi
 

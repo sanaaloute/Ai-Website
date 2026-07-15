@@ -3,19 +3,18 @@
 # This file is SOURCED by those scripts, not executed directly.
 #
 # Shared-host architecture:
-#   - The neoshop-api-gateway CONTAINER owns 0.0.0.0:80/443 (host nginx cannot
-#     bind them). It is the single public entry point for all services.
+#   - The neoshop-api-gateway container — Kong Gateway 3.x — owns 0.0.0.0:80/443
+#     (proxy ports 8000/8443) and fronts all services on this host.
 #   - This stack never publishes public ports. The app containers join the
 #     gateway's Docker network (compose `gateway` network) with DNS aliases
-#     ai-website-frontend / -backend / -admin; the gateway reverse-proxies our
-#     domains to those aliases (nginx/gateway/*.conf).
-#   - Scripts auto-detect the gateway's network AND its mounted nginx config
-#     dir (via docker inspect), install the server blocks there, and reload
-#     nginx inside the gateway container. They never modify the gateway's own
-#     project files or other services.
-#   - TLS: host certbot (webroot) issues into /etc/letsencrypt; the gateway
-#     must mount /var/www/certbot (ACME) and /etc/letsencrypt (certs) — the
-#     scripts check and print exact instructions if a mount is missing.
+#     ai-website-frontend / -backend / -admin.
+#   - Kong is configured through its Admin API (container port 8001, reachable
+#     from the host via the container IP): services + routes for our domains,
+#     and TLS certificates uploaded straight from /etc/letsencrypt.
+#     Admin-API changes are applied instantly and persist in Kong's database —
+#     no config files, mounts, or reloads.
+#   - ACME HTTP-01: a dedicated Kong route forwards /.well-known/acme-challenge
+#     to certbot --standalone running on the host (port 8888) during issuance.
 
 # ── logging ──────────────────────────────────────────────────────────────────
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
@@ -29,13 +28,9 @@ CERT_DIR="/etc/letsencrypt/live/$DOMAIN"
 CERT_FULLCHAIN="$CERT_DIR/fullchain.pem"
 CERT_KEY="$CERT_DIR/privkey.pem"
 
-# ACME HTTP-01 webroot; must be mounted into the gateway at the same path.
-ACME_WEBROOT="/var/www/certbot"
-
-# Repo gateway configs installed into the gateway container.
-SRC_GATEWAY_HTTP_CONF="$ROOT/nginx/gateway/ai-website.http.conf"   # HTTP bootstrap
-SRC_GATEWAY_HTTPS_CONF="$ROOT/nginx/gateway/ai-website.https.conf" # 80 -> 443 + 443
-GATEWAY_CONF_NAME="ai-website.conf"  # filename inside the gateway's conf dir
+# Host port used by certbot --standalone for the ACME HTTP-01 challenge. Kong
+# routes the challenge path to it; only needs to be free during issuance.
+ACME_PORT=8888
 
 GATEWAY_CONTAINER_DEFAULT="neoshop-api-gateway"
 
@@ -79,111 +74,155 @@ ensure_gateway_network() {
   local gw net
   gw="$(gateway_container)"
   if ! docker inspect "$gw" >/dev/null 2>&1; then
-    die "Gateway container '$gw' not found. This host must run the shared nginx
+    die "Gateway container '$gw' not found. This host must run the shared Kong
   gateway (ports 80/443). If it has a different name, set GATEWAY_CONTAINER in .env."
   fi
   net="$(detect_gateway_network || true)"
   if [[ -z "$net" ]]; then
-    warn "Could not detect the Docker network of '$gw'."
-    warn "Set GATEWAY_NETWORK in .env (see: docker inspect $gw --format '{{json .NetworkSettings.Networks}}')."
-    warn "Falling back to the compose default (neoshop_default)."
-    return 0
+    die "Could not detect the Docker network of '$gw'.
+  Set GATEWAY_NETWORK in .env (see: docker inspect $gw --format '{{json .NetworkSettings.Networks}}')."
   fi
   export GATEWAY_NETWORK="$net"
   ok "Gateway: container '$gw', network '$GATEWAY_NETWORK'."
 }
 
-# ── gateway config-dir detection + install ───────────────────────────────────
+# ── Kong Admin API ───────────────────────────────────────────────────────────
 
-# List the gateway's mounts as "source|destination" lines.
-gateway_mounts() {
-  docker inspect "$(gateway_container)" \
-    --format '{{range .Mounts}}{{println .Source "|" .Destination}}{{end}}' 2>/dev/null
+# Base URL of Kong's Admin API. Priority: env KONG_ADMIN_URL > .env
+# KONG_ADMIN_URL > http://<gateway container IP on the shared network>:8001.
+kong_admin_url() {
+  if [[ -n "${KONG_ADMIN_URL:-}" ]]; then printf '%s' "$KONG_ADMIN_URL"; return 0; fi
+  local pinned
+  pinned="$(env_from_file KONG_ADMIN_URL || true)"
+  if [[ -n "$pinned" ]]; then printf '%s' "$pinned"; return 0; fi
+  local gw net ip
+  gw="$(gateway_container)"
+  net="${GATEWAY_NETWORK:-$(detect_gateway_network || true)}"
+  if [[ -n "$net" ]]; then
+    ip="$(docker inspect "$gw" --format "{{with index .NetworkSettings.Networks \"$net\"}}{{.IPAddress}}{{end}}" 2>/dev/null || true)"
+  fi
+  if [[ -z "${ip:-}" ]]; then
+    ip="$(docker inspect "$gw" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null | head -n1)"
+  fi
+  [[ -n "$ip" ]] && printf 'http://%s:8001' "$ip"
 }
 
-# Find the host directory that maps to the gateway's nginx config include dir.
-# Priority: a mount straight onto a conf.d / sites-enabled dir; else a whole
-# /etc/nginx mount (we then use its conf.d subdirectory). Prints the HOST path.
-gateway_conf_host_dir() {
-  local gw src dest
-  gw="$(gateway_container)"
-  # 1) direct conf.d / sites-enabled mount
-  while IFS='|' read -r src dest; do
-    case "$dest" in
-      */conf.d|*/conf.d/|*/sites-enabled|*/sites-enabled/)
-        if docker exec "$gw" test -d "$dest" 2>/dev/null; then
-          printf '%s' "${src%/}"
-          return 0
-        fi
-        ;;
-    esac
-  done < <(gateway_mounts)
-  # 2) whole /etc/nginx mount -> its conf.d subdir
-  while IFS='|' read -r src dest; do
-    case "${dest%/}" in
-      /etc/nginx)
-        if docker exec "$gw" test -d "$dest/conf.d" 2>/dev/null; then
-          printf '%s' "${src%/}/conf.d"
-          return 0
-        fi
-        ;;
-    esac
-  done < <(gateway_mounts)
-  return 1
+kong_admin_reachable() {
+  local url
+  url="$(kong_admin_url || true)"
+  [[ -n "$url" ]] || return 1
+  curl -fsS --max-time 5 "$url/status" >/dev/null 2>&1
 }
 
-# Print manual install instructions (fallback when auto-install isn't possible).
-gateway_config_hint() {
-  local mode="$1" src gw
-  src="$SRC_GATEWAY_HTTP_CONF"; [[ "$mode" == "https" ]] && src="$SRC_GATEWAY_HTTPS_CONF"
-  gw="$(gateway_container)"
-  cat >&2 <<MSG
-
-! Could not auto-detect the gateway's nginx config dir. Install manually:
-    cp $src  <gateway conf.d>/$GATEWAY_CONF_NAME
-    docker exec $gw nginx -t && docker exec $gw nginx -s reload
-  The gateway's current mounts are:
-$(gateway_mounts | sed 's/^/    /')
-MSG
+# Thin wrapper: kong_api METHOD PATH [curl args...]
+kong_api() {
+  local method="$1" path="$2"
+  shift 2
+  curl -fsS --max-time 15 -X "$method" "$(kong_admin_url)$path" "$@"
 }
 
-# Install the gateway server blocks (mode: http|https) into the detected config
-# dir and reload the gateway. Non-fatal: falls back to printed instructions.
-install_gateway_config() {
-  local mode="$1" src dest_dir dest_file gw
-  case "$mode" in
-    http)  src="$SRC_GATEWAY_HTTP_CONF" ;;
-    https) src="$SRC_GATEWAY_HTTPS_CONF" ;;
-    *)     die "install_gateway_config: unknown mode '$mode'" ;;
-  esac
-  [[ -f "$src" ]] || die "Missing gateway config: $src"
-  gw="$(gateway_container)"
-
-  dest_dir="$(gateway_conf_host_dir || true)"
-  if [[ -z "$dest_dir" ]]; then
-    gateway_config_hint "$mode"
+# Create-or-update the Kong services and routes for our domains. Idempotent.
+ensure_kong_routes() {
+  if ! kong_admin_reachable; then
+    warn "Kong Admin API is not reachable ($(kong_admin_url || echo 'URL unknown'))."
+    warn "If it listens on a different address, set KONG_ADMIN_URL in .env and re-run."
     return 1
   fi
-  dest_file="$dest_dir/$GATEWAY_CONF_NAME"
-  if cp "$src" "$dest_file" 2>/dev/null || sudo -n cp "$src" "$dest_file" 2>/dev/null; then
-    ok "Installed gateway config ($mode) -> $dest_file"
-    reload_gateway
+  log "Configuring Kong services + routes (Admin API)..."
+  local out
+  if ! out="$(kong_api PUT /services/ai-website-frontend \
+      -H 'Content-Type: application/json' \
+      --data '{"url":"http://ai-website-frontend:3000"}' 2>&1)"; then
+    warn "Kong refused the Admin API write: $out"
+    warn "If Kong runs DB-less (declarative config), merge nginx/gateway/kong-routes.yml"
+    warn "into the gateway's declarative config file and reload Kong instead."
+    return 1
+  fi
+  # Builder AI routes can exceed default proxy timeouts (SSE streams) — raise
+  # them on the backend service.
+  kong_api PUT /services/ai-website-backend \
+    -H 'Content-Type: application/json' \
+    --data '{"url":"http://ai-website-backend:4000","connect_timeout":75000,"read_timeout":900000,"write_timeout":900000}' >/dev/null
+  kong_api PUT /services/ai-website-admin \
+    -H 'Content-Type: application/json' \
+    --data '{"url":"http://ai-website-admin:3000"}' >/dev/null
+
+  # strip_path=false + preserve_host=true: pass path and Host through unchanged,
+  # exactly like a plain nginx proxy_pass. Longer prefixes win over "/".
+  kong_api PUT /routes/ai-website-web \
+    -H 'Content-Type: application/json' \
+    --data '{"service":{"name":"ai-website-frontend"},"hosts":["ai-web-builder.com","www.ai-web-builder.com"],"paths":["/"],"strip_path":false,"preserve_host":true}' >/dev/null
+  kong_api PUT /routes/ai-website-api \
+    -H 'Content-Type: application/json' \
+    --data '{"service":{"name":"ai-website-backend"},"hosts":["ai-web-builder.com","www.ai-web-builder.com"],"paths":["/api","/health","/live","/ready"],"strip_path":false,"preserve_host":true}' >/dev/null
+  kong_api PUT /routes/ai-website-admin \
+    -H 'Content-Type: application/json' \
+    --data '{"service":{"name":"ai-website-admin"},"hosts":["admin.ai-web-builder.com"],"paths":["/"],"strip_path":false,"preserve_host":true}' >/dev/null
+  ok "Kong routes configured for $DOMAIN (+ www, admin)."
+}
+
+# The host's IP on the shared Docker network (bridge gateway) — Kong uses it to
+# reach certbot --standalone during ACME issuance.
+host_bridge_ip() {
+  docker network inspect "${GATEWAY_NETWORK:-$(detect_gateway_network || true)}" \
+    --format '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null
+}
+
+# Route /.well-known/acme-challenge on our domains to the host's ACME port.
+# Kept permanently so renewals work without reconfiguration.
+kong_ensure_acme_route() {
+  local bip
+  bip="$(host_bridge_ip || true)"
+  if [[ -z "$bip" ]]; then
+    warn "Could not determine the host IP on network ${GATEWAY_NETWORK:-<unknown>}."
+    return 1
+  fi
+  kong_api PUT /services/ai-website-acme \
+    -H 'Content-Type: application/json' \
+    --data "{\"url\":\"http://$bip:$ACME_PORT\"}" >/dev/null
+  kong_api PUT /routes/ai-website-acme \
+    -H 'Content-Type: application/json' \
+    --data '{"service":{"name":"ai-website-acme"},"hosts":["ai-web-builder.com","www.ai-web-builder.com","admin.ai-web-builder.com"],"paths":["/.well-known/acme-challenge"],"strip_path":false,"preserve_host":true,"protocols":["http"]}' >/dev/null
+  ok "ACME challenge route configured (Kong -> host:$ACME_PORT)."
+}
+
+# Upload the issued certificate to Kong (SNI-based; no mounts or reloads).
+# Handles the root-only /etc/letsencrypt permissions via sudo when needed.
+kong_upload_cert() {
+  certs_exist || { warn "No certificate on the host to upload."; return 1; }
+  if ! kong_admin_reachable; then
+    warn "Kong Admin API is not reachable — cannot upload the certificate."
+    return 1
+  fi
+  local tmp fullchain key
+  tmp="$(mktemp -d)"
+  if ! cp "$CERT_FULLCHAIN" "$CERT_KEY" "$tmp/" 2>/dev/null; then
+    if sudo -n true 2>/dev/null; then
+      sudo cp "$CERT_FULLCHAIN" "$CERT_KEY" "$tmp/"
+      sudo chown "$USER:$(id -gn)" "$tmp"/*.pem
+    else
+      warn "Cannot read $CERT_FULLCHAIN — re-run with sudo."
+      rm -rf "$tmp"
+      return 1
+    fi
+  fi
+  fullchain="$tmp/$(basename "$CERT_FULLCHAIN")"
+  key="$tmp/$(basename "$CERT_KEY")"
+  if kong_api PUT "/certificates/$DOMAIN" \
+      -F "cert=@$fullchain;type=application/x-pem-file" \
+      -F "key=@$key;type=application/x-pem-file" \
+      -F "snis[]=$DOMAIN" -F "snis[]=www.$DOMAIN" -F "snis[]=admin.$DOMAIN" >/dev/null; then
+    ok "Certificate uploaded to Kong (SNI: $DOMAIN, www, admin)."
+    rm -rf "$tmp"
     return 0
   fi
-  warn "No write permission for $dest_file"
-  gateway_config_hint "$mode"
+  warn "Uploading the certificate to Kong failed."
+  rm -rf "$tmp"
   return 1
 }
 
-# True when a path is visible inside the gateway container (as a mount).
-gateway_has_mount() {
-  docker exec "$(gateway_container)" test -e "$1" 2>/dev/null
-}
+# ── TLS issuance (host certbot --standalone, reached through Kong) ───────────
 
-# ── TLS (host certbot, webroot served by the gateway) ────────────────────────
-
-# Obtain certificates via host certbot (webroot). Requires: HTTP gateway config
-# installed, $ACME_WEBROOT mounted into the gateway, DNS pointing here.
 request_certs() {
   local email="$1"
   [[ -z "$email" ]] && die "No Let's Encrypt email. Set LETSENCRYPT_EMAIL (or CERTBOT_EMAIL) in .env."
@@ -192,54 +231,28 @@ request_certs() {
     warn "certbot needs sudo. Re-run with sudo or grant the deploy user NOPASSWD for certbot."
     return 1
   fi
-  if ! gateway_has_mount "$ACME_WEBROOT"; then
-    warn "$ACME_WEBROOT is NOT mounted into the gateway container — the ACME"
-    warn "challenge cannot be served. Add to the gateway and recreate it:"
-    warn "  -v $ACME_WEBROOT:$ACME_WEBROOT"
-    return 1
-  fi
-  sudo mkdir -p "$ACME_WEBROOT"
-  log "Requesting Let's Encrypt certificates (webroot: $ACME_WEBROOT)..."
-  sudo certbot certonly --webroot \
-    -w "$ACME_WEBROOT" \
+  kong_ensure_acme_route || return 1
+  log "Requesting Let's Encrypt certificates (standalone on :$ACME_PORT, reached via Kong)..."
+  sudo certbot certonly --standalone --http-01-port "$ACME_PORT" \
     -d "$DOMAIN" -d "www.$DOMAIN" -d "admin.$DOMAIN" \
     --email "$email" --agree-tos --no-eff-email --non-interactive
 }
 
-# After certificates exist, verify the gateway can actually read them.
-check_gateway_cert_mount() {
-  if gateway_has_mount "$CERT_FULLCHAIN"; then
-    return 0
-  fi
-  warn "The gateway cannot see $CERT_FULLCHAIN"
-  warn "Mount the certificates into the gateway container (read-only) and recreate it:"
-  warn "  -v /etc/letsencrypt:/etc/letsencrypt:ro"
-  warn "Then re-run: bash scripts/deploy.sh   (to install the HTTPS config)"
-  return 1
-}
-
-# Reload nginx INSIDE the gateway container (no host nginx involved).
-reload_gateway() {
-  local gw
-  gw="$(gateway_container)"
-  log "Reloading nginx in gateway container '$gw'..."
-  if ! docker exec "$gw" nginx -t >/dev/null 2>&1; then
-    warn "nginx config test failed inside '$gw':"; docker exec "$gw" nginx -t >&2 || true
-    return 1
-  fi
-  if docker exec "$gw" nginx -s reload >/dev/null 2>&1; then
-    ok "Gateway nginx reloaded."
-    return 0
-  fi
-  warn "Could not reload gateway nginx (try: docker restart $gw)."
-  return 1
+# Renewal hook: re-upload renewed certificates to Kong automatically.
+install_cert_renewal_hook() {
+  sudo -n true >/dev/null 2>&1 || { warn "Need sudo to install the certbot renewal hook. Skipping."; return 0; }
+  local hook="/etc/letsencrypt/renewal-hooks/deploy/ai-website-kong.sh"
+  sudo mkdir -p "$(dirname "$hook")"
+  printf '#!/bin/sh\nbash %s/scripts/kong-cert-upload.sh >> /var/log/ai-website-kong-cert.log 2>&1\n' "$ROOT" \
+    | sudo tee "$hook" >/dev/null
+  sudo chmod +x "$hook"
+  ok "Certbot renewal hook installed ($hook)."
 }
 
 # ── stack health + status ────────────────────────────────────────────────────
 
-# Non-fatal: verify the gateway can resolve our container aliases on the shared
-# network (catches the #1 misconfiguration — stack and gateway on different
-# networks). Runs after `docker compose up -d`.
+# Verify the gateway can resolve our container aliases (Kong resolves upstream
+# hostnames through Docker DNS).
 verify_gateway_dns() {
   local gw
   gw="$(gateway_container)"
@@ -250,6 +263,19 @@ verify_gateway_dns() {
     warn "Gateway '$gw' cannot resolve the ai-website-* aliases."
     warn "Make sure '$gw' is attached to network '${GATEWAY_NETWORK:-<unknown>}':"
     warn "  docker network connect ${GATEWAY_NETWORK:-<network>} $gw   # only if missing"
+  fi
+}
+
+# End-to-end probe through Kong's published HTTP port.
+probe_gateway() {
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $DOMAIN" --max-time 10 \
+    http://localhost/health 2>/dev/null || true)"
+  if [[ "$code" == "200" ]]; then
+    ok "Gateway serves $DOMAIN (backend /health returned 200)."
+  else
+    warn "Gateway probe for http://$DOMAIN/health returned HTTP '$code'."
+    warn "Check routes: curl -s \$(bash -c 'source scripts/lib.sh; kong_admin_url')/routes | less"
   fi
 }
 
@@ -275,10 +301,11 @@ show_status() {
   docker compose ps
   echo
   verify_gateway_dns
+  probe_gateway
   if certs_exist; then
     ok "Site should be live at https://$DOMAIN (and https://admin.$DOMAIN)."
   else
-    ok "App stack is up; gateway serves http://$DOMAIN (HTTP only — no certificate yet)."
+    ok "App stack is up; Kong serves http://$DOMAIN (HTTP only — no certificate yet)."
     log "To enable HTTPS: set LETSENCRYPT_EMAIL in .env, ensure DNS points here, then run:"
     log "  sudo bash scripts/deploy.sh --request-cert"
   fi
