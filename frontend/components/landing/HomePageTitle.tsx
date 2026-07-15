@@ -56,7 +56,7 @@ function useTypewriter(messages: string[]): string {
 
 export default function HomePageTitle() {
   const t = useTranslations("homePageTitle");
-  // The subtitle keeps `rotating2`, so the headline cycles through the rest.
+  // `rotating2` was the old subtitle; the headline cycles through the rest.
   const m1 = t("rotating1");
   const m3 = t("rotating3");
   const m4 = t("rotating4");
@@ -86,14 +86,6 @@ export default function HomePageTitle() {
           <span className="animate-pulse font-light text-primary">|</span>
         </span>
       </motion.h1>
-      <motion.p
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease, delay: 0.1 }}
-        className="mt-4 max-w-xl text-base text-zinc-400 sm:text-lg"
-      >
-        {t("rotating2")}
-      </motion.p>
     </header>
   );
 }

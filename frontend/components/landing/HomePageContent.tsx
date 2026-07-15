@@ -10,11 +10,11 @@ export default function HomePageContent() {
       {/* Clears fixed navbar */}
       <div aria-hidden className="h-16 sm:h-[4.2rem]" />
 
-      <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-1 flex-col px-4 pb-20 pt-8 sm:px-6 md:px-8 lg:px-10">
+      <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-1 flex-col px-4 sm:px-6 md:px-8 lg:px-10">
         {/* Hero: title + prompt input */}
         <section
           aria-label="Start building"
-          className="flex w-full flex-1 flex-col items-center justify-center pt-8 sm:pt-12 md:min-h-[calc(100svh-8rem)] md:pt-16 md:pb-8"
+          className="flex w-full flex-1 flex-col items-center justify-center py-8"
         >
           <HomePageTitle />
           <PromptInput />

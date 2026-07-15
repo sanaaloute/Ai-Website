@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 export default function Footer() {
   const t = useTranslations("footer");
   return (
-    <footer className="mt-16 border-t border-white/5 bg-background-soft/30">
+    <footer className="border-t border-white/5 bg-background-soft/30">
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 px-4 py-4 text-sm text-zinc-500 md:flex-row md:justify-between md:px-8 lg:px-10">
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-semibold text-white">

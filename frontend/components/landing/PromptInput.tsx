@@ -290,7 +290,7 @@ export default function PromptInput() {
           <p className="mt-2 text-xs text-amber-300">{generationNotice}</p>
         ) : null}
 
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
           {shownIdeas.map((idea) => (
             <button
               key={idea.id}
