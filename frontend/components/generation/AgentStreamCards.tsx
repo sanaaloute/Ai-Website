@@ -19,8 +19,11 @@ export function AgentStreamCards({
   generationProgress,
   generationEstimatedPercent,
 }: AgentStreamCardsProps) {
-  const steps = generationProgress.agentSteps ?? [];
-  const allDone = steps.length > 0 && steps.every((s) => s.done);
+  // Code streams ("Stream synthesis") must never appear in the main stream —
+  // the code panel on the right is the single place where code is shown.
+  const allSteps = generationProgress.agentSteps ?? [];
+  const steps = allSteps.filter((s) => s.kind !== 'code');
+  const allDone = allSteps.length > 0 && allSteps.every((s) => s.done);
 
   // Visible while generating (even before the first agent token arrives, so it
   // fully replaces the old static steps card) or when there are steps to show.
@@ -55,6 +58,56 @@ export function AgentStreamCards({
       {steps.map((step) => (
         <AgentStepCard key={step.id} step={step} />
       ))}
+
+      {/* Live activity: which agent is working right now. Keeps the main
+          stream visibly alive during non-code phases (analyzer → validator)
+          where no tokens stream, and points to the code panel while the
+          executor is writing code. */}
+      <AgentActivityIndicator generationProgress={generationProgress} />
+    </div>
+  );
+}
+
+function AgentActivityIndicator({
+  generationProgress,
+}: {
+  generationProgress: GenerationProgress;
+}) {
+  if (!generationProgress.isGenerating) return null;
+
+  const allSteps = generationProgress.agentSteps ?? [];
+  const activeStep = allSteps.find((s) => !s.done);
+
+  let label: string;
+  let detail: string | null = null;
+  if (activeStep?.kind === 'code') {
+    label = 'Writing code';
+    detail = generationProgress.currentFile?.path ?? null;
+  } else if (activeStep) {
+    label = activeStep.label;
+  } else {
+    label = generationProgress.status || 'Working';
+  }
+
+  return (
+    <div className="flex items-center gap-3 overflow-hidden rounded-xl border border-glow-cyan/20 bg-gradient-to-r from-glow-cyan/[0.07] via-primary/[0.07] to-transparent px-3 py-2.5">
+      <span className="flex shrink-0 items-end gap-[3px]" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-glow-cyan"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">
+        <span className="animate-pulse bg-gradient-to-r from-zinc-100 via-glow-cyan to-zinc-100 bg-clip-text text-transparent">
+          {label}
+        </span>
+        {detail ? (
+          <span className="ml-1.5 font-mono text-[10px] text-zinc-500">{detail}</span>
+        ) : null}
+      </span>
     </div>
   );
 }

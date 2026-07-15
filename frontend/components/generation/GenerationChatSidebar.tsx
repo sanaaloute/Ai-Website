@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import BuilderChatInput from '@/components/builder/BuilderChatInput';
@@ -54,6 +54,35 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
   } = workspace;
   const t = useTranslations('generation');
 
+  // Auto-scroll the main stream so it follows the generation progress.
+  // Pauses when the user scrolls up (>80px from bottom) and resumes once
+  // they scroll back near the bottom — same behavior as the code panel.
+  const chatAutoScrollEnabledRef = useRef(true);
+  const wasGeneratingRef = useRef(false);
+
+  const handleChatScroll = () => {
+    const el = chatMessagesRef.current;
+    if (!el) return;
+    const threshold = 80;
+    chatAutoScrollEnabledRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  };
+
+  // Re-enable auto-scroll whenever a new generation starts, so the stream
+  // follows the progress even if the user scrolled up during a previous run.
+  useEffect(() => {
+    if (generationProgress.isGenerating && !wasGeneratingRef.current) {
+      chatAutoScrollEnabledRef.current = true;
+    }
+    wasGeneratingRef.current = generationProgress.isGenerating;
+  }, [generationProgress.isGenerating]);
+
+  useEffect(() => {
+    const el = chatMessagesRef.current;
+    if (!el || !chatAutoScrollEnabledRef.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [mainChatVisibleMessages, generationProgress, codeApplicationState, chatMessagesRef]);
+
   return (
     <div
       className="relative flex min-h-0 flex-shrink-0 flex-col border-r border-white/[0.06] bg-black/30 backdrop-blur-xl"
@@ -102,6 +131,7 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
       <div
         className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 scrollbar-hide"
         ref={chatMessagesRef}
+        onScroll={handleChatScroll}
       >
         {mainChatVisibleMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-14 text-center">

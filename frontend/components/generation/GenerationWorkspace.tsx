@@ -59,8 +59,9 @@ function GenerationWorkspace({ workspace }: GenerationWorkspaceProps) {
       const path = generationProgress.currentFile.path;
       setSelectedFile(path);
 
-      // Expand the root plus all parent folders so the current file is
-      // visible in the explorer.
+      // Expand only the root and the top-level folder (e.g. `src`) so the
+      // current file's area is visible. Deeper subfolders stay collapsed —
+      // the user can expand them manually.
       const parts = path.split('/');
       const foldersToExpand = new Set(expandedFolders);
       let changed = false;
@@ -68,12 +69,9 @@ function GenerationWorkspace({ workspace }: GenerationWorkspaceProps) {
         foldersToExpand.add('root');
         changed = true;
       }
-      for (let i = 1; i < parts.length; i++) {
-        const folder = parts.slice(0, i).join('/');
-        if (!foldersToExpand.has(folder)) {
-          foldersToExpand.add(folder);
-          changed = true;
-        }
+      if (parts.length > 1 && !foldersToExpand.has(parts[0])) {
+        foldersToExpand.add(parts[0]);
+        changed = true;
       }
       if (changed) {
         setExpandedFolders(foldersToExpand);
@@ -196,9 +194,9 @@ function GenerationWorkspace({ workspace }: GenerationWorkspaceProps) {
               {/* Active file takes priority so each file opens as it is written. */}
               {selectedFile ? (
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-black/40">
+                  <div className="overflow-clip rounded-xl border border-white/[0.06] bg-black/40">
                     {/* File header */}
-                    <div className="flex items-center justify-between border-b border-white/[0.06] bg-white/[0.03] px-3 py-2">
+                    <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.06] bg-zinc-950/90 px-3 py-2 backdrop-blur-md">
                       <div className="flex items-center gap-2 min-w-0">
                         {generationProgress.currentFile?.path === selectedFile ? (
                           <GenerationOrb size="xs" className="shrink-0" />
@@ -289,8 +287,8 @@ function GenerationWorkspace({ workspace }: GenerationWorkspaceProps) {
                   activeStep={generationProgress.isGenerating ? 2 : generationProgress.status ? 1 : 0}
                 />
               ) : generationProgress.currentFile ? (
-                <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-black/40">
-                  <div className="flex items-center justify-between border-b border-white/[0.06] bg-white/[0.03] px-3 py-2">
+                <div className="overflow-clip rounded-xl border border-white/[0.06] bg-black/40">
+                  <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.06] bg-zinc-950/90 px-3 py-2 backdrop-blur-md">
                     <div className="flex min-w-0 items-center gap-2">
                       <GenerationOrb size="xs" className="shrink-0" />
                       <span className="truncate font-mono text-xs text-zinc-300">{generationProgress.currentFile.path}</span>
