@@ -466,8 +466,53 @@ let E2BService = E2BService_1 = class E2BService {
             await this.state.releaseRenewalLock(currentId);
         }
     }
+    async tryExtendSandbox(currentId) {
+        try {
+            const sandbox = this.sandboxes.get(currentId) ??
+                (await e2b_1.Sandbox.connect(currentId, {
+                    apiKey: (0, env_1.env)().e2bApiKey,
+                    requestTimeoutMs: CONNECT_TIMEOUT_MS,
+                }));
+            this.sandboxes.set(currentId, sandbox);
+            await sandbox.setTimeout(SANDBOX_LIFETIME_MS);
+            const info = await this.state.getSandboxInfo(currentId);
+            if (info) {
+                await this.state.setSandboxInfo(currentId, {
+                    ...info,
+                    endAt: new Date(Date.now() + SANDBOX_LIFETIME_MS).toISOString(),
+                });
+            }
+            return true;
+        }
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this.logger.warn(`Could not extend sandbox ${currentId} TTL (${msg}); falling back to migration`);
+            return false;
+        }
+    }
+    async killSandboxDirect(sandboxId) {
+        try {
+            const sandbox = this.sandboxes.get(sandboxId) ??
+                (await e2b_1.Sandbox.connect(sandboxId, {
+                    apiKey: (0, env_1.env)().e2bApiKey,
+                    requestTimeoutMs: CONNECT_TIMEOUT_MS,
+                }));
+            await sandbox.kill();
+            this.sandboxes.delete(sandboxId);
+            return true;
+        }
+        catch {
+            this.sandboxes.delete(sandboxId);
+            return false;
+        }
+    }
     async doRenewSandbox(currentId) {
         const start = Date.now();
+        if (await this.tryExtendSandbox(currentId)) {
+            const data = await this.attach(currentId);
+            this.logger.log(`Extended sandbox ${currentId} TTL (${Date.now() - start}ms)`);
+            return { ...data, filesMigrated: 0 };
+        }
         const files = await this.readFiles(currentId, { maxFiles: 1000 });
         const oldInfo = await this.state.getSandboxInfo(currentId);
         const newSandbox = await this.createSandbox({ userId: oldInfo?.userId });
@@ -481,25 +526,22 @@ let E2BService = E2BService_1 = class E2BService {
                     await this.writeFile(newSandbox.sandboxId, templatePath, templateContent);
                 }
             }
-            const installRes = await this.runCommand(newSandbox.sandboxId, 'npm install', exports.WORKDIR, {
-                timeoutMs: 5 * 60 * 1000,
-            });
-            if (installRes.exitCode !== 0) {
-                this.logger.error(`npm install failed in renewed sandbox ${newSandbox.sandboxId}: exitCode=${installRes.exitCode}, stdout=${installRes.output}, stderr=${installRes.error}`);
-                throw new Error(`npm install failed: ${installRes.error || installRes.output}`);
-            }
-            const restarted = await this.restartPreview(newSandbox.sandboxId);
-            if (!restarted) {
-                throw new Error('Failed to start dev server in renewed sandbox');
-            }
             try {
                 await this.kill(currentId);
             }
             catch (killErr) {
                 const msg = killErr instanceof Error ? killErr.message : String(killErr);
-                this.logger.warn(`Failed to kill old sandbox ${currentId} after renewal: ${msg}`);
+                this.logger.warn(`Failed to kill old sandbox ${currentId} during renewal: ${msg}`);
             }
             await this.registerRenewal(currentId, newSandbox.sandboxId);
+            const installRes = await this.runCommand(newSandbox.sandboxId, 'NODE_OPTIONS=--max-old-space-size=400 npm install --no-audit --no-fund', exports.WORKDIR, { timeoutMs: 5 * 60 * 1000 });
+            if (installRes.exitCode !== 0) {
+                this.logger.error(`npm install failed in renewed sandbox ${newSandbox.sandboxId}: exitCode=${installRes.exitCode}, stdout=${installRes.output}, stderr=${installRes.error}`);
+            }
+            const restarted = await this.restartPreview(newSandbox.sandboxId);
+            if (!restarted) {
+                this.logger.warn(`Dev server did not start in renewed sandbox ${newSandbox.sandboxId}; preview health flow will retry`);
+            }
             const filesMigrated = Object.keys(files.files).length;
             this.logger.log(`Renewed sandbox ${currentId} -> ${newSandbox.sandboxId} (${filesMigrated} files, ${Date.now() - start}ms)`);
             return {
@@ -510,10 +552,12 @@ let E2BService = E2BService_1 = class E2BService {
         catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             this.logger.error(`Sandbox renewal failed for ${currentId}: ${message}`);
-            try {
-                await this.kill(newSandbox.sandboxId);
+            const killed = await this.killSandboxDirect(newSandbox.sandboxId);
+            if (killed) {
+                await this.state.clearSandboxState(newSandbox.sandboxId);
             }
-            catch {
+            else {
+                this.logger.warn(`Could not kill partially renewed sandbox ${newSandbox.sandboxId}; leaving it tracked for lifecycle cleanup`);
             }
             throw err;
         }
@@ -542,7 +586,8 @@ let E2BService = E2BService_1 = class E2BService {
                 catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
                     const isSpawnFailure = /exit status 25[0-9]/.test(msg);
-                    if (attempt < MAX_ATTEMPTS && (isSpawnFailure || isTimeoutOrNetworkError(err))) {
+                    const isCommandExit = err instanceof e2b_1.CommandExitError;
+                    if (attempt < MAX_ATTEMPTS && !isCommandExit && (isSpawnFailure || isTimeoutOrNetworkError(err))) {
                         this.logger.warn(`runCommand transient failure (attempt ${attempt}/${MAX_ATTEMPTS}): ${msg} — retrying`);
                         await sleep(3_000 * attempt);
                         continue;
@@ -560,7 +605,7 @@ let E2BService = E2BService_1 = class E2BService {
             if (err instanceof e2b_1.CommandExitError) {
                 return {
                     output: err.stdout ?? '',
-                    error: err.error ?? err.message,
+                    error: err.stderr || err.error || err.message,
                     exitCode: err.exitCode ?? 1,
                 };
             }

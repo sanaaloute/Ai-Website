@@ -505,7 +505,7 @@ export function useGenerationPage() {
       }
 
       renewedSandboxIdRef.current = oldId;
-      chatAddChatMessage('⏳ Your workspace will expire soon. Migrating all your files to a fresh sandbox...', 'system');
+      chatAddChatMessage('⏳ Your workspace will expire soon. Extending it automatically...', 'system');
       uiSetLoading(true);
       uiSetShowLoadingBackground(true);
 
@@ -549,7 +549,9 @@ export function useGenerationPage() {
 
         const migrated = data.filesMigrated ?? 0;
         chatAddChatMessage(
-          `✅ Sandbox renewed! ${migrated} files migrated to a fresh workspace. You can keep working without interruption.`,
+          migrated > 0
+            ? `✅ Sandbox renewed! ${migrated} files migrated to a fresh workspace. You can keep working without interruption.`
+            : '✅ Workspace extended! You can keep working without interruption.',
           'system'
         );
         updateStatus('Sandbox active', true);
@@ -911,7 +913,7 @@ export function useGenerationPage() {
         hasWarned = true;
         chat.addChatMessage(
           `Workspace expires in ${Math.round(remaining / 60000)} minutes. ` +
-          `A fresh sandbox will be prepared automatically before then.`,
+          `It will be extended automatically before then.`,
           'system'
         );
       }
@@ -920,18 +922,9 @@ export function useGenerationPage() {
 
       hasRenewed = true;
 
-      // If a generation is still running, abort it so we can migrate before
-      // the provider kills the sandbox under active work.
-      if (gen.generationProgress.isGenerating) {
-        chat.addChatMessage(
-          'Workspace is expiring. Pausing the current task to migrate to a fresh sandbox...',
-          'system'
-        );
-        abortChatMessageRef.current?.();
-        // Give the stream a moment to close and persist any in-flight files.
-        await new Promise((resolve) => window.setTimeout(resolve, 3000));
-      }
-
+      // Renewal is transparent to running work: the backend extends the
+      // sandbox TTL in place whenever possible, so an active generation no
+      // longer needs to be aborted for a migration.
       await onSandboxRenewRef.current?.();
     }, CHECK_INTERVAL_MS);
 

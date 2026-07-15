@@ -54,6 +54,8 @@ export declare class E2BService {
     renewSandbox(oldSandboxId: string): Promise<SandboxData & {
         filesMigrated: number;
     }>;
+    private tryExtendSandbox;
+    private killSandboxDirect;
     private doRenewSandbox;
     runCommand(sandboxId: string, command: string, cwd?: string, opts?: {
         timeoutMs?: number;

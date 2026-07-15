@@ -16,19 +16,19 @@ declare const updateTodosSchema: z.ZodObject<{
         content?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
+    merge: boolean;
     todos: {
         id: string;
         status?: "completed" | "pending" | "in_progress" | undefined;
         content?: string | undefined;
     }[];
-    merge: boolean;
 }, {
+    merge: boolean;
     todos: {
         id: string;
         status?: "completed" | "pending" | "in_progress" | undefined;
         content?: string | undefined;
     }[];
-    merge: boolean;
 }>;
 export declare class UpdateTodosTool extends AgentTool {
     name: string;
@@ -49,19 +49,19 @@ export declare class UpdateTodosTool extends AgentTool {
             content?: string | undefined;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
+        merge: boolean;
         todos: {
             id: string;
             status?: "completed" | "pending" | "in_progress" | undefined;
             content?: string | undefined;
         }[];
-        merge: boolean;
     }, {
+        merge: boolean;
         todos: {
             id: string;
             status?: "completed" | "pending" | "in_progress" | undefined;
             content?: string | undefined;
         }[];
-        merge: boolean;
     }>;
     private findExpectedNextTodoIdInList;
     private findCurrentInProgressTodoIdInList;

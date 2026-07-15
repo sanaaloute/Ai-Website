@@ -555,10 +555,77 @@ export class E2BService {
     }
   }
 
+  /**
+   * Fast-path renewal: extend the live sandbox's TTL in place. This avoids
+   * the whole file-migration + npm-install dance (and its failure modes —
+   * OOM aborts, orphaned sandboxes) whenever the sandbox is still alive.
+   * Returns true when the extension succeeded.
+   */
+  private async tryExtendSandbox(currentId: string): Promise<boolean> {
+    try {
+      const sandbox =
+        this.sandboxes.get(currentId) ??
+        (await Sandbox.connect(currentId, {
+          apiKey: env().e2bApiKey,
+          requestTimeoutMs: CONNECT_TIMEOUT_MS,
+        }));
+      this.sandboxes.set(currentId, sandbox);
+
+      await sandbox.setTimeout(SANDBOX_LIFETIME_MS);
+
+      const info = await this.state.getSandboxInfo(currentId);
+      if (info) {
+        await this.state.setSandboxInfo(currentId, {
+          ...info,
+          endAt: new Date(Date.now() + SANDBOX_LIFETIME_MS).toISOString(),
+        });
+      }
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `Could not extend sandbox ${currentId} TTL (${msg}); falling back to migration`,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Kills a sandbox by its exact ID without following renewal chains and
+   * without touching Redis state. Returns false when the kill RPC failed —
+   * callers then decide whether to keep lifecycle tracking.
+   */
+  private async killSandboxDirect(sandboxId: string): Promise<boolean> {
+    try {
+      const sandbox =
+        this.sandboxes.get(sandboxId) ??
+        (await Sandbox.connect(sandboxId, {
+          apiKey: env().e2bApiKey,
+          requestTimeoutMs: CONNECT_TIMEOUT_MS,
+        }));
+      await sandbox.kill();
+      this.sandboxes.delete(sandboxId);
+      return true;
+    } catch {
+      this.sandboxes.delete(sandboxId);
+      return false;
+    }
+  }
+
   private async doRenewSandbox(currentId: string): Promise<SandboxData & { filesMigrated: number }> {
     const start = Date.now();
 
-    // 1. Snapshot the current sandbox.
+    // Fast path: the sandbox is still alive — just extend its TTL. No
+    // migration, no npm install, no downtime, no new sandbox.
+    if (await this.tryExtendSandbox(currentId)) {
+      const data = await this.attach(currentId);
+      this.logger.log(`Extended sandbox ${currentId} TTL (${Date.now() - start}ms)`);
+      return { ...data, filesMigrated: 0 };
+    }
+
+    // Slow path: migrate to a fresh sandbox.
+    // 1. Snapshot the current sandbox (throws when it is already gone — the
+    // lifecycle scheduler treats that as a dead sandbox and purges it).
     const files = await this.readFiles(currentId, { maxFiles: 1000 });
 
     // 2. Create a fresh 1-hour sandbox, keeping the same owner for metering.
@@ -571,9 +638,9 @@ export class E2BService {
         await this.writeFile(newSandbox.sandboxId, path, content);
       }
 
-      // 4. Ensure a runnable project exists, then reinstall dependencies.
-      // If the snapshot was empty or missing package.json, seed the generic
-      // template so the dev server can actually start.
+      // 4. Ensure a runnable project exists. If the snapshot was empty or
+      // missing package.json, seed the generic template so the dev server
+      // can actually start.
       if (!files.files['package.json']) {
         this.logger.warn(
           `Renewed sandbox ${newSandbox.sandboxId} is missing package.json; seeding generic template`,
@@ -583,32 +650,41 @@ export class E2BService {
         }
       }
 
-      const installRes = await this.runCommand(newSandbox.sandboxId, 'npm install', WORKDIR, {
-        timeoutMs: 5 * 60 * 1000,
-      });
-      if (installRes.exitCode !== 0) {
-        this.logger.error(
-          `npm install failed in renewed sandbox ${newSandbox.sandboxId}: exitCode=${installRes.exitCode}, stdout=${installRes.output}, stderr=${installRes.error}`,
-        );
-        throw new Error(`npm install failed: ${installRes.error || installRes.output}`);
-      }
-
-      // 5. Start the Vite dev server so the preview URL works immediately.
-      const restarted = await this.restartPreview(newSandbox.sandboxId);
-      if (!restarted) {
-        throw new Error('Failed to start dev server in renewed sandbox');
-      }
-
-      // 6. Only kill the old sandbox after the new one is fully bootstrapped.
+      // 5. Hand over identity BEFORE the risky steps: retire the old sandbox
+      // and point the renewal chain at the new one. From here on, every
+      // request keyed to the old ID resolves to the new sandbox, so a
+      // failing npm install can no longer strand the user on a dead sandbox.
       try {
         await this.kill(currentId);
       } catch (killErr) {
         const msg = killErr instanceof Error ? killErr.message : String(killErr);
-        this.logger.warn(`Failed to kill old sandbox ${currentId} after renewal: ${msg}`);
+        this.logger.warn(`Failed to kill old sandbox ${currentId} during renewal: ${msg}`);
+      }
+      await this.registerRenewal(currentId, newSandbox.sandboxId);
+
+      // 6. Install dependencies. Non-fatal: restartPreview below retries the
+      // install (`test -d node_modules || npm install`), and the preview
+      // health flow recovers a missing dev server later. The heap cap and
+      // disabled audit reduce OOM aborts in the 512MB sandbox.
+      const installRes = await this.runCommand(
+        newSandbox.sandboxId,
+        'NODE_OPTIONS=--max-old-space-size=400 npm install --no-audit --no-fund',
+        WORKDIR,
+        { timeoutMs: 5 * 60 * 1000 },
+      );
+      if (installRes.exitCode !== 0) {
+        this.logger.error(
+          `npm install failed in renewed sandbox ${newSandbox.sandboxId}: exitCode=${installRes.exitCode}, stdout=${installRes.output}, stderr=${installRes.error}`,
+        );
       }
 
-      // 7. Point any references to the old ID at the new sandbox.
-      await this.registerRenewal(currentId, newSandbox.sandboxId);
+      // 7. Start the dev server so the preview URL works (best-effort).
+      const restarted = await this.restartPreview(newSandbox.sandboxId);
+      if (!restarted) {
+        this.logger.warn(
+          `Dev server did not start in renewed sandbox ${newSandbox.sandboxId}; preview health flow will retry`,
+        );
+      }
 
       const filesMigrated = Object.keys(files.files).length;
       this.logger.log(
@@ -622,10 +698,16 @@ export class E2BService {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Sandbox renewal failed for ${currentId}: ${message}`);
-      try {
-        await this.kill(newSandbox.sandboxId);
-      } catch {
-        // ignore
+      // Best-effort cleanup of the partially migrated sandbox. If the kill
+      // RPC itself fails, keep Redis tracking so the lifecycle scheduler can
+      // purge it after expiry instead of leaking an invisible orphan.
+      const killed = await this.killSandboxDirect(newSandbox.sandboxId);
+      if (killed) {
+        await this.state.clearSandboxState(newSandbox.sandboxId);
+      } else {
+        this.logger.warn(
+          `Could not kill partially renewed sandbox ${newSandbox.sandboxId}; leaving it tracked for lifecycle cleanup`,
+        );
       }
       throw err;
     }
@@ -668,7 +750,11 @@ export class E2BService {
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           const isSpawnFailure = /exit status 25[0-9]/.test(msg);
-          if (attempt < MAX_ATTEMPTS && (isSpawnFailure || isTimeoutOrNetworkError(err))) {
+          // A CommandExitError means the command actually ran and crashed
+          // (e.g. npm install dying on an OOM abort) — retrying the exact
+          // same command is pointless and just wastes time.
+          const isCommandExit = err instanceof CommandExitError;
+          if (attempt < MAX_ATTEMPTS && !isCommandExit && (isSpawnFailure || isTimeoutOrNetworkError(err))) {
             this.logger.warn(
               `runCommand transient failure (attempt ${attempt}/${MAX_ATTEMPTS}): ${msg} — retrying`,
             );
@@ -690,7 +776,9 @@ export class E2BService {
       if (err instanceof CommandExitError) {
         return {
           output: err.stdout ?? '',
-          error: err.error ?? err.message,
+          // Prefer real stderr — `err.error` is only the envd status string
+          // (e.g. "signal: aborted") and hides the actual command output.
+          error: err.stderr || err.error || err.message,
           exitCode: err.exitCode ?? 1,
         };
       }

@@ -136,10 +136,22 @@ export async function attachE2bSandbox(
   } catch (error: unknown) {
     console.error('[attachE2bSandbox] Error:', error);
     updateStatus('Error', false);
-    addChatMessage(
-      `Failed to attach sandbox: ${getErrorMessage(error)}`,
-      'error'
-    );
+    const msg = getErrorMessage(error);
+    const sandboxMissing =
+      /sandbox[_\s-]*(not[_\s-]*found|gone)/i.test(msg) ||
+      /(not[_\s-]*found|gone)[_\s-]*sandbox/i.test(msg);
+    if (sandboxMissing) {
+      // The sandbox expired or was reset. Delegate to the file-fetch
+      // recovery flow, which creates a fresh sandbox while preserving the
+      // project context — instead of leaving the user on a dead-end error.
+      addChatMessage(
+        'Your sandbox expired or was reset. Creating a fresh one…',
+        'system'
+      );
+      void fetchSandboxFiles(targetSandboxId);
+    } else {
+      addChatMessage(`Failed to attach sandbox: ${msg}`, 'error');
+    }
   } finally {
     setLoading(false);
     setShowLoadingBackground(false);
@@ -223,8 +235,9 @@ export async function fetchSandboxFiles(
 
     const sandboxMissing =
       data.code === 'SANDBOX_GONE' ||
-      /sandbox.*not found/i.test(data.error || '') ||
-      /not found.*sandbox/i.test(data.error || '');
+      data.code === 'SANDBOX_NOT_FOUND' ||
+      /sandbox[_\s-]*(not[_\s-]*found|gone)/i.test(data.error || '') ||
+      /(not[_\s-]*found|gone)[_\s-]*sandbox/i.test(data.error || '');
 
     if (!result.ok && sandboxMissing && !sandboxFileRecoverRef.current) {
       sandboxFileRecoverRef.current = true;

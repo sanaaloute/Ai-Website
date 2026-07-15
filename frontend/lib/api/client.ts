@@ -1024,6 +1024,9 @@ export async function createZipRaw(body: {
 // ─── Sandbox Renew ──────────────────────────────────────────────────────
 
 export async function renewSandbox(sandboxId: string) {
+  // Renewals usually return within seconds (TTL extension), but the
+  // migration fallback (file copy + npm install + dev server) can take
+  // several minutes — give the request a matching timeout.
   return apiPost<{
     success: boolean;
     error?: string;
@@ -1034,5 +1037,5 @@ export async function renewSandbox(sandboxId: string) {
     endAt?: string;
     filesMigrated?: number;
     durationMs?: number;
-  }>('/sandbox-renew', { sandboxId }, 'renewSandbox');
+  }>('/sandbox-renew', { sandboxId }, 'renewSandbox', undefined, 10 * 60 * 1000);
 }
