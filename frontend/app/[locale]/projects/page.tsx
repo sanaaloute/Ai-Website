@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, Link } from '@/i18n/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Boxes,
@@ -25,22 +25,29 @@ import { listProjects, createSandbox, openProject, deleteProject as apiDeletePro
 import { useLandingAuthStore } from '@/stores/landingAuthStore';
 
 type FilterTab = 'all' | 'deployed' | 'undeployed';
+type OpeningStatusKey = 'sandbox' | 'files' | 'finalize';
 
 const CURRENT_SESSION_PROJECT_KEY = 'ai-website:currentProjectId:v1';
 const LAST_SAVED_PROJECT_KEY = 'ai-website:lastSavedProjectId:v1';
 
-function formatRelativeTime(updatedAt?: number): string {
-  if (!updatedAt) return 'Just now';
+type RelativeTimeTranslate = (key: string, values?: Record<string, number>) => string;
+
+function formatRelativeTime(
+  updatedAt: number | undefined,
+  t: RelativeTimeTranslate,
+  locale: string
+): string {
+  if (!updatedAt) return t('justNow');
   const diff = Date.now() - updatedAt;
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t('justNow');
+  if (minutes < 60) return t('minutesAgo', { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return t('daysAgo', { count: days });
   const date = new Date(updatedAt);
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 /* ------------------------------------------------------------------ */
@@ -48,28 +55,25 @@ function formatRelativeTime(updatedAt?: number): string {
 /* ------------------------------------------------------------------ */
 
 function OpeningProjectLoader({
-  projectName,
+  title,
+  subtitle,
   status,
+  steps,
+  activeStep,
 }: {
-  projectName: string;
+  title: string;
+  subtitle: string;
   status: string;
+  steps: { label: string; key: string }[];
+  activeStep: number;
 }) {
-  const steps = [
-    { label: 'Creating sandbox', key: 'sandbox' },
-    { label: 'Loading files', key: 'files' },
-    { label: 'Finalizing', key: 'finalize' },
-  ];
-
-  const activeIndex =
-    status.includes('sandbox') ? 0 : status.includes('files') || status.includes('Loading') ? 1 : 2;
-
   return (
     <AppLoaderFullscreen
-      title="Opening project"
-      subtitle={`${projectName || 'Your project'} is being prepared`}
+      title={title}
+      subtitle={subtitle}
       status={status}
       steps={steps}
-      activeStep={activeIndex}
+      activeStep={activeStep}
     />
   );
 }
@@ -81,6 +85,8 @@ function OpeningProjectLoader({
 export default function ProjectsPage() {
   const router = useRouter();
   const t = useTranslations('loginRequired');
+  const tp = useTranslations('projects');
+  const locale = useLocale();
   const isAuthenticated = useLandingAuthStore((s) => s.isAuthenticated);
   const authChecked = useLandingAuthStore((s) => s.authChecked);
   const openLoginDialog = useLandingAuthStore((s) => s.openLoginDialog);
@@ -88,7 +94,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openingProjectId, setOpeningProjectId] = useState<string | null>(null);
-  const [openingStatus, setOpeningStatus] = useState('Creating sandbox...');
+  const [openingStatusKey, setOpeningStatusKey] = useState<OpeningStatusKey>('sandbox');
   const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
@@ -98,12 +104,12 @@ export default function ProjectsPage() {
     try {
       const result = await listProjects();
       if (!result.ok) {
-        setError(result.error || 'Could not load projects.');
+        setError(result.error || tp('errorLoadProjects'));
         setProjects([]);
         return;
       }
       if (!result.data.success) {
-        setError(result.data.error || 'Could not load projects.');
+        setError(result.data.error || tp('errorLoadProjects'));
         setProjects([]);
         return;
       }
@@ -111,12 +117,12 @@ export default function ProjectsPage() {
       items.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
       setProjects(items);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load projects.');
+      setError(e instanceof Error ? e.message : tp('errorLoadProjects'));
       setProjects([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tp]);
 
   // Initial data fetch on mount; loadProjects sets state after the async call resolves.
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -132,26 +138,26 @@ export default function ProjectsPage() {
       setError(null);
       let didNavigate = false;
       try {
-        setOpeningStatus('Creating sandbox...');
+        setOpeningStatusKey('sandbox');
         const sandboxResult = await createSandbox();
         if (!sandboxResult.ok) {
-          throw new Error(sandboxResult.error || 'Failed to create sandbox.');
+          throw new Error(sandboxResult.error || tp('errorCreateSandbox'));
         }
         if (!sandboxResult.data.sandboxId) {
-          throw new Error('Failed to create sandbox.');
+          throw new Error(tp('errorCreateSandbox'));
         }
 
-        setOpeningStatus('Loading files...');
+        setOpeningStatusKey('files');
         const openResult = await openProject(project.projectId, sandboxResult.data.sandboxId);
         if (!openResult.ok) {
-          throw new Error(openResult.error || 'Failed to open project.');
+          throw new Error(openResult.error || tp('errorOpenProject'));
         }
 
         const restoredCount = openResult.data?.restoredCount ?? 0;
         if (restoredCount === 0) {
           // Don't spin up (and leak) a sandbox for a project that has no saved files.
           void killSandbox(sandboxResult.data.sandboxId).catch(() => {});
-          throw new Error('This project has no saved files. Generate and save a project first.');
+          throw new Error(tp('errorNoSavedFiles'));
         }
 
         try {
@@ -161,7 +167,7 @@ export default function ProjectsPage() {
           // Ignore storage errors.
         }
 
-        setOpeningStatus('Finalizing...');
+        setOpeningStatusKey('finalize');
         const params = new URLSearchParams({
           sandbox: sandboxResult.data.sandboxId,
           projectId: project.projectId,
@@ -170,42 +176,42 @@ export default function ProjectsPage() {
         didNavigate = true;
         router.push(`/generation?${params.toString()}`);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Could not open this project.');
-        setOpeningStatus('Creating sandbox...');
+        setError(e instanceof Error ? e.message : tp('errorOpenGeneric'));
+        setOpeningStatusKey('sandbox');
       } finally {
         if (!didNavigate) {
           setOpeningProjectId(null);
         }
       }
     },
-    [openingProjectId, router]
+    [openingProjectId, router, tp]
   );
 
   const deleteProject = useCallback(
     async (project: CloudProjectListItem) => {
       const projectId = project.projectId;
       if (!projectId || deleteBusyId) return;
-      const readableName = (project.projectName || 'Untitled project').trim() || 'Untitled project';
-      const shouldDelete = window.confirm(`Delete "${readableName}"? This action cannot be undone.`);
+      const readableName = (project.projectName || tp('untitledProject')).trim() || tp('untitledProject');
+      const shouldDelete = window.confirm(tp('confirmDelete', { name: readableName }));
       if (!shouldDelete) return;
 
       setDeleteBusyId(projectId);
       try {
         const result = await apiDeleteProject(projectId);
         if (!result.ok) {
-          throw new Error(result.error || 'Could not delete project.');
+          throw new Error(result.error || tp('errorDeleteProject'));
         }
         if (!result.data.success) {
-          throw new Error(result.data.error || 'Could not delete project.');
+          throw new Error(result.data.error || tp('errorDeleteProject'));
         }
         setProjects((prev) => prev.filter((p) => p.projectId !== projectId));
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Could not delete project.');
+        setError(e instanceof Error ? e.message : tp('errorDeleteProject'));
       } finally {
         setDeleteBusyId(null);
       }
     },
-    [deleteBusyId]
+    [deleteBusyId, tp]
   );
 
   const filteredProjects = useMemo(() => {
@@ -225,6 +231,22 @@ export default function ProjectsPage() {
   const hasFiltered = filteredProjects.length > 0;
   const openingProject = projects.find((p) => p.projectId === openingProjectId);
 
+  const openingSteps = [
+    { label: tp('stepSandbox'), key: 'sandbox' },
+    { label: tp('stepFiles'), key: 'files' },
+    { label: tp('stepFinalize'), key: 'finalize' },
+  ];
+  const openingActiveStep =
+    openingStatusKey === 'sandbox' ? 0 : openingStatusKey === 'files' ? 1 : 2;
+  const openingStatusLabel =
+    openingStatusKey === 'sandbox'
+      ? tp('statusSandbox')
+      : openingStatusKey === 'files'
+        ? tp('statusFiles')
+        : tp('statusFinalize');
+
+
+
   return (
     <>
       {/* Full-screen loader overlay when opening a project */}
@@ -237,8 +259,13 @@ export default function ProjectsPage() {
             transition={{ duration: 0.3 }}
           >
             <OpeningProjectLoader
-              projectName={openingProject?.projectName || ''}
-              status={openingStatus}
+              title={tp('openingTitle')}
+              subtitle={tp('openingSubtitle', {
+                projectName: openingProject?.projectName || tp('defaultProjectName'),
+              })}
+              status={openingStatusLabel}
+              steps={openingSteps}
+              activeStep={openingActiveStep}
             />
           </motion.div>
         )}
@@ -252,7 +279,7 @@ export default function ProjectsPage() {
           {!authChecked || loading ? (
             <div className="flex flex-1 flex-col items-center justify-center py-24">
               <Loader2 className="h-8 w-8 animate-spin text-glow-cyan" />
-              <p className="mt-4 text-sm text-zinc-400">Loading your projects…</p>
+              <p className="mt-4 text-sm text-zinc-400">{tp('loading')}</p>
             </div>
           ) : !isAuthenticated ? (
             <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
@@ -279,7 +306,7 @@ export default function ProjectsPage() {
             {/* Centered title + CTAs */}
             <div className="flex flex-col items-center text-center">
               <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                Your Projects
+                {tp('title')}
               </h1>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                 <Link
@@ -287,14 +314,14 @@ export default function ProjectsPage() {
                   className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-100 transition hover:border-glow-cyan/45 hover:bg-white/10"
                 >
                   <Wand2 className="h-4 w-4" aria-hidden />
-                  Start New Project
+                  {tp('startNewProject')}
                 </Link>
                 <Link
                   href="/templates"
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-glow-purple/40 hover:bg-white/5 hover:text-white"
                 >
                   <LayoutTemplate className="h-4 w-4" aria-hidden />
-                  Explore templates
+                  {tp('exploreTemplates')}
                 </Link>
               </div>
             </div>
@@ -306,24 +333,24 @@ export default function ProjectsPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-background-soft/60 px-4 py-1.5 text-xs text-zinc-400">
                     <Boxes size={13} className="text-glow-cyan" />
-                    <span className="font-semibold text-white">{stats.total}</span> total
+                    <span className="font-semibold text-white">{stats.total}</span> {tp('statTotal')}
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/15 bg-emerald-500/5 px-4 py-1.5 text-xs text-zinc-400">
                     <Globe size={13} className="text-emerald-400" />
-                    <span className="font-semibold text-emerald-300">{stats.deployed}</span> live
+                    <span className="font-semibold text-emerald-300">{stats.deployed}</span> {tp('statLive')}
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-background-soft/60 px-4 py-1.5 text-xs text-zinc-400">
                     <Rocket size={13} className="text-amber-400" />
-                    <span className="font-semibold text-amber-300">{stats.undeployed}</span> draft
+                    <span className="font-semibold text-amber-300">{stats.undeployed}</span> {tp('statDraft')}
                   </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-background-soft/40 p-1">
                   {([
-                    { key: 'all', label: 'All', count: stats.total },
-                    { key: 'deployed', label: 'Live', count: stats.deployed },
-                    { key: 'undeployed', label: 'Draft', count: stats.undeployed },
+                    { key: 'all', label: tp('tabAll'), count: stats.total },
+                    { key: 'deployed', label: tp('tabLive'), count: stats.deployed },
+                    { key: 'undeployed', label: tp('tabDraft'), count: stats.undeployed },
                   ] as { key: FilterTab; label: string; count: number }[]).map((tab) => (
                     <button
                       key={tab.key}
@@ -371,23 +398,23 @@ export default function ProjectsPage() {
           {loading ? (
             <div className="flex flex-1 flex-col items-center justify-center py-24">
               <Loader2 className="h-8 w-8 animate-spin text-glow-cyan" />
-              <p className="mt-4 text-sm text-zinc-400">Loading your projects…</p>
+              <p className="mt-4 text-sm text-zinc-400">{tp('loading')}</p>
             </div>
           ) : !hasProjects ? (
             <div className="flex flex-1 flex-col items-center justify-center py-24 text-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/5 ring-1 ring-white/10">
                 <Boxes size={36} className="text-zinc-500" />
               </div>
-              <h2 className="mt-6 text-xl font-semibold text-white">No saved projects yet</h2>
+              <h2 className="mt-6 text-xl font-semibold text-white">{tp('emptyTitle')}</h2>
               <p className="mt-2 max-w-sm text-sm text-zinc-400">
-                Generate an app and save it to Supabase. Your projects will appear here.
+                {tp('emptyDescription')}
               </p>
               <Link
                 href="/generation?new=1"
                 className="mt-6 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-zinc-100 transition hover:border-glow-cyan/45 hover:bg-white/10"
               >
                 <Wand2 className="h-4 w-4" aria-hidden />
-                Start building
+                {tp('emptyCta')}
               </Link>
             </div>
           ) : (
@@ -403,13 +430,13 @@ export default function ProjectsPage() {
                   </div>
                   <p className="mt-4 text-base font-medium text-white">
                     {activeTab === 'deployed'
-                      ? 'No deployed projects'
-                      : 'No draft projects'}
+                      ? tp('noLiveTitle')
+                      : tp('noDraftTitle')}
                   </p>
                   <p className="mt-1 text-sm text-zinc-400">
                     {activeTab === 'deployed'
-                      ? 'Projects you deploy to Vercel will show here.'
-                      : 'All your projects are currently deployed.'}
+                      ? tp('noLiveDescription')
+                      : tp('noDraftDescription')}
                   </p>
                 </div>
               ) : (
@@ -444,7 +471,7 @@ export default function ProjectsPage() {
                               <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/70 to-transparent" />
                               <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-medium text-emerald-300 backdrop-blur-md ring-1 ring-emerald-500/20">
                                 <Globe size={11} aria-hidden />
-                                Live
+                                {tp('liveBadge')}
                               </span>
                               <a
                                 href={project.vercelDomainUrl!}
@@ -463,9 +490,9 @@ export default function ProjectsPage() {
                                 <Rocket size={24} className="text-zinc-500" />
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-zinc-300">Not deployed yet</p>
+                                <p className="text-sm font-medium text-zinc-300">{tp('notDeployedTitle')}</p>
                                 <p className="mt-1 text-xs text-zinc-500">
-                                  Open this project to deploy it to Vercel
+                                  {tp('notDeployedDescription')}
                                 </p>
                               </div>
                             </div>
@@ -476,14 +503,14 @@ export default function ProjectsPage() {
                         <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
                           <div className="flex items-start justify-between gap-2">
                             <h2 className="line-clamp-1 text-base font-semibold text-white sm:text-lg">
-                              {project.projectName || 'Untitled project'}
+                              {project.projectName || tp('untitledProject')}
                             </h2>
                           </div>
 
                           <div className="flex items-center gap-3 text-xs text-zinc-500">
                             <span className="inline-flex items-center gap-1">
                               <span className="h-1 w-1 rounded-full bg-zinc-500" />
-                              {formatRelativeTime(project.updatedAt)}
+                              {formatRelativeTime(project.updatedAt, tp, locale)}
                             </span>
                             {isDeployed && project.vercelDomainUrl && (
                               <a
@@ -510,12 +537,12 @@ export default function ProjectsPage() {
                               {isOpening ? (
                                 <>
                                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                                  Opening…
+                                  {tp('opening')}
                                 </>
                               ) : (
                                 <>
                                   <FolderOpen className="h-3.5 w-3.5" aria-hidden />
-                                  Open
+                                  {tp('open')}
                                 </>
                               )}
                             </button>
@@ -528,7 +555,7 @@ export default function ProjectsPage() {
                                 className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-gradient-to-r from-primary/20 via-primary-soft/20 to-primary-accent/20 px-3 py-2 text-xs font-medium text-white transition hover:border-glow-cyan/40 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
                               >
                                 <Globe className="h-3.5 w-3.5" aria-hidden />
-                                Visit
+                                {tp('visit')}
                               </a>
                             )}
                             {project.pocketbaseAdminUrl && (
@@ -539,7 +566,7 @@ export default function ProjectsPage() {
                                 className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-gradient-to-r from-purple-500/20 via-purple-400/20 to-purple-300/20 px-3 py-2 text-xs font-medium text-white transition hover:border-purple-400/40 hover:shadow-[0_0_20px_rgba(192,132,252,0.2)]"
                               >
                                 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                                Admin
+                                {tp('admin')}
                               </a>
                             )}
 
@@ -554,7 +581,7 @@ export default function ProjectsPage() {
                               ) : (
                                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
                               )}
-                              Delete
+                              {tp('delete')}
                             </button>
                           </div>
                         </div>

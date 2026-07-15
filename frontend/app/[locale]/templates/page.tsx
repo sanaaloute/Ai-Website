@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { use } from "react";
 import { setRequestLocale } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import TemplatesSectorGrid from "@/components/templates/TemplatesSectorGrid";
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
 export default function TemplatesIndexPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
   setRequestLocale(locale);
+  const t = useTranslations("templates");
   const sectors = listTemplateSectors();
 
   return (
@@ -29,18 +31,17 @@ export default function TemplatesIndexPage({ params }: { params: Promise<{ local
           {/* Header */}
           <header className="mb-14 max-w-2xl mx-auto text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-glow-cyan">
-              Starter Kits
+              {t("overline")}
             </p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              Templates
+              {t("heading")}
             </h1>
             <p className="mt-4 text-pretty text-base text-zinc-400 sm:text-lg">
-              Real websites you can clone locally or open in the AI builder.
-              Pick an industry and start building.
+              {t("subheading")}
             </p>
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-background-soft/60 px-4 py-1.5 text-xs text-zinc-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {PRESET_ROWS.length} template{PRESET_ROWS.length === 1 ? "" : "s"} available
+              {t("availableBadge", { count: PRESET_ROWS.length })}
             </div>
           </header>
 

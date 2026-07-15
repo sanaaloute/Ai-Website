@@ -139,8 +139,10 @@
     "heading": "Ponte en contacto",
     "subheading": "¿Tienes una pregunta, un comentario o una idea de colaboración? Nos encantaría saber de ti.",
     "emailLabel": "Escríbenos por correo",
-    "emailValue": "hello@ai-web-builder.com",
-    "responseTime": "Normalmente respondemos en un día laborable."
+    "emailValue": "contact@barkosem.com",
+    "responseTime": "Normalmente respondemos en un día laborable.",
+    "phoneLabel": "Llámanos",
+    "phoneValue": "+86 131 4139 2484"
   },
   "download": {
     "overline": "Aplicación de escritorio",
@@ -368,12 +370,132 @@
     "abortedTitle": "Descarga abortada",
     "abortedDesc": "Operación cancelada por el usuario",
     "abort": "Abortar",
-    "dismiss": "Cerrar"
+    "dismiss": "Cerrar",
+    "overline": "Kits de inicio",
+    "heading": "Plantillas",
+    "subheading": "Sitios web reales que puedes clonar localmente o abrir en el builder de IA. Elige un sector y empieza a construir.",
+    "availableBadge": "{count, plural, one {# plantilla disponible} other {# plantillas disponibles}}",
+    "inSectorBadge": "{count, plural, one {# plantilla en este sector} other {# plantillas en este sector}}",
+    "allSectors": "Todos los sectores",
+    "emptySector": "Aún no hay plantillas en este sector.",
+    "browseOtherSectors": "Explorar otros sectores",
+    "templateCount": "{count, plural, one {# plantilla} other {# plantillas}}",
+    "sectorCardAria": "{name} — {count, plural, one {# plantilla} other {# plantillas}}"
   },
   "presets": {
     "tpl_shop_now_title": "Shop Now",
     "tpl_shop_now_desc": "Un sitio web moderno de venta de zapatos con catálogo de productos, carrito y experiencia de pago.",
     "tpl_home_control_title": "Home Control",
     "tpl_home_control_desc": "Un panel de control para el hogar inteligente que permite monitorear y controlar dispositivos, el uso de energía y el estado de las habitaciones."
+  },
+  "templateSectors": {
+    "saas": {
+      "name": "B2B SaaS",
+      "description": "Paneles, portales de facturación y herramientas internas para productos de ingresos recurrentes."
+    },
+    "ecommerce": {
+      "name": "Comercio electrónico",
+      "description": "Escaparates, UX de catálogo, flujos de pago y paneles de administración para comerciantes."
+    },
+    "fintech": {
+      "name": "Fintech",
+      "description": "Billeteras, análisis de gastos, flujos con enfoque en cumplimiento y áreas de cuenta seguras."
+    },
+    "healthcare": {
+      "name": "Salud",
+      "description": "Programación amigable para pacientes, formularios de admisión y paneles para médicos."
+    },
+    "fitness": {
+      "name": "Fitness y bienestar",
+      "description": "Sitios de coaching, reservas de clases, rastreadores de hábitos y portales para miembros."
+    },
+    "education": {
+      "name": "Educación",
+      "description": "Portales de cursos, páginas de destino de cohortes e interfaces ligeras estilo LMS."
+    },
+    "real-estate": {
+      "name": "Bienes raíces",
+      "description": "Galerías de listados, perfiles de agentes y captura de clientes potenciales."
+    },
+    "creative": {
+      "name": "Creatividad y agencias",
+      "description": "Sitios de portafolio, diseños de casos de estudio y presentaciones como experiencias web."
+    },
+    "hospitality": {
+      "name": "Hostelería y alimentación",
+      "description": "Restaurantes, cafés, hoteles, reservas y menús para los huéspedes."
+    },
+    "travel": {
+      "name": "Viajes y turismo",
+      "description": "Itinerarios, flujos de reserva, guías de destino y operadores turísticos."
+    },
+    "hr-recruiting": {
+      "name": "RRHH y reclutamiento",
+      "description": "Bolsas de trabajo, seguimiento de solicitantes, perfiles de candidatos y programación de entrevistas."
+    },
+    "legal": {
+      "name": "Legal y cumplimiento",
+      "description": "Sitios de bufetes, formularios de admisión, áreas de práctica y portales seguros para clientes."
+    },
+    "nonprofit": {
+      "name": "Sin fines de lucro e impacto",
+      "description": "Donaciones, campañas, registro de voluntarios e historias de impacto."
+    },
+    "media": {
+      "name": "Medios y entretenimiento",
+      "description": "Centros de streaming, pódcasts, calendarios de eventos y comunidades de fans."
+    },
+    "manufacturing": {
+      "name": "Fabricación y logística",
+      "description": "Inventario, visibilidad de la cadena de suministro, paneles de flota y operaciones de almacén."
+    }
+  },
+  "projects": {
+    "title": "Tus proyectos",
+    "startNewProject": "Nuevo proyecto",
+    "exploreTemplates": "Explorar plantillas",
+    "loading": "Cargando tus proyectos…",
+    "statTotal": "total",
+    "statLive": "en vivo",
+    "statDraft": "borrador",
+    "tabAll": "Todos",
+    "tabLive": "En vivo",
+    "tabDraft": "Borradores",
+    "emptyTitle": "Aún no hay proyectos guardados",
+    "emptyDescription": "Genera una aplicación y guárdala en Supabase. Tus proyectos aparecerán aquí.",
+    "emptyCta": "Empezar a construir",
+    "noLiveTitle": "No hay proyectos desplegados",
+    "noLiveDescription": "Los proyectos que despliegues en Vercel aparecerán aquí.",
+    "noDraftTitle": "No hay borradores",
+    "noDraftDescription": "Todos tus proyectos están desplegados actualmente.",
+    "notDeployedTitle": "Aún no desplegado",
+    "notDeployedDescription": "Abre este proyecto para desplegarlo en Vercel",
+    "liveBadge": "En vivo",
+    "untitledProject": "Proyecto sin título",
+    "open": "Abrir",
+    "opening": "Abriendo…",
+    "visit": "Visitar",
+    "admin": "Admin",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar \"{name}\"? Esta acción no se puede deshacer.",
+    "justNow": "Ahora mismo",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} h",
+    "daysAgo": "hace {count} d",
+    "openingTitle": "Abriendo proyecto",
+    "openingSubtitle": "{projectName} se está preparando",
+    "defaultProjectName": "Tu proyecto",
+    "stepSandbox": "Creando sandbox",
+    "stepFiles": "Cargando archivos",
+    "stepFinalize": "Finalizando",
+    "statusSandbox": "Creando sandbox...",
+    "statusFiles": "Cargando archivos...",
+    "statusFinalize": "Finalizando...",
+    "errorLoadProjects": "No se pudieron cargar los proyectos.",
+    "errorCreateSandbox": "Error al crear el sandbox.",
+    "errorOpenProject": "Error al abrir el proyecto.",
+    "errorOpenGeneric": "No se pudo abrir este proyecto.",
+    "errorNoSavedFiles": "Este proyecto no tiene archivos guardados. Genera y guarda un proyecto primero.",
+    "errorDeleteProject": "No se pudo eliminar el proyecto."
   }
 }

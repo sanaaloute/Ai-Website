@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { TemplateSectorRow } from "@/lib/templates/catalog";
 import { PRESET_ROWS } from "@/lib/templates/presets";
 
@@ -18,10 +19,16 @@ function getTemplateCount(sectorId: string): number {
 }
 
 export default function TemplatesSectorGrid({ sectors }: Props) {
+  const t = useTranslations("templates");
+  const tSectors = useTranslations("templateSectors");
+
   return (
     <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {sectors.map((sector, index) => {
         const count = getTemplateCount(sector.id);
+        const sectorName = tSectors.has(`${sector.slug}.name`)
+          ? tSectors(`${sector.slug}.name`)
+          : sector.name;
         return (
           <li key={sector.id}>
             <motion.div
@@ -31,7 +38,7 @@ export default function TemplatesSectorGrid({ sectors }: Props) {
             >
               <Link
                 href={`/templates/${sector.slug}`}
-                aria-label={`${sector.name} — ${count} template${count === 1 ? "" : "s"}`}
+                aria-label={t("sectorCardAria", { name: sectorName, count })}
                 className="group relative flex aspect-[16/11] overflow-hidden rounded-3xl border border-white/10 bg-background-soft/40 shadow-[0_0_60px_rgba(15,23,42,0.9)] transition duration-500 hover:border-glow-cyan/30 hover:shadow-[0_0_80px_rgba(34,211,238,0.15)]"
               >
                 <Image
@@ -53,10 +60,10 @@ export default function TemplatesSectorGrid({ sectors }: Props) {
                 <div className="relative mt-auto flex w-full items-end justify-between p-5 sm:p-6">
                   <div className="flex flex-col gap-1">
                     <span className="text-xl font-semibold tracking-tight text-white drop-shadow-lg sm:text-2xl">
-                      {sector.name}
+                      {sectorName}
                     </span>
                     <span className="text-xs font-medium text-zinc-400">
-                      {count} template{count === 1 ? "" : "s"}
+                      {t("templateCount", { count })}
                     </span>
                   </div>
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 backdrop-blur-md transition duration-300 group-hover:border-glow-cyan/40 group-hover:bg-glow-cyan/10 group-hover:text-white">

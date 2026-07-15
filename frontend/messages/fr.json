@@ -139,8 +139,10 @@
     "heading": "Contactez-nous",
     "subheading": "Une question, un retour ou une idée de partenariat ? Nous serions ravis de vous entendre.",
     "emailLabel": "Envoyez-nous un e-mail",
-    "emailValue": "hello@ai-web-builder.com",
-    "responseTime": "Nous répondons généralement sous un jour ouvré."
+    "emailValue": "contact@barkosem.com",
+    "responseTime": "Nous répondons généralement sous un jour ouvré.",
+    "phoneLabel": "Appelez-nous",
+    "phoneValue": "+86 131 4139 2484"
   },
   "download": {
     "overline": "Application de bureau",
@@ -368,12 +370,132 @@
     "abortedTitle": "Téléchargement annulé",
     "abortedDesc": "Opération annulée par l'utilisateur",
     "abort": "Annuler",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "overline": "Kits de démarrage",
+    "heading": "Modèles",
+    "subheading": "De vrais sites web que vous pouvez cloner localement ou ouvrir dans le builder IA. Choisissez un secteur et commencez à construire.",
+    "availableBadge": "{count, plural, one {# modèle disponible} other {# modèles disponibles}}",
+    "inSectorBadge": "{count, plural, one {# modèle dans ce secteur} other {# modèles dans ce secteur}}",
+    "allSectors": "Tous les secteurs",
+    "emptySector": "Aucun modèle dans ce secteur pour le moment.",
+    "browseOtherSectors": "Parcourir les autres secteurs",
+    "templateCount": "{count, plural, one {# modèle} other {# modèles}}",
+    "sectorCardAria": "{name} — {count, plural, one {# modèle} other {# modèles}}"
   },
   "presets": {
     "tpl_shop_now_title": "Shop Now",
     "tpl_shop_now_desc": "Un site de vente de chaussures moderne avec catalogue de produits, panier et expérience de paiement.",
     "tpl_home_control_title": "Home Control",
     "tpl_home_control_desc": "Un tableau de bord pour la maison intelligente permettant de surveiller et de contrôler les appareils, la consommation d'énergie et l'état des pièces."
+  },
+  "templateSectors": {
+    "saas": {
+      "name": "B2B SaaS",
+      "description": "Tableaux de bord, portails de facturation et outils internes pour les produits à revenus récurrents."
+    },
+    "ecommerce": {
+      "name": "E-commerce",
+      "description": "Vitrines, UX de catalogue, parcours de paiement et panneaux d'administration marchands."
+    },
+    "fintech": {
+      "name": "Fintech",
+      "description": "Portefeuilles, analyses de dépenses, parcours soucieux de la conformité et espaces de compte sécurisés."
+    },
+    "healthcare": {
+      "name": "Santé",
+      "description": "Planification conviviale pour les patients, formulaires d'admission et tableaux de bord cliniciens."
+    },
+    "fitness": {
+      "name": "Fitness & bien-être",
+      "description": "Sites de coaching, réservations de cours, suivis d'habitudes et portails membres."
+    },
+    "education": {
+      "name": "Éducation",
+      "description": "Portails de cours, pages d'accueil de cohortes et interfaces légères de type LMS."
+    },
+    "real-estate": {
+      "name": "Immobilier",
+      "description": "Galeries d'annonces, profils d'agents et capture de prospects pour les chercheurs de biens."
+    },
+    "creative": {
+      "name": "Création & agences",
+      "description": "Sites de portfolio, mises en page d'études de cas et pitch decks en expériences web."
+    },
+    "hospitality": {
+      "name": "Hôtellerie & restauration",
+      "description": "Restaurants, cafés, hôtels, réservations et menus destinés aux clients."
+    },
+    "travel": {
+      "name": "Voyages & tourisme",
+      "description": "Itinéraires, parcours de réservation, guides de destination et tour-opérateurs."
+    },
+    "hr-recruiting": {
+      "name": "RH & recrutement",
+      "description": "Job boards, suivi des candidatures, profils de candidats et planification d'entretiens."
+    },
+    "legal": {
+      "name": "Juridique & conformité",
+      "description": "Sites de cabinets d'avocats, formulaires d'accueil, domaines de pratique et portails clients sécurisés."
+    },
+    "nonprofit": {
+      "name": "Associations & impact",
+      "description": "Dons, campagnes, inscriptions de bénévoles et récits d'impact."
+    },
+    "media": {
+      "name": "Médias & divertissement",
+      "description": "Hubs de streaming, podcasts, calendriers d'événements et communautés de fans."
+    },
+    "manufacturing": {
+      "name": "Industrie & logistique",
+      "description": "Inventaire, visibilité de la chaîne d'approvisionnement, tableaux de bord de flotte et opérations d'entrepôt."
+    }
+  },
+  "projects": {
+    "title": "Vos projets",
+    "startNewProject": "Nouveau projet",
+    "exploreTemplates": "Explorer les modèles",
+    "loading": "Chargement de vos projets…",
+    "statTotal": "total",
+    "statLive": "en ligne",
+    "statDraft": "brouillon",
+    "tabAll": "Tous",
+    "tabLive": "En ligne",
+    "tabDraft": "Brouillons",
+    "emptyTitle": "Aucun projet enregistré",
+    "emptyDescription": "Générez une application et enregistrez-la dans Supabase. Vos projets apparaîtront ici.",
+    "emptyCta": "Commencer à construire",
+    "noLiveTitle": "Aucun projet déployé",
+    "noLiveDescription": "Les projets que vous déployez sur Vercel apparaîtront ici.",
+    "noDraftTitle": "Aucun brouillon",
+    "noDraftDescription": "Tous vos projets sont actuellement déployés.",
+    "notDeployedTitle": "Pas encore déployé",
+    "notDeployedDescription": "Ouvrez ce projet pour le déployer sur Vercel",
+    "liveBadge": "En ligne",
+    "untitledProject": "Projet sans titre",
+    "open": "Ouvrir",
+    "opening": "Ouverture…",
+    "visit": "Visiter",
+    "admin": "Admin",
+    "delete": "Supprimer",
+    "confirmDelete": "Supprimer « {name} » ? Cette action est irréversible.",
+    "justNow": "À l'instant",
+    "minutesAgo": "il y a {count} min",
+    "hoursAgo": "il y a {count} h",
+    "daysAgo": "il y a {count} j",
+    "openingTitle": "Ouverture du projet",
+    "openingSubtitle": "{projectName} est en cours de préparation",
+    "defaultProjectName": "Votre projet",
+    "stepSandbox": "Création du sandbox",
+    "stepFiles": "Chargement des fichiers",
+    "stepFinalize": "Finalisation",
+    "statusSandbox": "Création du sandbox...",
+    "statusFiles": "Chargement des fichiers...",
+    "statusFinalize": "Finalisation...",
+    "errorLoadProjects": "Impossible de charger les projets.",
+    "errorCreateSandbox": "Échec de la création du sandbox.",
+    "errorOpenProject": "Échec de l'ouverture du projet.",
+    "errorOpenGeneric": "Impossible d'ouvrir ce projet.",
+    "errorNoSavedFiles": "Ce projet n'a aucun fichier enregistré. Générez et enregistrez d'abord un projet.",
+    "errorDeleteProject": "Impossible de supprimer le projet."
   }
 }

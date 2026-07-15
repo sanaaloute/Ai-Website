@@ -14,7 +14,7 @@ export default function HomePageContent() {
         {/* Hero: title + prompt input */}
         <section
           aria-label="Start building"
-          className="flex w-full flex-1 flex-col items-center justify-center py-8"
+          className="flex w-full flex-1 flex-col items-center justify-center pb-20 pt-8 sm:pb-24"
         >
           <HomePageTitle />
           <PromptInput />

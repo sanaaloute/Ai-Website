@@ -139,8 +139,10 @@
     "heading": "Get in touch",
     "subheading": "Have a question, feedback, or a partnership idea? We'd love to hear from you.",
     "emailLabel": "Email us",
-    "emailValue": "hello@ai-web-builder.com",
-    "responseTime": "We usually reply within one business day."
+    "emailValue": "contact@barkosem.com",
+    "responseTime": "We usually reply within one business day.",
+    "phoneLabel": "Call us",
+    "phoneValue": "+86 131 4139 2484"
   },
   "download": {
     "overline": "Desktop app",
@@ -368,12 +370,132 @@
     "abortedTitle": "Download aborted",
     "abortedDesc": "Operation cancelled by user",
     "abort": "Abort",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "overline": "Starter Kits",
+    "heading": "Templates",
+    "subheading": "Real websites you can clone locally or open in the AI builder. Pick an industry and start building.",
+    "availableBadge": "{count, plural, one {# template available} other {# templates available}}",
+    "inSectorBadge": "{count, plural, one {# template in this sector} other {# templates in this sector}}",
+    "allSectors": "All sectors",
+    "emptySector": "No templates in this sector yet.",
+    "browseOtherSectors": "Browse other sectors",
+    "templateCount": "{count, plural, one {# template} other {# templates}}",
+    "sectorCardAria": "{name} — {count, plural, one {# template} other {# templates}}"
   },
   "presets": {
     "tpl_shop_now_title": "Shop Now",
     "tpl_shop_now_desc": "A modern shoe shopping website with product catalog, cart, and checkout experience.",
     "tpl_home_control_title": "Home Control",
     "tpl_home_control_desc": "A smart home dashboard to monitor and control devices, energy usage, and room status."
+  },
+  "templateSectors": {
+    "saas": {
+      "name": "B2B SaaS",
+      "description": "Dashboards, billing portals, and internal tools for recurring-revenue products."
+    },
+    "ecommerce": {
+      "name": "E-commerce",
+      "description": "Storefronts, catalog UX, checkout flows, and merchant admin panels."
+    },
+    "fintech": {
+      "name": "Fintech",
+      "description": "Wallets, spend insights, compliance-minded flows, and secure account areas."
+    },
+    "healthcare": {
+      "name": "Healthcare",
+      "description": "Patient-friendly scheduling, intake forms, and clinician dashboards."
+    },
+    "fitness": {
+      "name": "Fitness & wellness",
+      "description": "Coaching sites, class bookings, habit trackers, and member portals."
+    },
+    "education": {
+      "name": "Education",
+      "description": "Course portals, cohort landing pages, and lightweight LMS-style UIs."
+    },
+    "real-estate": {
+      "name": "Real estate",
+      "description": "Listing galleries, agent profiles, and lead capture for property seekers."
+    },
+    "creative": {
+      "name": "Creative & agencies",
+      "description": "Portfolio sites, case-study layouts, and pitch decks as web experiences."
+    },
+    "hospitality": {
+      "name": "Hospitality & food",
+      "description": "Restaurants, cafés, hotels, reservations, and guest-facing menus."
+    },
+    "travel": {
+      "name": "Travel & tourism",
+      "description": "Itineraries, booking flows, destination guides, and tour operators."
+    },
+    "hr-recruiting": {
+      "name": "HR & recruiting",
+      "description": "Job boards, applicant tracking, candidate profiles, and interview scheduling."
+    },
+    "legal": {
+      "name": "Legal & compliance",
+      "description": "Law firm sites, intake forms, practice areas, and secure client portals."
+    },
+    "nonprofit": {
+      "name": "Non-profit & impact",
+      "description": "Donations, campaigns, volunteer sign-ups, and impact storytelling."
+    },
+    "media": {
+      "name": "Media & entertainment",
+      "description": "Streaming hubs, podcasts, event calendars, and fan communities."
+    },
+    "manufacturing": {
+      "name": "Manufacturing & logistics",
+      "description": "Inventory, supply-chain visibility, fleet dashboards, and warehouse ops."
+    }
+  },
+  "projects": {
+    "title": "Your Projects",
+    "startNewProject": "Start New Project",
+    "exploreTemplates": "Explore templates",
+    "loading": "Loading your projects…",
+    "statTotal": "total",
+    "statLive": "live",
+    "statDraft": "draft",
+    "tabAll": "All",
+    "tabLive": "Live",
+    "tabDraft": "Draft",
+    "emptyTitle": "No saved projects yet",
+    "emptyDescription": "Generate an app and save it to Supabase. Your projects will appear here.",
+    "emptyCta": "Start building",
+    "noLiveTitle": "No deployed projects",
+    "noLiveDescription": "Projects you deploy to Vercel will show here.",
+    "noDraftTitle": "No draft projects",
+    "noDraftDescription": "All your projects are currently deployed.",
+    "notDeployedTitle": "Not deployed yet",
+    "notDeployedDescription": "Open this project to deploy it to Vercel",
+    "liveBadge": "Live",
+    "untitledProject": "Untitled project",
+    "open": "Open",
+    "opening": "Opening…",
+    "visit": "Visit",
+    "admin": "Admin",
+    "delete": "Delete",
+    "confirmDelete": "Delete \"{name}\"? This action cannot be undone.",
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago",
+    "openingTitle": "Opening project",
+    "openingSubtitle": "{projectName} is being prepared",
+    "defaultProjectName": "Your project",
+    "stepSandbox": "Creating sandbox",
+    "stepFiles": "Loading files",
+    "stepFinalize": "Finalizing",
+    "statusSandbox": "Creating sandbox...",
+    "statusFiles": "Loading files...",
+    "statusFinalize": "Finalizing...",
+    "errorLoadProjects": "Could not load projects.",
+    "errorCreateSandbox": "Failed to create sandbox.",
+    "errorOpenProject": "Failed to open project.",
+    "errorOpenGeneric": "Could not open this project.",
+    "errorNoSavedFiles": "This project has no saved files. Generate and save a project first.",
+    "errorDeleteProject": "Could not delete project."
   }
 }

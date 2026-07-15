@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { use } from "react";
 import { setRequestLocale } from "next-intl/server";
 import { useTranslations } from "next-intl";
-import { Mail } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import TemplatesPageShell from "@/components/templates/TemplatesPageShell";
@@ -18,6 +18,8 @@ export default function ContactPage({ params }: { params: Promise<{ locale: stri
   setRequestLocale(locale);
   const t = useTranslations("contact");
   const email = t("emailValue");
+  const phone = t("phoneValue");
+  const phoneHref = `tel:${phone.replace(/[^+\d]/g, "")}`;
 
   return (
     <TemplatesPageShell>
@@ -40,14 +42,26 @@ export default function ContactPage({ params }: { params: Promise<{ locale: stri
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-background text-primary ring-1 ring-white/10">
               <Mail size={20} />
             </div>
-            <a
-              href={`mailto:${email}`}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-soft-glow transition hover:bg-primary/90"
-            >
-              <Mail size={16} aria-hidden />
-              {t("emailLabel")}
-            </a>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <a
+                href={`mailto:${email}`}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-soft-glow transition hover:bg-primary/90"
+              >
+                <Mail size={16} aria-hidden />
+                {t("emailLabel")}
+              </a>
+              <a
+                href={phoneHref}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:border-glow-cyan/45 hover:bg-white/10"
+              >
+                <Phone size={16} aria-hidden />
+                {t("phoneLabel")}
+              </a>
+            </div>
             <p className="mt-3 text-sm text-zinc-400">{email}</p>
+            <p dir="ltr" className="mt-1 text-sm text-zinc-400">
+              {phone}
+            </p>
             <p className="mt-2 text-xs text-zinc-500">{t("responseTime")}</p>
           </div>
         </div>

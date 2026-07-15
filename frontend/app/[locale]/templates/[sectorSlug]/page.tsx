@@ -34,7 +34,7 @@ export async function generateMetadata({
   };
 }
 
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 export default async function SectorTemplatesPage({ params }: PageProps) {
   const { locale, sectorSlug } = await params;
@@ -43,6 +43,15 @@ export default async function SectorTemplatesPage({ params }: PageProps) {
   if (!sector) {
     notFound();
   }
+
+  const t = await getTranslations({ locale, namespace: "templates" });
+  const tSectors = await getTranslations({ locale, namespace: "templateSectors" });
+  const sectorName = tSectors.has(`${sector.slug}.name`)
+    ? tSectors(`${sector.slug}.name`)
+    : sector.name;
+  const sectorDescription = tSectors.has(`${sector.slug}.description`)
+    ? tSectors(`${sector.slug}.description`)
+    : sector.description;
 
   const presets = listTemplatePresetsBySectorId(sector.id);
 
@@ -60,32 +69,32 @@ export default async function SectorTemplatesPage({ params }: PageProps) {
               className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-background-soft/60 px-4 py-2 text-sm font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:text-white"
             >
               <ChevronLeft size={16} className="shrink-0" />
-              All sectors
+              {t("allSectors")}
             </Link>
           </div>
 
           {/* Header */}
           <header className="mb-12 max-w-2xl mx-auto text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-glow-cyan">
-              {sector.name}
+              {sectorName}
             </p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              Templates
+              {t("heading")}
             </h1>
             <p className="mt-4 text-pretty text-base text-zinc-400 sm:text-lg">
-              {sector.description}
+              {sectorDescription}
             </p>
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-background-soft/60 px-4 py-1.5 text-xs text-zinc-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {presets.length} template{presets.length === 1 ? "" : "s"} in this sector
+              {t("inSectorBadge", { count: presets.length })}
             </div>
           </header>
 
           {presets.length === 0 ? (
             <p className="rounded-3xl border border-white/10 bg-background-soft/60 px-4 py-12 text-center text-sm text-zinc-400">
-              No templates in this sector yet.{" "}
+              {t("emptySector")}{" "}
               <Link href="/templates" className="text-glow-cyan hover:underline">
-                Browse other sectors
+                {t("browseOtherSectors")}
               </Link>
               .
             </p>

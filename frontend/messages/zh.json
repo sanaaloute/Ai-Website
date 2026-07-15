@@ -139,8 +139,10 @@
     "heading": "保持联系",
     "subheading": "有问题、反馈或合作意向？我们很乐意听到你的声音。",
     "emailLabel": "发送邮件",
-    "emailValue": "hello@ai-web-builder.com",
-    "responseTime": "我们通常会在一个工作日内回复。"
+    "emailValue": "contact@barkosem.com",
+    "responseTime": "我们通常会在一个工作日内回复。",
+    "phoneLabel": "致电我们",
+    "phoneValue": "+86 131 4139 2484"
   },
   "download": {
     "overline": "桌面应用",
@@ -368,12 +370,132 @@
     "abortedTitle": "下载已中止",
     "abortedDesc": "用户取消了操作",
     "abort": "中止",
-    "dismiss": "关闭"
+    "dismiss": "关闭",
+    "overline": "入门套件",
+    "heading": "模板",
+    "subheading": "可直接克隆到本地或在 AI 构建器中打开的真实网站。选择一个行业，开始构建。",
+    "availableBadge": "{count, plural, other {共 # 个模板可用}}",
+    "inSectorBadge": "{count, plural, other {该行业共 # 个模板}}",
+    "allSectors": "所有行业",
+    "emptySector": "该行业暂无模板。",
+    "browseOtherSectors": "浏览其他行业",
+    "templateCount": "{count, plural, other {# 个模板}}",
+    "sectorCardAria": "{name} — {count, plural, other {# 个模板}}"
   },
   "presets": {
     "tpl_shop_now_title": "立即购买",
     "tpl_shop_now_desc": "一个现代化的鞋类购物网站，包含产品目录、购物车和结账体验。",
     "tpl_home_control_title": "家庭控制",
     "tpl_home_control_desc": "一个智能家居仪表板，用于监控和控制设备、能源使用情况和房间状态。"
+  },
+  "templateSectors": {
+    "saas": {
+      "name": "B2B SaaS",
+      "description": "面向经常性收入产品的仪表板、账单门户和内部工具。"
+    },
+    "ecommerce": {
+      "name": "电子商务",
+      "description": "店面、目录体验、结账流程和商家管理面板。"
+    },
+    "fintech": {
+      "name": "金融科技",
+      "description": "钱包、支出洞察、注重合规的流程和安全的账户区域。"
+    },
+    "healthcare": {
+      "name": "医疗健康",
+      "description": "方便患者的预约安排、接诊表单和临床医生仪表板。"
+    },
+    "fitness": {
+      "name": "健身与健康",
+      "description": "教练网站、课程预订、习惯追踪器和会员门户。"
+    },
+    "education": {
+      "name": "教育",
+      "description": "课程门户、班级落地页和轻量级 LMS 风格界面。"
+    },
+    "real-estate": {
+      "name": "房地产",
+      "description": "房源图库、经纪人资料页和面向购房者的线索收集。"
+    },
+    "creative": {
+      "name": "创意与代理",
+      "description": "作品集网站、案例研究版式和以网页体验呈现的推介内容。"
+    },
+    "hospitality": {
+      "name": "酒店与餐饮",
+      "description": "餐厅、咖啡馆、酒店、预订和面向客人的菜单。"
+    },
+    "travel": {
+      "name": "旅游",
+      "description": "行程、预订流程、目的地指南和旅行社。"
+    },
+    "hr-recruiting": {
+      "name": "人力资源与招聘",
+      "description": "招聘看板、求职者跟踪、候选人资料和面试安排。"
+    },
+    "legal": {
+      "name": "法律与合规",
+      "description": "律师事务所网站、接待表单、业务领域和安全的客户门户。"
+    },
+    "nonprofit": {
+      "name": "非营利与公益",
+      "description": "捐赠、活动、志愿者报名和影响力故事。"
+    },
+    "media": {
+      "name": "媒体与娱乐",
+      "description": "流媒体中心、播客、活动日历和粉丝社区。"
+    },
+    "manufacturing": {
+      "name": "制造与物流",
+      "description": "库存、供应链可视化、车队仪表板和仓储运营。"
+    }
+  },
+  "projects": {
+    "title": "你的项目",
+    "startNewProject": "开始新项目",
+    "exploreTemplates": "浏览模板",
+    "loading": "正在加载你的项目…",
+    "statTotal": "总计",
+    "statLive": "已上线",
+    "statDraft": "草稿",
+    "tabAll": "全部",
+    "tabLive": "已上线",
+    "tabDraft": "草稿",
+    "emptyTitle": "还没有保存的项目",
+    "emptyDescription": "生成一个应用并保存到 Supabase，你的项目会显示在这里。",
+    "emptyCta": "开始构建",
+    "noLiveTitle": "没有已部署的项目",
+    "noLiveDescription": "你部署到 Vercel 的项目会显示在这里。",
+    "noDraftTitle": "没有草稿项目",
+    "noDraftDescription": "你所有的项目都已部署。",
+    "notDeployedTitle": "尚未部署",
+    "notDeployedDescription": "打开此项目以将其部署到 Vercel",
+    "liveBadge": "已上线",
+    "untitledProject": "未命名项目",
+    "open": "打开",
+    "opening": "正在打开…",
+    "visit": "访问",
+    "admin": "管理",
+    "delete": "删除",
+    "confirmDelete": "确定删除“{name}”吗？此操作无法撤销。",
+    "justNow": "刚刚",
+    "minutesAgo": "{count} 分钟前",
+    "hoursAgo": "{count} 小时前",
+    "daysAgo": "{count} 天前",
+    "openingTitle": "正在打开项目",
+    "openingSubtitle": "正在为你准备 {projectName}",
+    "defaultProjectName": "你的项目",
+    "stepSandbox": "正在创建沙箱",
+    "stepFiles": "正在加载文件",
+    "stepFinalize": "正在完成",
+    "statusSandbox": "正在创建沙箱…",
+    "statusFiles": "正在加载文件…",
+    "statusFinalize": "正在完成…",
+    "errorLoadProjects": "无法加载项目。",
+    "errorCreateSandbox": "创建沙箱失败。",
+    "errorOpenProject": "打开项目失败。",
+    "errorOpenGeneric": "无法打开此项目。",
+    "errorNoSavedFiles": "此项目没有已保存的文件。请先生成并保存一个项目。",
+    "errorDeleteProject": "无法删除项目。"
   }
 }

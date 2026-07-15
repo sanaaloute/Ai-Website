@@ -139,8 +139,10 @@
     "heading": "تواصل معنا",
     "subheading": "هل لديك سؤال أو ملاحظة أو فكرة شراكة؟ يسعدنا أن نسمع منك.",
     "emailLabel": "راسلنا عبر البريد",
-    "emailValue": "hello@ai-web-builder.com",
-    "responseTime": "نرد عادةً خلال يوم عمل واحد."
+    "emailValue": "contact@barkosem.com",
+    "responseTime": "نرد عادةً خلال يوم عمل واحد.",
+    "phoneLabel": "اتصل بنا",
+    "phoneValue": "+86 131 4139 2484"
   },
   "download": {
     "overline": "تطبيق سطح المكتب",
@@ -368,12 +370,132 @@
     "abortedTitle": "تم إلغاء التحميل",
     "abortedDesc": "ألغى المستخدم العملية",
     "abort": "إلغاء",
-    "dismiss": "إغلاق"
+    "dismiss": "إغلاق",
+    "overline": "حزم البداية",
+    "heading": "القوالب",
+    "subheading": "مواقع حقيقية يمكنك استنساخها محليًا أو فتحها في مُنشئ الذكاء الاصطناعي. اختر مجالًا وابدأ البناء.",
+    "availableBadge": "{count, plural, one {قالب واحد متاح} two {قالبان متاحان} few {# قوالب متاحة} many {# قالبًا متاحًا} other {# قالب متاح}}",
+    "inSectorBadge": "{count, plural, one {قالب واحد في هذا المجال} two {قالبان في هذا المجال} few {# قوالب في هذا المجال} many {# قالبًا في هذا المجال} other {# قالب في هذا المجال}}",
+    "allSectors": "كل المجالات",
+    "emptySector": "لا توجد قوالب في هذا المجال بعد.",
+    "browseOtherSectors": "تصفح مجالات أخرى",
+    "templateCount": "{count, plural, one {قالب واحد} two {قالبان} few {# قوالب} many {# قالبًا} other {# قالب}}",
+    "sectorCardAria": "{name} — {count, plural, one {قالب واحد} two {قالبان} few {# قوالب} many {# قالبًا} other {# قالب}}"
   },
   "presets": {
     "tpl_shop_now_title": "تسوق الآن",
     "tpl_shop_now_desc": "موقع تسوق عصري للأحذية يضم كتالوج المنتجات وعربة التسوق وتجربة الدفع.",
     "tpl_home_control_title": "التحكم بالمنزل",
     "tpl_home_control_desc": "لوحة تحكم للمنزل الذكي لمراقبة والتحكم في الأجهزة واستخدام الطاقة وحالة الغرف."
+  },
+  "templateSectors": {
+    "saas": {
+      "name": "B2B SaaS",
+      "description": "لوحات تحكم وبوابات فوترة وأدوات داخلية للمنتجات ذات الإيرادات المتكررة."
+    },
+    "ecommerce": {
+      "name": "التجارة الإلكترونية",
+      "description": "واجهات متاجر وتجربة كتالوج وتدفقات دفع ولوحات إدارة للتجار."
+    },
+    "fintech": {
+      "name": "التقنية المالية",
+      "description": "محافظ ورؤى إنفاق وتدفقات تراعي الامتثال ومناطق حسابات آمنة."
+    },
+    "healthcare": {
+      "name": "الرعاية الصحية",
+      "description": "جدولة مريحة للمرضى ونماذج استقبال ولوحات تحكم للأطباء."
+    },
+    "fitness": {
+      "name": "اللياقة والعافية",
+      "description": "مواقع تدريب وحجوزات حصص ومتتبعات عادات وبوابات أعضاء."
+    },
+    "education": {
+      "name": "التعليم",
+      "description": "بوابات دورات وصفحات هبوط للدفعات وواجهات خفيفة بأسلوب LMS."
+    },
+    "real-estate": {
+      "name": "العقارات",
+      "description": "معارض قوائم وملفات وكلاء والتقاط عملاء محتملين للباحثين عن عقارات."
+    },
+    "creative": {
+      "name": "الإبداع والوكالات",
+      "description": "مواقع أعمال وتخطيطات دراسات حالة وعروض تقديمية كتجارب ويب."
+    },
+    "hospitality": {
+      "name": "الضيافة والمأكولات",
+      "description": "مطاعم ومقاهٍ وفنادق وحجوزات وقوائم موجهة للضيوف."
+    },
+    "travel": {
+      "name": "السفر والسياحة",
+      "description": "مسارات رحلات وتدفقات حجز وأدلة وجهات ومنظمو رحلات."
+    },
+    "hr-recruiting": {
+      "name": "الموارد البشرية والتوظيف",
+      "description": "لوحات وظائف وتتبع المتقدمين وملفات المرشحين وجدولة المقابلات."
+    },
+    "legal": {
+      "name": "القانون والامتثال",
+      "description": "مواقع مكاتب محاماة ونماذج استقبال ومجالات ممارسة وبوابات عملاء آمنة."
+    },
+    "nonprofit": {
+      "name": "غير ربحي وتأثير",
+      "description": "تبرعات وحملات وتسجيل متطوعين وسرد التأثير."
+    },
+    "media": {
+      "name": "الإعلام والترفيه",
+      "description": "مراكز بث وبودكاست وتقويمات فعاليات ومجتمعات معجبين."
+    },
+    "manufacturing": {
+      "name": "التصنيع والخدمات اللوجستية",
+      "description": "المخزون ورؤية سلسلة التوريد ولوحات تحكم الأسطول وعمليات المستودعات."
+    }
+  },
+  "projects": {
+    "title": "مشاريعك",
+    "startNewProject": "بدء مشروع جديد",
+    "exploreTemplates": "استكشاف القوالب",
+    "loading": "جاري تحميل مشاريعك…",
+    "statTotal": "الإجمالي",
+    "statLive": "مباشر",
+    "statDraft": "مسودة",
+    "tabAll": "الكل",
+    "tabLive": "مباشر",
+    "tabDraft": "مسودات",
+    "emptyTitle": "لا توجد مشاريع محفوظة بعد",
+    "emptyDescription": "أنشئ تطبيقًا واحفظه في Supabase. ستظهر مشاريعك هنا.",
+    "emptyCta": "ابدأ البناء",
+    "noLiveTitle": "لا توجد مشاريع منشورة",
+    "noLiveDescription": "ستظهر هنا المشاريع التي تنشرها على Vercel.",
+    "noDraftTitle": "لا توجد مسودات",
+    "noDraftDescription": "جميع مشاريعك منشورة حاليًا.",
+    "notDeployedTitle": "لم يُنشر بعد",
+    "notDeployedDescription": "افتح هذا المشروع لنشره على Vercel",
+    "liveBadge": "مباشر",
+    "untitledProject": "مشروع بدون عنوان",
+    "open": "فتح",
+    "opening": "جاري الفتح…",
+    "visit": "زيارة",
+    "admin": "الإدارة",
+    "delete": "حذف",
+    "confirmDelete": "حذف \"{name}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+    "justNow": "الآن",
+    "minutesAgo": "منذ {count} د",
+    "hoursAgo": "منذ {count} س",
+    "daysAgo": "منذ {count} يوم",
+    "openingTitle": "جاري فتح المشروع",
+    "openingSubtitle": "جاري تجهيز {projectName}",
+    "defaultProjectName": "مشروعك",
+    "stepSandbox": "إنشاء بيئة العمل",
+    "stepFiles": "تحميل الملفات",
+    "stepFinalize": "اللمسات الأخيرة",
+    "statusSandbox": "جاري إنشاء بيئة العمل...",
+    "statusFiles": "جاري تحميل الملفات...",
+    "statusFinalize": "جاري الإنهاء...",
+    "errorLoadProjects": "تعذر تحميل المشاريع.",
+    "errorCreateSandbox": "فشل إنشاء بيئة العمل.",
+    "errorOpenProject": "فشل فتح المشروع.",
+    "errorOpenGeneric": "تعذر فتح هذا المشروع.",
+    "errorNoSavedFiles": "لا يحتوي هذا المشروع على ملفات محفوظة. أنشئ مشروعًا واحفظه أولًا.",
+    "errorDeleteProject": "تعذر حذف المشروع."
   }
 }
