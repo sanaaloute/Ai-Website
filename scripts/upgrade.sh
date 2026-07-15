@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 # Update / upgrade an existing production deployment with minimal disruption.
-# Unlike deploy.sh this does NOT tear everything down: it (optionally) pulls the
-# latest code, rebuilds images, and recreates only the services that changed.
-# Prisma migrations run automatically via the backend container entrypoint when
-# it is recreated.
-#
-# Shared-host notes: the neoshop-api-gateway container (Kong) owns ports 80/443.
-# This script re-detects the gateway network so recreated containers rejoin it,
-# and re-upserts our Kong services/routes (idempotent).
+# Unlike deploy.sh this does NOT tear everything down: it (optionally) pulls
+# the latest code, rebuilds images, and recreates only the services that
+# changed. Prisma migrations run automatically via the backend container
+# entrypoint when it is recreated. The nginx site config is refreshed only
+# when it actually changed (no reload otherwise).
 #
 # Usage on prod:  bash scripts/upgrade.sh [--no-cache] [--no-git-pull] [--request-cert]
 #   --no-cache      rebuild images without using the Docker layer cache
@@ -40,9 +37,6 @@ done
 command -v docker >/dev/null 2>&1 || die "docker is not installed."
 docker compose version >/dev/null 2>&1 || die "the 'docker compose' plugin is not installed."
 
-log "Detecting shared gateway..."
-ensure_gateway_network
-
 if [[ "$GIT_PULL" -eq 1 && -d "$ROOT/.git" ]]; then
   # Only tracked-file changes should block the pull; untracked runtime artifacts
   # on the server must not prevent upgrades.
@@ -67,16 +61,14 @@ docker compose up -d --remove-orphans
 
 wait_for_backend || warn "Backend health check failed — see logs above."
 
-# Kong services + routes (idempotent; persists in Kong's database).
-ensure_kong_routes || warn "Kong is not configured — the site will not be reachable. See messages above."
+# Front door: additive nginx site config (refreshed only when changed).
+install_nginx_config || warn "nginx is not configured — the site will not be reachable. See messages above."
 
-# TLS: upload the existing cert (keeps Kong in sync), or obtain one first.
-if certs_exist; then
-  kong_upload_cert || true
-elif [[ "$REQUEST_CERT" -eq 1 ]]; then
+# TLS: obtain certs on request, then flip the site config to full HTTPS.
+if ! certs_exist && [[ "$REQUEST_CERT" -eq 1 ]]; then
   if request_certs "$(letsencrypt_email)"; then
     ok "Certificates obtained."
-    kong_upload_cert && install_cert_renewal_hook
+    install_nginx_config && install_cert_renewal_hook
   else
     warn "Certbot failed — staying on HTTP. Check that DNS A records point here."
   fi

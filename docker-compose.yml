@@ -1,17 +1,14 @@
-# AI-Website app stack — shared host edition.
+# AI-Website app stack — host-nginx tenant edition.
 #
-# The host runs other services too, and the neoshop-api-gateway CONTAINER owns
-# 0.0.0.0:80/443 (host nginx cannot bind them). This stack therefore:
-#   - never publishes public ports (127.0.0.1 bindings are debug-only),
-#   - joins the gateway's Docker network so the gateway can reverse-proxy our
-#     domains to the containers by DNS alias:
-#       ai-web-builder.com / www  -> http://ai-website-frontend:3000
-#       /api/, /health, /live, /ready -> http://ai-website-backend:4000
-#       admin.ai-web-builder.com  -> http://ai-website-admin:3000
-#
-# The gateway server blocks live in nginx/gateway/*.conf; scripts/deploy.sh
-# auto-detects the gateway's mounted config dir and installs them (see
-# nginx/README.md).
+# This EC2 also runs OTHER websites behind the host's nginx, which owns
+# 0.0.0.0:80/443. This stack therefore never publishes public ports; host
+# nginx reverse-proxies our domains to the loopback bindings below:
+#   ai-web-builder.com / www  -> 127.0.0.1:3000 (frontend)
+#   /api/*, /health, /live, /ready -> 127.0.0.1:4000 (backend)
+#   admin.ai-web-builder.com  -> 127.0.0.1:3001 (admin)
+# The nginx site config lives in nginx/ai-website.{http,https}.conf and is
+# installed into /etc/nginx/sites-available by scripts/deploy.sh (additive —
+# other sites on this nginx are never touched).
 name: ai-website
 
 services:
@@ -28,7 +25,6 @@ services:
       retries: 3
     restart: unless-stopped
     networks:
-      # Internal only — never exposed to the shared gateway network.
       - internal
 
   backend:
@@ -38,8 +34,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      # Debug access from the host only. Public traffic arrives via the
-      # shared gateway network (alias: ai-website-backend).
+      # Debug access from the host only; public traffic arrives via host nginx.
       - "127.0.0.1:4000:4000"
     env_file:
       - ./.env
@@ -66,10 +61,7 @@ services:
       start_period: 60s
     restart: unless-stopped
     networks:
-      internal:
-      gateway:
-        aliases:
-          - ai-website-backend
+      - internal
 
   frontend:
     image: ai-web-builder-frontend
@@ -82,7 +74,7 @@ services:
         NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-}
         NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL: ${NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL:-}
     ports:
-      # Debug access from the host only (alias for the gateway: ai-website-frontend).
+      # Debug access from the host only; public traffic arrives via host nginx.
       - "127.0.0.1:3000:3000"
     environment:
       # Runtime-only variables (server components)
@@ -92,10 +84,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      internal:
-      gateway:
-        aliases:
-          - ai-website-frontend
+      - internal
 
   admin:
     image: ai-web-builder-admin
@@ -107,7 +96,7 @@ services:
         # Internal Docker routing keeps admin→backend traffic inside the network
         BACKEND_API_URL: ${BACKEND_API_URL:-http://backend:4000}
     ports:
-      # Debug access from the host only (alias for the gateway: ai-website-admin).
+      # Public traffic arrives via host nginx (127.0.0.1:3001 upstream).
       # Note: container listens on 3000; 3001 is only the host-side debug port.
       - "127.0.0.1:3001:3000"
     depends_on:
@@ -115,21 +104,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      internal:
-      gateway:
-        aliases:
-          - ai-website-admin
+      - internal
 
 networks:
   # Private stack network (backend <-> redis, admin <-> backend, ...).
   internal:
     driver: bridge
-  # Shared network owned by the nginx gateway container (neoshop-api-gateway).
-  # Created/managed outside this compose project. scripts/deploy.sh auto-detects
-  # the gateway's network and exports GATEWAY_NETWORK; you can also pin it in .env.
-  gateway:
-    external: true
-    name: ${GATEWAY_NETWORK:-neoshop_default}
 
 volumes:
   redis_data:
