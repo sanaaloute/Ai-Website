@@ -349,12 +349,10 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
               questionnaire: state.questionnaire,
               plan: state.plan,
               exitPlan: state.exitPlan,
-              agentSteps: state.agentSteps
-                .filter((step) => step.kind !== 'code')
-                .map((step) => ({
-                  ...step,
-                  label: getAgentStepLabel(step),
-                })),
+              agentSteps: state.agentSteps.map((step) => ({
+                ...step,
+                label: getAgentStepLabel(step),
+              })),
               reviewMaxReached: state.reviewMaxReached || prev.reviewMaxReached,
               reviewMaxIssues: state.reviewMaxIssues?.length ? state.reviewMaxIssues : prev.reviewMaxIssues,
               reviewMaxTodos: state.reviewMaxTodos?.length ? state.reviewMaxTodos : prev.reviewMaxTodos,

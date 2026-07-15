@@ -348,12 +348,13 @@ async function readAgentStream(
                     const codeStepId = `${node}:code`;
                     let codeStep = state.agentSteps.find((s) => s.id === codeStepId);
                     if (!codeStep) {
-                      state.agentSteps.forEach((s) => {
-                        s.done = true;
-                      });
                       codeStep = { id: codeStepId, node, kind: 'code', text: '', done: false };
                       state.agentSteps.push(codeStep);
                     }
+                    codeStep.done = false;
+                    state.agentSteps.forEach((s) => {
+                      if (s !== codeStep) s.done = true;
+                    });
                     codeStep.text += event.data.content;
                   } else {
                     // Thinking/reasoning tokens accumulate into the agent's own
@@ -362,12 +363,13 @@ async function readAgentStream(
                       (s) => s.id === node && s.kind === 'thinking',
                     );
                     if (!step) {
-                      state.agentSteps.forEach((s) => {
-                        s.done = true;
-                      });
                       step = { id: node, node, kind: 'thinking', text: '', done: false };
                       state.agentSteps.push(step);
                     }
+                    step.done = false;
+                    state.agentSteps.forEach((s) => {
+                      if (s !== step) s.done = true;
+                    });
                     step.text += event.data.content;
                   }
                   if (process.env.NODE_ENV === 'development') {

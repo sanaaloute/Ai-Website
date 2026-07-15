@@ -6,11 +6,11 @@
 # entrypoint when it is recreated. The nginx site config is refreshed only
 # when it actually changed (no reload otherwise).
 #
-# Usage on prod:  bash scripts/upgrade.sh [--no-cache] [--no-git-pull] [--request-cert]
+# Usage on prod:  bash scripts/upgrade.sh [--no-cache] [--no-git-pull]
 #   --no-cache      rebuild images without using the Docker layer cache
 #   --no-git-pull   skip the fast-forward git pull
-#   --request-cert  if no certificate exists, obtain one via Let's Encrypt
-#                   (needs DNS pointing here + sudo)
+#   --request-cert  deprecated/no-op: certs are now requested automatically
+#                   (when missing + DNS points here + LETSENCRYPT_EMAIL in .env + sudo)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,7 +27,7 @@ for arg in "$@"; do
     --no-git-pull)   GIT_PULL=0 ;;
     --request-cert)  REQUEST_CERT=1 ;;
     -h|--help)
-      echo "Usage: bash scripts/upgrade.sh [--no-cache] [--no-git-pull] [--request-cert]"
+      echo "Usage: bash scripts/upgrade.sh [--no-cache] [--no-git-pull]"
       exit 0
       ;;
     *) die "Unknown option: $arg" ;;
@@ -64,14 +64,11 @@ wait_for_backend || warn "Backend health check failed — see logs above."
 # Front door: additive nginx site config (refreshed only when changed).
 install_nginx_config || warn "nginx is not configured — the site will not be reachable. See messages above."
 
-# TLS: obtain certs on request, then flip the site config to full HTTPS.
-if ! certs_exist && [[ "$REQUEST_CERT" -eq 1 ]]; then
-  if request_certs "$(letsencrypt_email)"; then
-    ok "Certificates obtained."
-    install_nginx_config && install_cert_renewal_hook
-  else
-    warn "Certbot failed — staying on HTTP. Check that DNS A records point here."
-  fi
+# TLS: obtain certs automatically when missing, then flip the site config to
+# full HTTPS. Never fatal — worst case the site stays on the HTTP config.
+if [[ "$REQUEST_CERT" -eq 1 ]]; then
+  log "Note: --request-cert is deprecated; TLS is now set up automatically."
 fi
+ensure_tls
 
 show_status

@@ -70,10 +70,12 @@ curl -H 'Host: ai-web-builder.com' http://localhost/         # 200 from the fron
 
 ## 4) Enable HTTPS (after DNS A records point here)
 
-Set `LETSENCRYPT_EMAIL` in `.env`, then:
+Set `LETSENCRYPT_EMAIL` in `.env` — that's all. Every `deploy.sh` / `upgrade.sh`
+run checks the certificate state and, when none exists yet, obtains one
+automatically (DNS must point here and sudo is required):
 
 ```bash
-sudo bash scripts/deploy.sh --request-cert
+sudo bash scripts/deploy.sh
 ```
 
 certbot uses the **webroot** authenticator (`/var/www/certbot`, served by the
@@ -82,6 +84,7 @@ script swaps in the full HTTPS site config (301 redirect, HSTS, SSE-tuned
 `/api` proxying) and installs a renewal hook
 (`/etc/letsencrypt/renewal-hooks/deploy/ai-website-nginx.sh`) that reloads
 nginx when certs renew. `sudo certbot renew --dry-run` verifies renewal.
+(`--request-cert` is still accepted for compatibility but is no longer needed.)
 
 ## 5) Day-to-day upgrades
 
@@ -89,8 +92,9 @@ nginx when certs renew. `sudo certbot renew --dry-run` verifies renewal.
 bash scripts/upgrade.sh        # git pull, rebuild, recreate changed services
 ```
 
-Flags: `--no-cache`, `--no-git-pull`, `--request-cert`. The nginx config is
-re-installed only when it changed (no pointless reloads).
+Flags: `--no-cache`, `--no-git-pull` (`--request-cert` is deprecated — TLS is
+automatic). The nginx config is re-installed only when it changed (no
+pointless reloads), and certificates are requested automatically when missing.
 
 ## Troubleshooting
 

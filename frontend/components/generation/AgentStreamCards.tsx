@@ -19,10 +19,12 @@ export function AgentStreamCards({
   generationProgress,
   generationEstimatedPercent,
 }: AgentStreamCardsProps) {
-  const steps = (generationProgress.agentSteps ?? []).filter((s) => s.kind !== 'code');
+  const steps = generationProgress.agentSteps ?? [];
   const allDone = steps.length > 0 && steps.every((s) => s.done);
 
-  if (steps.length === 0) return null;
+  // Visible while generating (even before the first agent token arrives, so it
+  // fully replaces the old static steps card) or when there are steps to show.
+  if (!generationProgress.isGenerating && steps.length === 0) return null;
 
   const isSpinning = generationProgress.isGenerating && !allDone;
 
@@ -98,7 +100,7 @@ function AgentStepCard({ step }: { step: AgentStep }) {
             step.done ? 'text-zinc-400' : 'text-zinc-300'
           }`}
         >
-          <StepContent text={step.text} done={step.done} />
+          <StepContent text={step.text} done={step.done} kind={step.kind} />
         </div>
       )}
     </div>
@@ -106,11 +108,21 @@ function AgentStepCard({ step }: { step: AgentStep }) {
 }
 
 /**
- * While the agent is still streaming, content is partial and shown as plain
- * text. Once the step is done, JSON payloads (e.g. design specs, plans) are
- * rendered as a structured, human-readable tree instead of raw JSON.
+ * Code streams ("Stream synthesis") render as a raw code block. Thinking
+ * streams render as plain text — except JSON-ish payloads (design specs,
+ * plans), which are sanitized into readable lines even while still streaming.
+ * Once the step is done, JSON payloads are rendered as a structured,
+ * human-readable tree instead of raw JSON.
  */
-function StepContent({ text, done }: { text: string; done: boolean }) {
+function StepContent({ text, done, kind }: { text: string; done: boolean; kind: AgentStep['kind'] }) {
+  if (kind === 'code') {
+    return (
+      <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-lg border border-white/[0.06] bg-black/30 p-2.5 font-mono text-[11px] leading-relaxed text-zinc-300">
+        {text}
+      </pre>
+    );
+  }
+
   if (done) {
     const parsed = tryParseJson(text);
     if (parsed !== null) {
@@ -121,11 +133,163 @@ function StepContent({ text, done }: { text: string; done: boolean }) {
       );
     }
   }
+
   return (
     <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-      {text}
+      {sanitizeStreamingText(text)}
     </div>
   );
+}
+
+/**
+ * Sanitizes text an agent is still streaming. Prose passes through untouched;
+ * JSON-ish payloads are converted into readable "Key: value" lines so the raw
+ * JSON is never shown. Never throws — partial input is expected.
+ */
+function sanitizeStreamingText(text: string): string {
+  // Strip markdown code fences the model may wrap payloads in.
+  const cleaned = text.replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '');
+  const trimmed = cleaned.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return text;
+  const sanitized = sanitizePartialJson(trimmed);
+  return sanitized || text;
+}
+
+/**
+ * Tolerant partial-JSON reader. Walks (possibly incomplete) JSON and renders
+ * it as indented "Key: value" lines with "•" bullets for array items. Never
+ * throws: unterminated strings/structures simply render what has arrived.
+ */
+function sanitizePartialJson(input: string): string {
+  let i = 0;
+  const n = input.length;
+  const lines: string[] = [];
+
+  const skipWs = () => {
+    while (i < n && /\s/.test(input[i])) i++;
+  };
+
+  const readString = (): string => {
+    // Assumes input[i] is the opening quote.
+    i++;
+    let out = '';
+    while (i < n) {
+      const c = input[i];
+      if (c === '\\' && i + 1 < n) {
+        const next = input[i + 1];
+        if (next === 'u' && i + 5 < n) {
+          const code = parseInt(input.slice(i + 2, i + 6), 16);
+          out += Number.isNaN(code) ? '' : String.fromCharCode(code);
+          i += 6;
+          continue;
+        }
+        const escapes: Record<string, string> = {
+          n: '\n', t: '\t', r: '\r', '"': '"', '\\': '\\', '/': '/', b: '\b', f: '\f',
+        };
+        out += escapes[next] ?? next;
+        i += 2;
+        continue;
+      }
+      if (c === '"') {
+        i++;
+        return out;
+      }
+      out += c;
+      i++;
+    }
+    return out; // Unterminated — return what has arrived so far.
+  };
+
+  const readPrimitive = (): string => {
+    let out = '';
+    while (i < n && !/[,}\]]/.test(input[i])) {
+      out += input[i];
+      i++;
+    }
+    return out.trim();
+  };
+
+  // Reads an inline (non-structural) value: quoted string or primitive.
+  const readInlineValue = (): string => {
+    skipWs();
+    if (input[i] === '"') return readString();
+    return readPrimitive();
+  };
+
+  const INDENT = '  ';
+
+  const parseValue = (depth: number, prefix: string): void => {
+    skipWs();
+    if (i >= n) return;
+    const c = input[i];
+    if (c === '{' || c === '[') {
+      // Structural item: the bullet (if any) gets its own line, contents indent.
+      if (prefix) {
+        lines.push(`${INDENT.repeat(depth)}${prefix.trimEnd()}`);
+        depth += 1;
+      }
+      i++;
+      if (c === '{') parseObject(depth);
+      else parseArray(depth);
+    } else {
+      const value = readInlineValue();
+      if (value) lines.push(`${INDENT.repeat(depth)}${prefix}${value}`);
+    }
+  };
+
+  const parseObject = (depth: number): void => {
+    while (i < n) {
+      skipWs();
+      if (i >= n) return;
+      const c = input[i];
+      if (c === '}') {
+        i++;
+        return;
+      }
+      if (c === ',') {
+        i++;
+        continue;
+      }
+      if (c !== '"') {
+        i++; // Skip stray characters defensively.
+        continue;
+      }
+      const key = readString();
+      skipWs();
+      if (input[i] === ':') i++;
+      skipWs();
+      if (input[i] === '{' || input[i] === '[') {
+        lines.push(`${INDENT.repeat(depth)}${formatKey(key)}:`);
+        const opener = input[i];
+        i++;
+        if (opener === '{') parseObject(depth + 1);
+        else parseArray(depth + 1);
+      } else {
+        const value = readInlineValue();
+        lines.push(`${INDENT.repeat(depth)}${formatKey(key)}: ${value}`);
+      }
+    }
+  };
+
+  const parseArray = (depth: number): void => {
+    while (i < n) {
+      skipWs();
+      if (i >= n) return;
+      const c = input[i];
+      if (c === ']') {
+        i++;
+        return;
+      }
+      if (c === ',') {
+        i++;
+        continue;
+      }
+      parseValue(depth, '• ');
+    }
+  };
+
+  parseValue(0, '');
+  return lines.join('\n');
 }
 
 function tryParseJson(text: string): unknown {

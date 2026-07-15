@@ -34,7 +34,14 @@ NGINX_AVAILABLE="${NGINX_AVAILABLE:-/etc/nginx/sites-available/ai-website}"
 NGINX_ENABLED="${NGINX_ENABLED:-/etc/nginx/sites-enabled/ai-website}"
 ACME_WEBROOT="${ACME_WEBROOT:-/var/www/certbot}"
 
-certs_exist() { [[ -f "$CERT_FULLCHAIN" && -f "$CERT_KEY" ]]; }
+certs_exist() {
+  # /etc/letsencrypt/live is root-only (drwx------) on standard installs, so a
+  # plain `test -f` as a non-root user returns false EVEN WHEN certs exist.
+  # That used to downgrade the nginx site from HTTPS to the HTTP bootstrap
+  # config on every non-sudo deploy. Fall back to a sudo check when needed.
+  if [[ -f "$CERT_FULLCHAIN" && -f "$CERT_KEY" ]]; then return 0; fi
+  as_root test -f "$CERT_FULLCHAIN" && as_root test -f "$CERT_KEY"
+}
 
 # Run a command as root: directly when already root, else via passwordless sudo.
 as_root() {
@@ -82,10 +89,11 @@ check_dns() {
   done
   if [[ "$all_good" -eq 1 ]]; then
     ok "DNS: all three names resolve to this server ($pub)."
-  else
-    warn "Fix the A records at your registrar. Until then the site stays"
-    warn "unreachable and certificates cannot be issued."
+    return 0
   fi
+  warn "Fix the A records at your registrar. Until then the site stays"
+  warn "unreachable and certificates cannot be issued."
+  return 1
 }
 
 # ── nginx site configuration (additive) ─────────────────────────────────────
@@ -165,6 +173,40 @@ install_cert_renewal_hook() {
   return 0
 }
 
+# Ensure TLS is fully set up. With an existing certificate this just guarantees
+# the renewal hook. When no certificate exists yet, it obtains one via
+# certbot --webroot — but only when it can succeed: LETSENCRYPT_EMAIL set, sudo
+# available, and DNS pointing here (avoids Let's Encrypt rate limits). Then it
+# flips the nginx site to full HTTPS. Never fatal: worst case the site stays on
+# the HTTP bootstrap config.
+ensure_tls() {
+  if certs_exist; then
+    install_cert_renewal_hook
+    return 0
+  fi
+  local email
+  email="$(letsencrypt_email)"
+  if [[ -z "$email" ]]; then
+    warn "No TLS certificate yet and LETSENCRYPT_EMAIL is not set in .env — staying on HTTP."
+    return 0
+  fi
+  if ! as_root true; then
+    warn "No TLS certificate yet. Re-run with sudo (or passwordless sudo) to obtain one automatically."
+    return 0
+  fi
+  if ! check_dns; then
+    warn "Skipping the certificate request until DNS points here."
+    return 0
+  fi
+  if request_certs "$email"; then
+    ok "Certificates obtained."
+    install_nginx_config && install_cert_renewal_hook
+  else
+    warn "Certbot failed — staying on HTTP. Check that DNS A records point here"
+    warn "and that port 80 reaches this server."
+  fi
+}
+
 # ── health + status ──────────────────────────────────────────────────────────
 
 wait_for_backend() {
@@ -226,8 +268,8 @@ show_status() {
     ok "Site should be live at https://$DOMAIN (and https://admin.$DOMAIN)."
   elif [[ "$live" -eq 1 ]]; then
     ok "App stack is up and routed by nginx (HTTP only — no certificate yet)."
-    log "To enable HTTPS: set LETSENCRYPT_EMAIL in .env, ensure DNS points here, then run:"
-    log "  sudo bash scripts/deploy.sh --request-cert"
+    log "HTTPS is set up automatically once DNS points here and LETSENCRYPT_EMAIL"
+    log "is set in .env — then just re-run: sudo bash scripts/deploy.sh"
   else
     warn "The app may be running, but nginx is not routing to it yet — see above."
   fi

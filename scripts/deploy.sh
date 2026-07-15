@@ -6,17 +6,17 @@
 #   3) prisma migrate deploy        (run DB migrations, fail-fast)
 #   4) docker compose up -d         (create and start the app containers)
 #   5) install our ADDITIVE nginx site config (sites-available/ai-website)
-#   6) optionally obtain Let's Encrypt certs via certbot --webroot and switch
-#      the site config to full HTTPS (--request-cert)
+#   6) obtain Let's Encrypt certs via certbot --webroot when missing and switch
+#      the site config to full HTTPS (automatic: needs DNS pointing here,
+#      LETSENCRYPT_EMAIL in .env, and sudo)
 #
 # Prisma migrations also run automatically in the backend container entrypoint
 # (Dockerfile CMD: `npx prisma migrate deploy && node dist/main`); the explicit
 # run here gives clear, fail-fast feedback before the whole stack starts.
 #
-# Usage on prod:  bash scripts/deploy.sh [--no-cache] [--request-cert]
+# Usage on prod:  bash scripts/deploy.sh [--no-cache]
 #   --no-cache      rebuild images without using the Docker layer cache
-#   --request-cert  if no certificate exists, obtain one via Let's Encrypt
-#                   (needs DNS pointing here + sudo)
+#   --request-cert  deprecated/no-op: certs are now requested automatically
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -30,7 +30,7 @@ for arg in "$@"; do
   case "$arg" in
     --no-cache)      NO_CACHE=1 ;;
     --request-cert)  REQUEST_CERT=1 ;;
-    -h|--help)       echo "Usage: bash scripts/deploy.sh [--no-cache] [--request-cert]"; exit 0 ;;
+    -h|--help)       echo "Usage: bash scripts/deploy.sh [--no-cache]"; exit 0 ;;
     *)               die "Unknown option: $arg" ;;
   esac
 done
@@ -39,7 +39,7 @@ command -v docker >/dev/null 2>&1 || die "docker is not installed."
 docker compose version >/dev/null 2>&1 || die "the 'docker compose' plugin is not installed."
 
 log "Checking DNS (needed for HTTPS issuance)..."
-check_dns
+check_dns || true
 
 log "Stopping existing app containers..."
 docker compose down --remove-orphans
@@ -74,15 +74,11 @@ wait_for_backend || warn "Backend health check failed — see logs above."
 # Front door: additive nginx site config (HTTP bootstrap or HTTPS by cert).
 install_nginx_config || warn "nginx is not configured — the site will not be reachable. See messages above."
 
-# TLS: obtain certs on request, then flip the site config to full HTTPS.
-if ! certs_exist && [[ "$REQUEST_CERT" -eq 1 ]]; then
-  if request_certs "$(letsencrypt_email)"; then
-    ok "Certificates obtained."
-    install_nginx_config && install_cert_renewal_hook
-  else
-    warn "Certbot failed — staying on HTTP. Check that DNS A records point here"
-    warn "and that port 80 reaches this server."
-  fi
+# TLS: obtain certs automatically when missing, then flip the site config to
+# full HTTPS. Never fatal — worst case the site stays on the HTTP config.
+if [[ "$REQUEST_CERT" -eq 1 ]]; then
+  log "Note: --request-cert is deprecated; TLS is now set up automatically."
 fi
+ensure_tls
 
 show_status

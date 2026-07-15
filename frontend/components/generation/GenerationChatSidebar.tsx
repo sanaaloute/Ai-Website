@@ -9,7 +9,6 @@ import type { CodeApplicationState, GenerationProgress } from '@/hooks/useGenera
 import type { ChatMessage, ConversationContext } from '@/hooks/useWorkspaceChat';
 import { ScrapedWebsitesPanel } from './ScrapedWebsitesPanel';
 import { ChatMessageItem } from './ChatMessageItem';
-import { GenerationProgressPanel } from './GenerationProgressPanel';
 import { AgentStreamCards } from './AgentStreamCards';
 import { AgentQuestionnaire } from './AgentQuestionnaire';
 import { Square } from 'lucide-react';
@@ -132,18 +131,11 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
           <CodeApplicationProgress state={codeApplicationState} />
         )}
 
-        {/* File generation progress - inline display (during generation) */}
-        {generationProgress.agentSteps && generationProgress.agentSteps.length > 0 ? (
-          <AgentStreamCards
-            generationProgress={generationProgress}
-            generationEstimatedPercent={generationEstimatedPercent}
-          />
-        ) : (
-          <GenerationProgressPanel
-            generationProgress={generationProgress}
-            generationEstimatedPercent={generationEstimatedPercent}
-          />
-        )}
+        {/* Generation progress: overall status header + sequential per-agent cards */}
+        <AgentStreamCards
+          generationProgress={generationProgress}
+          generationEstimatedPercent={generationEstimatedPercent}
+        />
 
         {/* Planning Questionnaire */}
         {generationProgress.questionnaire && (
