@@ -290,7 +290,7 @@ export default function PromptInput() {
           <p className="mt-2 text-xs text-amber-300">{generationNotice}</p>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {shownIdeas.map((idea) => (
             <button
               key={idea.id}
@@ -298,7 +298,7 @@ export default function PromptInput() {
               title={idea.title}
               aria-label={`Use suggestion: ${idea.title}. Fills the prompt with a detailed description.`}
               onClick={() => handleIdeaClick(idea)}
-              className={`max-w-full rounded-full border px-3 py-1.5 text-left text-sm transition ${
+              className={`max-w-full rounded-full border px-2.5 py-1 text-left text-xs transition ${
                 activeIdeaId === idea.id
                   ? "border-primary/60 bg-primary/10 text-white"
                   : "border-white/10 bg-transparent text-zinc-400 hover:border-white/20 hover:text-zinc-200"
@@ -311,10 +311,10 @@ export default function PromptInput() {
             type="button"
             onClick={handleShuffleIdeas}
             aria-label={t("shuffleIdeas")}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-sm text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
+            className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-xs text-zinc-400 transition hover:border-white/20 hover:text-zinc-200"
             title={t("shuffleIdeas")}
           >
-            <Shuffle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Shuffle className="h-3 w-3 shrink-0" aria-hidden />
             <span>{t("shuffleIdeas")}</span>
           </button>
         </div>

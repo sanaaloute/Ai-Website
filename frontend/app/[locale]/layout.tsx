@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -13,8 +13,10 @@ const BackgroundEffects = dynamic(
 );
 
 
-const inter = Inter({
-  subsets: ["latin"],
+const inter = localFont({
+  // Self-hosted (latin, variable weights 100–900) so builds don't depend on
+  // fetching Google Fonts at build time.
+  src: "../fonts/InterVariable.woff2",
   display: "swap"
 });
 
