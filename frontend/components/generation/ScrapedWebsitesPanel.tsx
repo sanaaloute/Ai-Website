@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 interface ScrapedSiteContent {
   metadata?: {
     sourceURL?: string;
@@ -26,6 +28,8 @@ export function ScrapedWebsitesPanel({
   screenshotCollapsed,
   setScreenshotCollapsed,
 }: ScrapedWebsitesPanelProps) {
+  const t = useTranslations('generation');
+
   if (scrapedWebsites.length === 0) return null;
 
   return (
@@ -78,7 +82,7 @@ export function ScrapedWebsitesPanel({
                   <button
                     onClick={() => setScreenshotCollapsed(!screenshotCollapsed)}
                     className="flex items-center gap-1 text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors mb-1"
-                    aria-label={screenshotCollapsed ? 'Expand screenshot' : 'Collapse screenshot'}
+                    aria-label={screenshotCollapsed ? t('scraped.expandScreenshot') : t('scraped.collapseScreenshot')}
                   >
                     <svg
                       width="10"
@@ -95,7 +99,7 @@ export function ScrapedWebsitesPanel({
                         strokeLinejoin="round"
                       />
                     </svg>
-                    Screenshot
+                    {t('scraped.screenshot')}
                   </button>
                   <div
                     className="w-full overflow-hidden rounded-lg border border-white/[0.06] transition-all duration-300"
@@ -109,7 +113,7 @@ export function ScrapedWebsitesPanel({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={screenshot}
-                      alt={`${siteName} preview`}
+                      alt={t('scraped.previewAlt', { siteName })}
                       className="w-full h-auto object-cover"
                       style={{ maxHeight: '160px' }}
                     />

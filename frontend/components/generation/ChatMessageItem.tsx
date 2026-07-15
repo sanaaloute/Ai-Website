@@ -1,6 +1,7 @@
 'use client';
 
 import type { ChatMessage } from '@/hooks/useWorkspaceChat';
+import { useTranslations } from 'next-intl';
 import { BrandingDataCard } from './BrandingDataCard';
 import { Wand2, User, Bot, Terminal, AlertCircle } from 'lucide-react';
 
@@ -10,6 +11,7 @@ interface ChatMessageItemProps {
 }
 
 export function ChatMessageItem({ msg, onSuggestionClick }: ChatMessageItemProps) {
+  const t = useTranslations('generation');
   const hasSuggestions = msg.metadata?.suggestions && msg.metadata.suggestions.length > 0;
 
   const avatarColors = {
@@ -42,7 +44,7 @@ export function ChatMessageItem({ msg, onSuggestionClick }: ChatMessageItemProps
               </div>
             )}
             <span className="text-[10px] text-zinc-600 font-medium">
-              {msg.type === 'user' ? 'You' : msg.type === 'ai' ? 'AI' : msg.type === 'system' ? 'System' : msg.type === 'command' ? 'Command' : 'Error'}
+              {msg.type === 'user' ? t('chat.roleYou') : msg.type === 'ai' ? t('chat.roleAi') : msg.type === 'system' ? t('chat.roleSystem') : msg.type === 'command' ? t('chat.roleCommand') : t('chat.roleError')}
             </span>
           </div>
 
@@ -88,12 +90,12 @@ export function ChatMessageItem({ msg, onSuggestionClick }: ChatMessageItemProps
                   </div>
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium mb-0.5 text-xs text-red-200">Build Errors Detected</div>
+                  <div className="font-medium mb-0.5 text-xs text-red-200">{t('chat.buildErrorsDetected')}</div>
                   <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-xs leading-relaxed text-red-100/80">
                     {msg.content}
                   </div>
                   <div className="mt-1.5 text-[10px] text-red-300/60">
-                    Press &apos;F&apos; or click the Fix button above to resolve
+                    {t('chat.fixHint')}
                   </div>
                 </div>
               </div>
@@ -109,7 +111,7 @@ export function ChatMessageItem({ msg, onSuggestionClick }: ChatMessageItemProps
             <div className="mr-auto mt-1.5 max-w-[92%] rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
               <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium text-glow-cyan/80">
                 <Wand2 className="h-3 w-3" />
-                <span>Suggestions:</span>
+                <span>{t('chat.suggestions')}:</span>
               </div>
               <div className="flex flex-col gap-1">
                 {msg.metadata!.suggestions!.map((suggestion, idx) => (

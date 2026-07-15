@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { QuestionnaireQuestion } from '@/hooks/useGenerationProgress';
 
 export interface AgentQuestionnaireProps {
@@ -9,6 +10,7 @@ export interface AgentQuestionnaireProps {
 }
 
 export function AgentQuestionnaire({ questions, onSubmit }: AgentQuestionnaireProps) {
+  const t = useTranslations('generation');
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const handleChange = (id: string, value: string) => {
@@ -32,7 +34,7 @@ export function AgentQuestionnaire({ questions, onSubmit }: AgentQuestionnairePr
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-6 shadow-lg backdrop-blur">
       <h3 className="mb-4 text-lg font-semibold text-slate-100">
-        A few questions to help us build exactly what you need
+        {t('questionnaire.heading')}
       </h3>
       <div className="space-y-5">
         {questions.map((q) => (
@@ -45,7 +47,7 @@ export function AgentQuestionnaire({ questions, onSubmit }: AgentQuestionnairePr
               <input
                 type="text"
                 className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                placeholder={q.placeholder || 'Your answer...'}
+                placeholder={q.placeholder || t('questionnaire.placeholder')}
                 value={answers[q.id] || ''}
                 onChange={(e) => handleChange(q.id, e.target.value)}
               />
@@ -103,7 +105,7 @@ export function AgentQuestionnaire({ questions, onSubmit }: AgentQuestionnairePr
         disabled={!allRequiredAnswered}
         className="mt-6 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Submit Answers
+        {t('questionnaire.submit')}
       </button>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import BuilderHeader from '@/components/builder/BuilderHeader';
 import { Pencil, Trash2, Save, GitBranch, Cloud, Database, Lock } from 'lucide-react';
 import { useRouter } from '@/i18n/navigation';
@@ -58,6 +59,7 @@ export interface GenerationHeaderProps {
 }
 
 function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
+  const t = useTranslations('generation');
   const {
     sandboxData,
     projectOpeningBusy,
@@ -131,26 +133,26 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
             }}
             disabled={projectOpeningBusy}
             className="max-w-[min(100%,14rem)] cursor-pointer rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-left text-xs font-medium text-zinc-300 outline-none transition hover:border-glow-purple/30 focus:border-glow-purple/50 disabled:cursor-not-allowed disabled:opacity-60"
-            title="Open saved project"
+            title={t('header.openSavedProject')}
           >
             {(() => {
-              if (projectOpeningBusy) return 'Opening…';
-              if (cloudProjectsLoading) return 'Loading…';
-              if (cloudProjectsError) return 'Unavailable';
-              if (cloudProjects.length === 0) return 'No projects';
+              if (projectOpeningBusy) return t('header.opening');
+              if (cloudProjectsLoading) return t('header.loading');
+              if (cloudProjectsError) return t('header.unavailable');
+              if (cloudProjects.length === 0) return t('header.noProjects');
               const currentProject = cloudProjects.find(
                 (p) => p.projectId === currentSessionProjectId
               );
               if (currentProject) {
-                return (currentProject.projectName || 'Untitled').slice(0, 24);
+                return (currentProject.projectName || t('header.untitled')).slice(0, 24);
               }
-              return `Open (${cloudProjects.length})`;
+              return t('header.openWithCount', { count: cloudProjects.length });
             })()}
           </button>
           {projectMenuOpen && cloudProjects.length > 0 && !projectOpeningBusy && (
             <div className="absolute right-0 z-[140] mt-1.5 max-h-72 w-72 overflow-y-auto rounded-xl border border-white/[0.08] bg-black/95 p-1 shadow-2xl backdrop-blur-md">
               {cloudProjects.map((project) => {
-                const label = (project.projectName || 'Untitled project').slice(0, 40);
+                const label = (project.projectName || t('header.untitledProject')).slice(0, 40);
                 const isSelected = selectedCloudProjectId === project.projectId;
                 const isCurrent = currentSessionProjectId === project.projectId;
                 const renameBusy = projectRenameBusyId === project.projectId;
@@ -175,7 +177,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
                       <span className="truncate">{label}</span>
                       {isCurrent ? (
                         <span className="ml-1.5 rounded border border-glow-cyan/40 bg-glow-cyan/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-glow-cyan">
-                          Current
+                          {t('header.current')}
                         </span>
                       ) : null}
                       {project.updatedAt ? (
@@ -193,8 +195,8 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
                       }}
                       disabled={renameBusy || deleteBusy || projectOpeningBusy}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/[0.06] text-zinc-500 transition hover:border-glow-cyan/30 hover:bg-glow-cyan/10 hover:text-glow-cyan disabled:cursor-not-allowed disabled:opacity-50"
-                      title={renameBusy ? 'Renaming…' : 'Rename'}
-                      aria-label={`Rename ${project.projectName || 'project'}`}
+                      title={renameBusy ? t('header.renaming') : t('header.rename')}
+                      aria-label={t('header.renameProject', { name: project.projectName || t('header.untitledProject') })}
                     >
                       <Pencil className="h-3 w-3" />
                     </button>
@@ -207,8 +209,8 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
                       }}
                       disabled={renameBusy || deleteBusy || projectOpeningBusy}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-white/[0.06] text-zinc-500 transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
-                      title={deleteBusy ? 'Deleting…' : 'Delete'}
-                      aria-label={`Delete ${project.projectName || 'project'}`}
+                      title={deleteBusy ? t('header.deleting') : t('header.delete')}
+                      aria-label={t('header.deleteProject', { name: project.projectName || t('header.untitledProject') })}
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -227,10 +229,10 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           }}
           disabled={!sandboxData || isSavingProject}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-purple/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-35"
-          title={isSavingProject ? 'Saving…' : 'Save project'}
+          title={isSavingProject ? t('header.saving') : t('header.saveProject')}
         >
           <Save className="h-3.5 w-3.5 shrink-0 text-glow-purple/80" aria-hidden />
-          <span className="hidden sm:inline">{isSavingProject ? 'Saving…' : 'Save'}</span>
+          <span className="hidden sm:inline">{isSavingProject ? t('header.saving') : t('header.save')}</span>
         </button>
         <button
           type="button"
@@ -239,12 +241,12 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           }}
           disabled={!sandboxData || isDownloadingZip}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-35"
-          title={isDownloadingZip ? 'Preparing…' : 'Download ZIP'}
+          title={isDownloadingZip ? t('header.preparing') : t('header.downloadZip')}
         >
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="shrink-0">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
           </svg>
-          <span className="hidden sm:inline">{isDownloadingZip ? 'DL…' : 'Download'}</span>
+          <span className="hidden sm:inline">{isDownloadingZip ? t('header.dlShort') : t('header.download')}</span>
         </button>
         <button
           type="button"
@@ -253,7 +255,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
               promptUpgrade(
                 'github_push',
                 'basic',
-                'Pushing your project to GitHub requires the Basic plan or higher.'
+                t('header.pushUpgradeMessage')
               );
               return;
             }
@@ -263,9 +265,9 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-purple/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
           title={
             pushLocked
-              ? 'Push to GitHub requires the Basic plan'
+              ? t('header.pushLockedTitle')
               : !integrationReadiness.ready
-                ? integrationReadiness.primaryReason || 'Workflow not ready'
+                ? integrationReadiness.primaryReason || t('header.workflowNotReady')
                 : undefined
           }
         >
@@ -274,7 +276,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           ) : (
             <GitBranch className="h-3.5 w-3.5 shrink-0 text-glow-purple/80" aria-hidden />
           )}
-          <span className="hidden sm:inline">{integrationBusy === 'github' ? 'Push…' : 'Push'}</span>
+          <span className="hidden sm:inline">{integrationBusy === 'github' ? t('header.pushing') : t('header.push')}</span>
         </button>
         <button
           type="button"
@@ -283,7 +285,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
               promptUpgrade(
                 'deploy',
                 'basic',
-                'One-click deploy requires the Basic plan or higher.'
+                t('header.deployUpgradeMessage')
               );
               return;
             }
@@ -291,14 +293,14 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
           }}
           disabled={!deployLocked && integrationBusy !== null}
           className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-          title={deployLocked ? 'One-click deploy requires the Basic plan' : undefined}
+          title={deployLocked ? t('header.deployLockedTitle') : undefined}
         >
           {deployLocked ? (
             <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300/80" aria-hidden />
           ) : (
             <Cloud className="h-3.5 w-3.5 shrink-0 text-glow-cyan/80" aria-hidden />
           )}
-          <span className="hidden sm:inline">{integrationBusy === 'vercel' ? 'Deploy…' : 'Deploy'}</span>
+          <span className="hidden sm:inline">{integrationBusy === 'vercel' ? t('header.deploying') : t('header.deploy')}</span>
         </button>
         {sandboxData && (
           <a
@@ -311,7 +313,7 @@ function GenerationHeaderComponent({ workspace }: GenerationHeaderProps) {
               }
             }}
             className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs font-medium text-zinc-400 transition hover:border-glow-cyan/30 hover:bg-white/[0.06] hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
-            title={pbAdminUrl ? `PocketBase admin: ${pbAdminEmail} / ${pbAdminPassword}` : 'PocketBase is not running in this sandbox'}
+            title={pbAdminUrl ? t('header.pocketbaseAdminTitle', { email: pbAdminEmail, password: pbAdminPassword }) : t('header.pocketbaseNotRunning')}
             aria-disabled={!pbAdminUrl || pocketbaseLoading}
             style={{ pointerEvents: !pbAdminUrl || pocketbaseLoading ? 'none' : 'auto', opacity: !pbAdminUrl || pocketbaseLoading ? 0.4 : 1 }}
           >

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { BsFolderFill, BsFolder2Open } from '@/lib/icons';
 import { FiChevronDown, FiChevronRight, FiEdit2, FiTrash2 } from '@/lib/icons';
 import { FileIcon } from '@/components/generation/FileIcon';
@@ -92,6 +93,7 @@ function TreeNodeItem({
   onRenameFile?: (oldPath: string, newName: string) => Promise<void> | void;
   onDeleteFile?: (path: string) => Promise<void> | void;
 }) {
+  const t = useTranslations('generation');
   const isExpanded = expandedFolders.has(node.path);
   const isSelected = node.type === 'file' && selectedFile === node.path;
   // Highlight folders that contain the file the agent is currently working on.
@@ -185,7 +187,7 @@ function TreeNodeItem({
                 isSelected ? 'bg-glow-purple/30 text-glow-purple' : 'bg-amber-500/20 text-amber-400'
               }`}
             >
-              mod
+              {t('files.modified')}
             </span>
           )}
         </>
@@ -199,7 +201,7 @@ function TreeNodeItem({
         type="button"
         onClick={startRename}
         disabled={isBusy}
-        title="Rename"
+        title={t('files.rename')}
         className="rounded p-0.5 text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-300 disabled:opacity-50"
       >
         <FiEdit2 style={{ width: '10px', height: '10px' }} />
@@ -208,7 +210,7 @@ function TreeNodeItem({
         type="button"
         onClick={handleDelete}
         disabled={isBusy}
-        title="Delete"
+        title={t('files.delete')}
         className="rounded p-0.5 text-zinc-500 transition hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50"
       >
         <FiTrash2 style={{ width: '10px', height: '10px' }} />
@@ -293,6 +295,7 @@ export function GenerationFileExplorer({
   onDeleteFile,
   width = 220,
 }: GenerationFileExplorerProps) {
+  const t = useTranslations('generation');
   const tree = useMemo(() => buildTree(files), [files]);
   const rootExpanded = expandedFolders.has('root');
 
@@ -304,9 +307,9 @@ export function GenerationFileExplorer({
       <div className="px-3 py-2 flex items-center justify-between border-b border-white/[0.06]">
         <div className="flex items-center gap-1.5">
           <BsFolderFill style={{ width: '14px', height: '14px' }} className="text-amber-500/70" />
-          <span className="text-sm font-medium text-zinc-500">Explorer</span>
+          <span className="text-sm font-medium text-zinc-500">{t('files.explorer')}</span>
         </div>
-        <span className="text-xs text-zinc-600">{files.length} files</span>
+        <span className="text-xs text-zinc-600">{t('files.fileCount', { count: files.length })}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto py-1 scrollbar-hide">
@@ -330,7 +333,7 @@ export function GenerationFileExplorer({
             ) : (
               <BsFolderFill style={{ width: '14px', height: '14px' }} className="text-glow-cyan/70 shrink-0" />
             )}
-            <span className="text-xs font-medium text-zinc-400">project</span>
+            <span className="text-xs font-medium text-zinc-400">{t('files.rootProject')}</span>
           </div>
 
           {rootExpanded && (

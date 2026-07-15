@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ChevronRight } from 'lucide-react';
 import type { AgentStep, GenerationProgress } from '@/hooks/useGenerationProgress';
 
@@ -167,12 +168,14 @@ function PrimitiveValue({ value }: { value: unknown }) {
 }
 
 function JsonTree({ value, depth = 0 }: { value: unknown; depth?: number }) {
+  const t = useTranslations('generation');
+
   if (value === null || typeof value !== 'object') {
     return <PrimitiveValue value={value} />;
   }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="italic text-zinc-500">none</span>;
+    if (value.length === 0) return <span className="italic text-zinc-500">{t('stream.none')}</span>;
     return (
       <ul className="ml-1 space-y-1">
         {value.map((item, i) => (
@@ -194,7 +197,7 @@ function JsonTree({ value, depth = 0 }: { value: unknown; depth?: number }) {
   const entries = Object.entries(value as Record<string, unknown>).filter(
     ([, v]) => v !== undefined,
   );
-  if (entries.length === 0) return <span className="italic text-zinc-500">empty</span>;
+  if (entries.length === 0) return <span className="italic text-zinc-500">{t('stream.empty')}</span>;
 
   return (
     <div className={depth > 0 ? 'mt-1 space-y-1 border-l border-white/10 pl-2.5' : 'space-y-1'}>
@@ -214,7 +217,7 @@ function JsonTree({ value, depth = 0 }: { value: unknown; depth?: number }) {
                   {formatKey(key)}:
                 </span>
                 {isEmptyArray ? (
-                  <span className="italic text-zinc-500">none</span>
+                  <span className="italic text-zinc-500">{t('stream.none')}</span>
                 ) : (
                   <PrimitiveValue value={v} />
                 )}

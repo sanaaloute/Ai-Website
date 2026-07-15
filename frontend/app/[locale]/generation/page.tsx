@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useMemo, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { AppLoaderFullscreen } from '@/components/shared/AppLoader';
 import { HeaderProvider } from '@/components/shared/header/HeaderContext';
 import { GenerationLoadingStates } from '@/components/generation/GenerationLoadingStates';
@@ -14,6 +15,7 @@ import { useGenerationPage } from '@/hooks/useGenerationPage';
 import { useSandboxInitialization } from '@/hooks/useSandboxInitialization';
 
 function AISandboxPage() {
+  const t = useTranslations('generation');
   const page = useGenerationPage();
 
   // Destructure page values so useMemo dependency arrays compare primitives and
@@ -397,14 +399,14 @@ function AISandboxPage() {
         {ui.templateCloneError && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
             <div className="max-w-md rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-center">
-              <h2 className="text-lg font-semibold text-red-200">Template Clone Failed</h2>
+              <h2 className="text-lg font-semibold text-red-200">{t('page.cloneFailedTitle')}</h2>
               <p className="mt-2 text-sm text-red-300">{ui.templateCloneError.message}</p>
               <button
                 type="button"
                 onClick={handleCloseTemplateCloneError}
                 className="mt-4 rounded-xl bg-gradient-to-r from-red-500 to-red-400 px-4 py-2 text-sm font-semibold text-white shadow-soft-glow transition hover:opacity-95"
               >
-                Close & Return Home
+                {t('page.cloneFailedClose')}
               </button>
             </div>
           </div>
@@ -430,12 +432,13 @@ function AISandboxPage() {
 }
 
 export default function Page() {
+  const t = useTranslations('generation');
   return (
     <Suspense
       fallback={
         <AppLoaderFullscreen
-          title="Loading workspace"
-          steps={[{ label: 'Preparing', key: 'prepare' }]}
+          title={t('page.loadingWorkspace')}
+          steps={[{ label: t('page.preparing'), key: 'prepare' }]}
           activeStep={0}
           progress={40}
         />

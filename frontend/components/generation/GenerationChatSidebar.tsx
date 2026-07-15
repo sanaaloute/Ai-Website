@@ -1,6 +1,7 @@
 'use client';
 
 import React, { memo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import BuilderChatInput from '@/components/builder/BuilderChatInput';
 import CodeApplicationProgress from '@/components/CodeApplicationProgress';
@@ -52,6 +53,7 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
     loading,
     generationChatInputRef,
   } = workspace;
+  const t = useTranslations('generation');
 
   return (
     <div
@@ -69,7 +71,7 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-glow-cyan opacity-40" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-glow-cyan shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
           </div>
-          <span className="text-sm font-semibold tracking-wide text-zinc-300">AI Chat</span>
+          <span className="text-sm font-semibold tracking-wide text-zinc-300">{t('chat.title')}</span>
         </div>
         <div className="flex items-center gap-2">
           {generationProgress.isGenerating && abortChatMessage && (
@@ -77,17 +79,17 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
               type="button"
               onClick={() => abortChatMessage()}
               className="inline-flex items-center gap-1 rounded-md border border-red-400/20 bg-red-500/10 px-2 py-1 text-[11px] font-medium text-red-300 transition hover:border-red-400/40 hover:bg-red-500/20"
-              title="Stop the current generation"
+              title={t('chat.stopTitle')}
             >
               <Square className="h-2.5 w-2.5 fill-current" />
-              Stop
+              {t('chat.stop')}
             </button>
           )}
           <Link
             href="/"
             className="text-xs text-zinc-600 transition hover:text-glow-cyan"
           >
-            ← Back
+            {t('chat.back')}
           </Link>
         </div>
       </div>
@@ -110,7 +112,7 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
               </svg>
             </div>
             <p className="text-xs text-zinc-500 max-w-[200px]">
-              Start building something amazing
+              {t('chat.emptyState')}
             </p>
           </div>
         )}
@@ -169,7 +171,7 @@ function GenerationChatSidebarComponent({ workspace, width = 384 }: GenerationCh
           value={aiChatInput}
           onChange={setAiChatInput}
           onSubmit={() => void sendChatMessage()}
-          placeholder="Tell me what you want..."
+          placeholder={t('chat.placeholder')}
           disabled={loading || generationProgress.isGenerating}
         />
       </div>

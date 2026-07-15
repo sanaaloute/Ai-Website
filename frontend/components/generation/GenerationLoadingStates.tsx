@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { useTranslations } from "next-intl";
 import { AppLoaderFullscreen, useAutoProgress } from "@/components/shared/AppLoader";
 import type { SandboxData } from "@/hooks/useWorkspaceSandbox";
 import type { GenerationProgress } from "@/hooks/useGenerationProgress";
@@ -30,6 +31,8 @@ function GenerationLoadingStatesComponent({
     generationProgress,
   } = workspace;
 
+  const t = useTranslations("generation");
+
   const hasFiles = generationProgress.files.length > 0;
 
   // Auto-progress for single-step loaders
@@ -55,8 +58,8 @@ function GenerationLoadingStatesComponent({
   if (isReloadingWorkspace) {
     return (
       <AppLoaderFullscreen
-        title="Reloading workspace"
-        steps={[{ label: "Restoring session", key: "restore" }]}
+        title={t("loading.reloadingWorkspace")}
+        steps={[{ label: t("loading.restoringSession"), key: "restore" }]}
         activeStep={0}
         progress={reloadProgress}
       />
@@ -72,14 +75,14 @@ function GenerationLoadingStatesComponent({
     // Template clone flow
     if (status.includes("Cloning") || status.includes("clone")) {
       const steps = [
-        { label: "Cloning repository", key: "clone" },
-        { label: "Booting preview", key: "preview" },
+        { label: t("loading.cloningRepository"), key: "clone" },
+        { label: t("loading.bootingPreview"), key: "preview" },
       ];
       const activeStep =
         status.includes("Waiting") || status.includes("preview") ? 1 : 0;
       return (
         <AppLoaderFullscreen
-          title="Loading template"
+          title={t("loading.loadingTemplate")}
           steps={steps}
           activeStep={activeStep}
           progress={activeStep === 1 ? 75 : 30}
@@ -89,10 +92,10 @@ function GenerationLoadingStatesComponent({
 
     // Standard cloud project open flow
     const steps = [
-      { label: "Preparing workspace", key: "prepare" },
-      { label: "Creating sandbox", key: "sandbox" },
-      { label: "Restoring files", key: "files" },
-      { label: "Finalizing", key: "finalize" },
+      { label: t("loading.preparingWorkspace"), key: "prepare" },
+      { label: t("loading.creatingSandbox"), key: "sandbox" },
+      { label: t("loading.restoringFiles"), key: "files" },
+      { label: t("loading.finalizing"), key: "finalize" },
     ];
     const activeStep = status.includes("Preparing")
       ? 0
@@ -103,7 +106,7 @@ function GenerationLoadingStatesComponent({
           : 3;
     return (
       <AppLoaderFullscreen
-        title="Opening project"
+        title={t("loading.openingProject")}
         steps={steps}
         activeStep={activeStep}
         progress={
@@ -130,13 +133,13 @@ function GenerationLoadingStatesComponent({
   ) {
     const activeStep = !sandboxData ? 0 : !hasFiles ? 1 : 2;
     const steps = [
-      { label: "Creating sandbox", key: "sandbox" },
-      { label: "Loading workspace", key: "workspace" },
-      { label: "Starting preview", key: "preview" },
+      { label: t("loading.creatingSandbox"), key: "sandbox" },
+      { label: t("loading.loadingWorkspace"), key: "workspace" },
+      { label: t("loading.startingPreview"), key: "preview" },
     ];
     return (
       <AppLoaderFullscreen
-        title="Preparing workspace"
+        title={t("loading.preparingWorkspace")}
         steps={steps}
         activeStep={activeStep}
         progress={activeStep === 2 ? 90 : activeStep === 1 ? fileLoadProgress : createProgress}
@@ -157,13 +160,13 @@ function GenerationLoadingStatesComponent({
   ) {
     const activeStep = !sandboxData ? 0 : !hasFiles ? 1 : 2;
     const steps = [
-      { label: "Creating sandbox", key: "sandbox" },
-      { label: "Loading workspace", key: "workspace" },
-      { label: "Finalizing", key: "finalize" },
+      { label: t("loading.creatingSandbox"), key: "sandbox" },
+      { label: t("loading.loadingWorkspace"), key: "workspace" },
+      { label: t("loading.finalizing"), key: "finalize" },
     ];
     return (
       <AppLoaderFullscreen
-        title="Creating workspace"
+        title={t("loading.creatingWorkspace")}
         steps={steps}
         activeStep={activeStep}
         progress={activeStep === 2 ? 95 : activeStep === 1 ? fileLoadProgress : createProgress}

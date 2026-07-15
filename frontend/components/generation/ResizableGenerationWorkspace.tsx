@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 const MIN_CHAT_WIDTH = 280;
 const MAX_CHAT_WIDTH = 720;
@@ -16,6 +17,7 @@ export function ResizableGenerationWorkspace({
   renderChatSidebar,
   rightPanel,
 }: ResizableGenerationWorkspaceProps) {
+  const t = useTranslations('generation');
   const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_WIDTH);
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
@@ -92,7 +94,7 @@ export function ResizableGenerationWorkspace({
         onMouseDown={handleMouseDown}
         className="group relative z-20 flex w-3 flex-shrink-0 cursor-col-resize items-center justify-center bg-transparent"
         style={{ cursor: 'col-resize' }}
-        aria-label="Resize chat panel"
+        aria-label={t('workspace.resizeChatPanel')}
         role="separator"
       >
         <div className="h-16 w-[2px] rounded-full bg-white/10 transition-all group-hover:h-24 group-hover:bg-primary-accent/60 group-active:h-28 group-active:bg-primary-accent" />

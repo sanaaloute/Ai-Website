@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { KeyRound, X, Pencil, Trash2 } from "lucide-react";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
@@ -24,6 +25,7 @@ const FALLBACK_PROVIDERS: LlmProviderInfo[] = [
 
 export function ApiKeyDialog() {
   const store = useLandingAuthStore();
+  const t = useTranslations("generation");
 
   const {
     apiKeyDialogOpen,
@@ -76,9 +78,9 @@ export function ApiKeyDialog() {
           setApiKeyPreview(null);
           setApiKeyEditing(true);
           if (keysResult.status === 401) {
-            setApiKeyError("Please log in first to save your API key.");
+            setApiKeyError(t("apiKey.loginFirst"));
           } else {
-            setApiKeyError(keysResult.error || "Could not load API key state.");
+            setApiKeyError(keysResult.error || t("apiKey.loadError"));
           }
           return;
         }
@@ -102,7 +104,7 @@ export function ApiKeyDialog() {
         setApiKeyHasValue(false);
         setApiKeyPreview(null);
         setApiKeyEditing(true);
-        setApiKeyError("Could not load API key state.");
+        setApiKeyError(t("apiKey.loadError"));
       })
       .finally(() => {
         if (!cancelled) setApiKeyLoading(false);
@@ -137,7 +139,7 @@ export function ApiKeyDialog() {
   const saveKey = useCallback(async () => {
     const key = apiKeyInput.trim();
     if (!key) {
-      setApiKeyError("Please enter an API key.");
+      setApiKeyError(t("apiKey.enterKey"));
       return;
     }
     setApiKeySaving(true);
@@ -145,11 +147,11 @@ export function ApiKeyDialog() {
     try {
       const result = await saveProviderKey(apiKeyProvider, key);
       if (!result.ok) {
-        setApiKeyError(result.error || "Could not save API key.");
+        setApiKeyError(result.error || t("apiKey.saveError"));
         return;
       }
       if (!result.data.ok) {
-        setApiKeyError("Could not save API key.");
+        setApiKeyError(t("apiKey.saveError"));
         return;
       }
       const preview = result.data.keyPreview;
@@ -160,7 +162,7 @@ export function ApiKeyDialog() {
       setApiKeyInput("");
       setApiKeyEditing(false);
     } catch {
-      setApiKeyError("Network error while saving API key.");
+      setApiKeyError(t("apiKey.saveNetworkError"));
     } finally {
       setApiKeySaving(false);
     }
@@ -168,6 +170,7 @@ export function ApiKeyDialog() {
     apiKeyInput,
     apiKeyProvider,
     apiKeyPreviews,
+    t,
     setApiKeySaving,
     setApiKeyError,
     setApiKeyPreviews,
@@ -184,11 +187,11 @@ export function ApiKeyDialog() {
     try {
       const result = await deleteProviderKey(apiKeyProvider);
       if (!result.ok) {
-        setApiKeyError(result.error || "Could not delete API key.");
+        setApiKeyError(result.error || t("apiKey.deleteError"));
         return;
       }
       if (!result.data.ok) {
-        setApiKeyError("Could not delete API key.");
+        setApiKeyError(t("apiKey.deleteError"));
         return;
       }
       const next = { ...apiKeyPreviews };
@@ -200,13 +203,14 @@ export function ApiKeyDialog() {
       setApiKeyInput("");
       setApiKeyEditing(true);
     } catch {
-      setApiKeyError("Network error while deleting API key.");
+      setApiKeyError(t("apiKey.deleteNetworkError"));
     } finally {
       setApiKeyDeleting(false);
     }
   }, [
     apiKeyProvider,
     apiKeyPreviews,
+    t,
     setApiKeyDeleting,
     setApiKeyError,
     setApiKeyPreviews,
@@ -231,7 +235,7 @@ export function ApiKeyDialog() {
               type="button"
               onClick={closeApiKeyDialog}
               className="absolute right-2 top-2 rounded-full bg-background-soft/90 p-2 text-zinc-400 hover:text-white sm:right-4 sm:top-4"
-              aria-label="Close API key dialog"
+              aria-label={t("apiKey.closeAria")}
             >
               <X size={16} />
             </button>
@@ -239,14 +243,14 @@ export function ApiKeyDialog() {
             <div className="mb-4 pr-10">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-background-soft/70 px-3 py-1 text-xs text-zinc-300">
                 <KeyRound size={14} className="text-glow-cyan" />
-                AI Provider
+                {t("apiKey.badge")}
               </div>
               <h3 className="mt-3 text-lg font-semibold text-white">
-                Set your API key
+                {t("apiKey.title")}
               </h3>
               <p className="mt-1 text-sm text-zinc-400">
                 {apiKeyDialogDescription ??
-                  "Add an API key for your preferred LLM provider to enable AI generation."}
+                  t("apiKey.defaultDescription")}
               </p>
             </div>
 
@@ -255,7 +259,7 @@ export function ApiKeyDialog() {
                 htmlFor="shared-api-key-provider"
                 className="text-sm font-medium text-zinc-200"
               >
-                Provider
+                {t("apiKey.providerLabel")}
               </label>
               <select
                 id="shared-api-key-provider"
@@ -267,8 +271,8 @@ export function ApiKeyDialog() {
                 {providers.map((p) => (
                   <option key={p.id} value={p.id} className="bg-background text-white">
                     {p.label}
-                    {apiKeyPreviews[p.id] ? " (key saved)" : ""}
-                    {apiKeyActiveProvider === p.id ? " — active" : ""}
+                    {apiKeyPreviews[p.id] ? t("apiKey.keySavedSuffix") : ""}
+                    {apiKeyActiveProvider === p.id ? t("apiKey.activeSuffix") : ""}
                   </option>
                 ))}
               </select>
@@ -279,7 +283,7 @@ export function ApiKeyDialog() {
                 htmlFor="shared-api-key-input"
                 className="text-sm font-medium text-zinc-200"
               >
-                API Key
+                {t("apiKey.keyLabel")}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -289,8 +293,10 @@ export function ApiKeyDialog() {
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   placeholder={
                     apiKeyHasValue && !apiKeyEditing
-                      ? (apiKeyPreview ?? "Saved key")
-                      : `Paste your ${currentProvider?.label ?? "provider"} API key`
+                      ? (apiKeyPreview ?? t("apiKey.savedKeyPlaceholder"))
+                      : t("apiKey.pastePlaceholder", {
+                          provider: currentProvider?.label ?? t("apiKey.providerFallback"),
+                        })
                   }
                   disabled={
                     apiKeyLoading ||
@@ -303,8 +309,8 @@ export function ApiKeyDialog() {
                   <>
                     <button
                       type="button"
-                      aria-label="Edit API key"
-                      title="Edit API key"
+                      aria-label={t("apiKey.editAria")}
+                      title={t("apiKey.editAria")}
                       onClick={() => {
                         setApiKeyEditing(true);
                         setApiKeyError(null);
@@ -318,8 +324,8 @@ export function ApiKeyDialog() {
                     </button>
                     <button
                       type="button"
-                      aria-label="Delete API key"
-                      title="Delete API key"
+                      aria-label={t("apiKey.deleteAria")}
+                      title={t("apiKey.deleteAria")}
                       onClick={() => void deleteKey()}
                       className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-red-400/30 bg-red-950/30 text-red-200 transition hover:border-red-300/60 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={
@@ -353,7 +359,7 @@ export function ApiKeyDialog() {
                 }
                 className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-primary via-primary-soft to-primary-accent px-4 py-2.5 text-sm font-semibold text-white shadow-soft-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {apiKeySaving ? "Saving..." : "Save API Key"}
+                {apiKeySaving ? t("apiKey.saving") : t("apiKey.save")}
               </button>
               <a
                 href={currentProvider?.keySiteUrl ?? AI_WEBSITE_API_KEY_SITE_URL}
@@ -361,7 +367,7 @@ export function ApiKeyDialog() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-background-soft/70 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-glow-cyan/60 hover:text-white"
               >
-                Get API Key
+                {t("apiKey.getKey")}
               </a>
             </div>
           </div>

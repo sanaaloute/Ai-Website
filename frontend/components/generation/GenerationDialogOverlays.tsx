@@ -1,6 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, CheckCircle2, XCircle, ExternalLink, GripVertical } from "lucide-react";
 import {
   DatabaseConnectionDialog,
@@ -22,6 +23,7 @@ type DeployCardProps = {
 };
 
 function DraggableDeployCard({ card, onClose }: DeployCardProps) {
+  const t = useTranslations("generation");
   const [offset, setOffset] = React.useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = React.useState(false);
   const dragStartRef = React.useRef({ startX: 0, startY: 0, initialOffsetX: 0, initialOffsetY: 0 });
@@ -107,10 +109,10 @@ function DraggableDeployCard({ card, onClose }: DeployCardProps) {
           className="mb-2 flex cursor-grab items-center justify-center gap-1 rounded-md py-1 opacity-40 hover:bg-white/5 hover:opacity-70 active:cursor-grabbing"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          title="Drag to move"
+          title={t("dialogs.dragToMove")}
         >
           <GripVertical className="h-3.5 w-3.5" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">Drag</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider">{t("dialogs.drag")}</span>
           <GripVertical className="h-3.5 w-3.5" />
         </div>
 
@@ -126,14 +128,14 @@ function DraggableDeployCard({ card, onClose }: DeployCardProps) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-medium leading-snug">
-              {card.siteTitle || card.projectName || 'Project'}
+              {card.siteTitle || card.projectName || t("dialogs.projectFallback")}
             </p>
             <p className="mt-0.5 text-xs leading-relaxed opacity-90">
               {card.message}
             </p>
             {card.deploymentStatus && (
               <p className="mt-1 text-xs opacity-70">
-                Status: <span className="font-mono">{card.deploymentStatus}</span>
+                {t("dialogs.statusLabel")} <span className="font-mono">{card.deploymentStatus}</span>
               </p>
             )}
             {card.domainUrl && (
@@ -157,9 +159,9 @@ function DraggableDeployCard({ card, onClose }: DeployCardProps) {
             type="button"
             onClick={onClose}
             className="rounded-md border border-white/15 bg-white/5 px-2.5 py-1 text-xs font-medium opacity-90 transition hover:bg-white/10 hover:opacity-100"
-            aria-label="Close Vercel deployment status"
+            aria-label={t("dialogs.closeVercelStatusAria")}
           >
-            Close
+            {t("dialogs.close")}
           </button>
         </div>
       </div>
@@ -250,27 +252,28 @@ function GenerationDialogOverlays({
 }: {
   workspace: DialogOverlaysWorkspace;
 }) {
+  const t = useTranslations("generation");
   return (
     <>
       {workspace.showApiKeyDialog && (
         <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md">
           <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-950/95 p-5 shadow-2xl">
             <h3 className="text-lg font-semibold text-white">
-              GitHub API Key Required
+              {t("dialogs.apiKeyRequiredTitle")}
             </h3>
             <p className="mt-2 text-sm text-zinc-300">
-              To use GitHub API Provider models, add your API key first.
+              {t("dialogs.apiKeyRequiredDescription")}
             </p>
             <div className="mt-4">
               <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-zinc-400">
-                Your GitHub API Key
+                {t("dialogs.apiKeyLabel")}
               </label>
               <input
                 type="password"
                 value={workspace.apiKeyInput}
                 onChange={(e) => workspace.setApiKeyInput(e.target.value)}
                 className="w-full rounded-xl border border-white/15 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-glow-cyan/60"
-                placeholder="Paste your key here"
+                placeholder={t("dialogs.apiKeyPlaceholder")}
                 autoFocus
               />
               {workspace.apiKeyError && (
@@ -286,7 +289,7 @@ function GenerationDialogOverlays({
                 rel="noopener noreferrer"
                 className="inline-flex items-center rounded-lg border border-glow-cyan/50 bg-glow-cyan/10 px-3 py-2 text-xs font-semibold text-glow-cyan transition hover:bg-glow-cyan/20"
               >
-                Get API key
+                {t("dialogs.getApiKey")}
               </a>
               <div className="flex items-center gap-2">
                 <button
@@ -295,7 +298,7 @@ function GenerationDialogOverlays({
                   disabled={workspace.apiKeySaving}
                   className="rounded-lg border border-white/15 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-white/5 disabled:opacity-60"
                 >
-                  Close
+                  {t("dialogs.close")}
                 </button>
                 <button
                   type="button"
@@ -305,7 +308,7 @@ function GenerationDialogOverlays({
                   }
                   className="rounded-lg bg-gradient-to-r from-primary via-primary-soft to-primary-accent px-3 py-2 text-xs font-semibold text-white shadow-soft-glow transition disabled:opacity-60"
                 >
-                  {workspace.apiKeySaving ? "Validating..." : "Save key"}
+                  {workspace.apiKeySaving ? t("dialogs.validating") : t("dialogs.saveKey")}
                 </button>
               </div>
             </div>
@@ -317,11 +320,10 @@ function GenerationDialogOverlays({
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md">
           <div className="w-full max-w-lg rounded-2xl border border-red-400/35 bg-zinc-950/95 p-5 shadow-2xl">
             <h3 className="text-lg font-semibold text-white">
-              Not enough API credits
+              {t("dialogs.quotaTitle")}
             </h3>
             <p className="mt-2 text-sm text-zinc-300">
-              Your GitHub API Provider account does not have enough credits to run
-              this request.
+              {t("dialogs.quotaDescription")}
             </p>
             {workspace.quotaErrorText ? (
               <p className="mt-3 rounded-lg border border-red-400/25 bg-red-950/35 px-3 py-2 text-xs text-red-200">
@@ -335,14 +337,14 @@ function GenerationDialogOverlays({
                 rel="noopener noreferrer"
                 className="inline-flex items-center rounded-lg border border-glow-cyan/50 bg-glow-cyan/10 px-3 py-2 text-xs font-semibold text-glow-cyan transition hover:bg-glow-cyan/20"
               >
-                Recharge credits
+                {t("dialogs.quotaRecharge")}
               </a>
               <button
                 type="button"
                 onClick={() => workspace.setShowQuotaDialog(false)}
                 className="rounded-lg border border-white/15 px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-white/5"
               >
-                Close
+                {t("dialogs.close")}
               </button>
             </div>
           </div>
@@ -417,13 +419,13 @@ function GenerationDialogOverlays({
           }
           workspace.setProjectNameDialogOpen(true);
         }}
-        title={workspace.currentSessionProjectId ? 'Update project name' : 'Name this project'}
+        title={workspace.currentSessionProjectId ? t('dialogs.projectNameUpdateTitle') : t('dialogs.projectNameTitle')}
         description={
           workspace.currentSessionProjectId
-            ? 'Confirm the project name to update ai-website.json before saving.'
-            : 'Confirm a project name before first save. This name is reused for Supabase, GitHub repo default, and Vercel project default.'
+            ? t('dialogs.projectNameUpdateDescription')
+            : t('dialogs.projectNameDescription')
         }
-        confirmButtonLabel={workspace.currentSessionProjectId ? 'Update & save' : 'Confirm name'}
+        confirmButtonLabel={workspace.currentSessionProjectId ? t('dialogs.projectNameUpdateConfirm') : t('dialogs.projectNameConfirm')}
         suggestedName={
           workspace.projectNameSuggestion || workspace.suggestProjectName()
         }
@@ -441,14 +443,14 @@ function GenerationDialogOverlays({
           }
           workspace.setRenameProjectDialogOpen(true);
         }}
-        title="Rename project"
-        description="Update the name in your project list. Saved snapshots keep using this name when you return."
+        title={t("dialogs.renameTitle")}
+        description={t("dialogs.renameDescription")}
         suggestedName={
-          (workspace.renameProjectTarget?.projectName || "Untitled project").trim() ||
-          "Untitled project"
+          (workspace.renameProjectTarget?.projectName || t("dialogs.untitledProject")).trim() ||
+          t("dialogs.untitledProject")
         }
-        confirmButtonLabel="Rename"
-        confirmingButtonLabel="Renaming…"
+        confirmButtonLabel={t("dialogs.renameConfirm")}
+        confirmingButtonLabel={t("dialogs.renameConfirming")}
         onConfirm={(name) => void workspace.submitProjectRename(name)}
       />
     </>

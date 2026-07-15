@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import type { ChatMessage } from '@/hooks/useWorkspaceChat';
 
 type BrandingData = NonNullable<NonNullable<ChatMessage['metadata']>['brandingData']>;
@@ -26,6 +27,8 @@ function ColorSwatch({ color, label }: { color: string; label: string }) {
 }
 
 export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardProps) {
+  const t = useTranslations('generation');
+
   return (
     <div className="mt-2 overflow-hidden rounded-xl border border-white/[0.06] bg-black/40 max-w-[420px]">
       {/* Header */}
@@ -37,9 +40,9 @@ export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardPr
           height={16}
           className="w-4 h-4 rounded"
         />
-        <span className="text-xs font-medium text-zinc-300">Brand Guidelines</span>
+        <span className="text-xs font-medium text-zinc-300">{t('branding.title')}</span>
         {brandingData.colorScheme && (
-          <span className="ml-auto text-[10px] text-zinc-500 capitalize">{brandingData.colorScheme} mode</span>
+          <span className="ml-auto text-[10px] text-zinc-500 capitalize">{t('branding.colorSchemeMode', { scheme: brandingData.colorScheme })}</span>
         )}
       </div>
 
@@ -47,12 +50,12 @@ export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardPr
         {/* Colors */}
         {brandingData.colors && (
           <div>
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-2">Colors</div>
+            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-2">{t('branding.colors')}</div>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
-              {brandingData.colors.primary && <ColorSwatch color={brandingData.colors.primary} label="Primary" />}
-              {brandingData.colors.accent && <ColorSwatch color={brandingData.colors.accent} label="Accent" />}
-              {brandingData.colors.background && <ColorSwatch color={brandingData.colors.background} label="Bg" />}
-              {brandingData.colors.textPrimary && <ColorSwatch color={brandingData.colors.textPrimary} label="Text" />}
+              {brandingData.colors.primary && <ColorSwatch color={brandingData.colors.primary} label={t('branding.primary')} />}
+              {brandingData.colors.accent && <ColorSwatch color={brandingData.colors.accent} label={t('branding.accent')} />}
+              {brandingData.colors.background && <ColorSwatch color={brandingData.colors.background} label={t('branding.bg')} />}
+              {brandingData.colors.textPrimary && <ColorSwatch color={brandingData.colors.textPrimary} label={t('branding.text')} />}
             </div>
           </div>
         )}
@@ -60,16 +63,16 @@ export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardPr
         {/* Typography */}
         {brandingData.typography && (
           <div>
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Typography</div>
+            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">{t('branding.typography')}</div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
               {brandingData.typography.fontFamilies?.primary && (
-                <span><span className="text-zinc-500">Primary:</span> {brandingData.typography.fontFamilies.primary}</span>
+                <span><span className="text-zinc-500">{t('branding.primary')}:</span> {brandingData.typography.fontFamilies.primary}</span>
               )}
               {brandingData.typography.fontFamilies?.heading && (
-                <span><span className="text-zinc-500">Heading:</span> {brandingData.typography.fontFamilies.heading}</span>
+                <span><span className="text-zinc-500">{t('branding.heading')}:</span> {brandingData.typography.fontFamilies.heading}</span>
               )}
               {brandingData.typography.fontSizes?.body && (
-                <span><span className="text-zinc-500">Body:</span> {brandingData.typography.fontSizes.body}</span>
+                <span><span className="text-zinc-500">{t('branding.body')}:</span> {brandingData.typography.fontSizes.body}</span>
               )}
             </div>
           </div>
@@ -78,13 +81,13 @@ export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardPr
         {/* Spacing */}
         {brandingData.spacing && (
           <div>
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Spacing</div>
+            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">{t('branding.spacing')}</div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
               {brandingData.spacing.baseUnit && (
-                <span><span className="text-zinc-500">Base:</span> {brandingData.spacing.baseUnit}px</span>
+                <span><span className="text-zinc-500">{t('branding.base')}:</span> {brandingData.spacing.baseUnit}px</span>
               )}
               {brandingData.spacing.borderRadius && (
-                <span><span className="text-zinc-500">Radius:</span> {brandingData.spacing.borderRadius}</span>
+                <span><span className="text-zinc-500">{t('branding.radius')}:</span> {brandingData.spacing.borderRadius}</span>
               )}
             </div>
           </div>
@@ -93,7 +96,7 @@ export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardPr
         {/* Button preview */}
         {brandingData.components?.buttonPrimary && (
           <div>
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">Button</div>
+            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5">{t('branding.button')}</div>
             <button
               className="px-3 py-1 text-xs font-medium rounded-md transition hover:opacity-90"
               style={{
@@ -102,7 +105,7 @@ export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardPr
                 borderRadius: brandingData.components.buttonPrimary.borderRadius,
               }}
             >
-              Sample
+              {t('branding.sample')}
             </button>
           </div>
         )}
@@ -110,10 +113,10 @@ export function BrandingDataCard({ brandingData, sourceUrl }: BrandingDataCardPr
         {/* Personality */}
         {brandingData.personality && (
           <div className="text-xs text-zinc-400">
-            <span className="text-zinc-500">Tone:</span>{' '}
+            <span className="text-zinc-500">{t('branding.tone')}:</span>{' '}
             <span className="text-zinc-300 capitalize">{brandingData.personality.tone}</span>
             {brandingData.personality.energy && (
-              <>, <span className="text-zinc-500">energy:</span> <span className="text-zinc-300 capitalize">{brandingData.personality.energy}</span></>
+              <>, <span className="text-zinc-500">{t('branding.energy')}:</span> <span className="text-zinc-300 capitalize">{brandingData.personality.energy}</span></>
             )}
           </div>
         )}
