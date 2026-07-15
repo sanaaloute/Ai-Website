@@ -8,11 +8,13 @@
 #   - This stack never publishes public ports. The app containers join the
 #     gateway's Docker network (compose `gateway` network) with DNS aliases
 #     ai-website-frontend / -backend / -admin.
-#   - Kong is configured through its Admin API (container port 8001, reachable
-#     from the host via the container IP): services + routes for our domains,
-#     and TLS certificates uploaded straight from /etc/letsencrypt.
-#     Admin-API changes are applied instantly and persist in Kong's database —
-#     no config files, mounts, or reloads.
+#   - Kong is configured through its Admin API (port 8001): services + routes
+#     for our domains, and TLS certificates uploaded straight from
+#     /etc/letsencrypt. The scripts auto-discover how to reach the Admin API
+#     (published port, container IP, docker exec curl, or a curl sidecar in
+#     the gateway's network namespace) — so loopback-only Kong configs work
+#     too. Changes apply instantly and persist in Kong's database — no
+#     config files, mounts, or reloads.
 #   - ACME HTTP-01: a dedicated Kong route forwards /.well-known/acme-challenge
 #     to certbot --standalone running on the host (port 8888) during issuance.
 
@@ -87,14 +89,20 @@ ensure_gateway_network() {
 }
 
 # ── Kong Admin API ───────────────────────────────────────────────────────────
+#
+# Kong's Admin API (port 8001) often listens on the gateway container's
+# loopback only (Kong's default), so a direct URL from the host may not work.
+# The first of these transports that answers a /status probe wins:
+#   url      direct HTTP from the host — $KONG_ADMIN_URL (env/.env), then
+#            http://127.0.0.1:8001 (published port), then the container IP
+#   exec     curl inside the gateway container against its own loopback
+#   sidecar  a throwaway curlimages/curl container sharing the gateway's
+#            network namespace (works even with no curl in the gateway image)
+KONG_TRANSPORT=""
+KONG_ADMIN_BASE=""
 
-# Base URL of Kong's Admin API. Priority: env KONG_ADMIN_URL > .env
-# KONG_ADMIN_URL > http://<gateway container IP on the shared network>:8001.
-kong_admin_url() {
-  if [[ -n "${KONG_ADMIN_URL:-}" ]]; then printf '%s' "$KONG_ADMIN_URL"; return 0; fi
-  local pinned
-  pinned="$(env_from_file KONG_ADMIN_URL || true)"
-  if [[ -n "$pinned" ]]; then printf '%s' "$pinned"; return 0; fi
+# http://<gateway container IP on the shared network>:8001 (legacy default).
+kong_admin_container_url() {
   local gw net ip
   gw="$(gateway_container)"
   net="${GATEWAY_NETWORK:-$(detect_gateway_network || true)}"
@@ -107,57 +115,116 @@ kong_admin_url() {
   [[ -n "$ip" ]] && printf 'http://%s:8001' "$ip"
 }
 
-kong_admin_reachable() {
-  local url
-  url="$(kong_admin_url || true)"
-  [[ -n "$url" ]] || return 1
-  curl -fsS --max-time 5 "$url/status" >/dev/null 2>&1
+# Probe every transport once; cache the winner in KONG_TRANSPORT.
+kong_admin_resolve() {
+  [[ -n "$KONG_TRANSPORT" ]] && return 0
+  local gw url
+  gw="$(gateway_container)"
+
+  url="${KONG_ADMIN_URL:-$(env_from_file KONG_ADMIN_URL || true)}"
+  if [[ -n "$url" ]]; then
+    if curl -fsS --max-time 5 "$url/status" >/dev/null 2>&1; then
+      KONG_TRANSPORT=url; KONG_ADMIN_BASE="$url"; return 0
+    fi
+    warn "KONG_ADMIN_URL ($url) did not answer — trying auto-discovery."
+  fi
+
+  for url in "http://127.0.0.1:8001" "$(kong_admin_container_url || true)"; do
+    [[ -n "$url" ]] || continue
+    if curl -fsS --max-time 5 "$url/status" >/dev/null 2>&1; then
+      KONG_TRANSPORT=url; KONG_ADMIN_BASE="$url"; return 0
+    fi
+  done
+
+  if docker exec "$gw" sh -c 'command -v curl >/dev/null 2>&1' 2>/dev/null \
+     && docker exec "$gw" curl -fsS --max-time 5 http://127.0.0.1:8001/status >/dev/null 2>&1; then
+    KONG_TRANSPORT=exec; return 0
+  fi
+
+  log "Trying a curl sidecar in the gateway's network namespace (may pull ~11MB)..."
+  if docker run --rm --network "container:$gw" curlimages/curl:8.10.1 \
+      -fsS --max-time 10 http://127.0.0.1:8001/status >/dev/null; then
+    KONG_TRANSPORT=sidecar; return 0
+  fi
+
+  return 1
 }
 
-# Thin wrapper: kong_api METHOD PATH [curl args...]
+kong_admin_describe() {
+  case "$KONG_TRANSPORT" in
+    url)     printf '%s' "$KONG_ADMIN_BASE" ;;
+    exec)    printf 'docker exec %s -> http://127.0.0.1:8001' "$(gateway_container)" ;;
+    sidecar) printf 'curl sidecar (netns of %s) -> http://127.0.0.1:8001' "$(gateway_container)" ;;
+    *)       printf 'unresolved' ;;
+  esac
+}
+
+# Thin wrapper over the resolved transport: kong_api METHOD PATH [curl args...]
 kong_api() {
   local method="$1" path="$2"
   shift 2
-  curl -fsS --max-time 15 -X "$method" "$(kong_admin_url)$path" "$@"
+  kong_admin_resolve || return 1
+  case "$KONG_TRANSPORT" in
+    url)
+      curl -fsS --max-time 15 -X "$method" "$KONG_ADMIN_BASE$path" "$@" ;;
+    exec)
+      docker exec -i "$(gateway_container)" \
+        curl -fsS --max-time 15 -X "$method" "http://127.0.0.1:8001$path" "$@" ;;
+    sidecar)
+      docker run --rm -i --network "container:$(gateway_container)" curlimages/curl:8.10.1 \
+        -fsS --max-time 15 -X "$method" "http://127.0.0.1:8001$path" "$@" ;;
+  esac
+}
+
+_kong_unreachable_hint() {
+  warn "Kong Admin API is not reachable by any transport (checked: KONG_ADMIN_URL,"
+  warn "host :8001, container IP :8001, docker exec curl, curl sidecar)."
+  warn "Set KONG_ADMIN_URL in .env to a reachable address and re-run."
+}
+
+_kong_db_less_hint() {
+  warn "If Kong runs DB-less (declarative config), merge nginx/gateway/kong-routes.yml"
+  warn "into the gateway's declarative config file and reload Kong instead."
+}
+
+# Checked upsert: kong_put PATH JSON — warns and fails on any error.
+kong_put() {
+  local out
+  if ! out="$(kong_api PUT "$1" -H 'Content-Type: application/json' --data "$2" 2>&1)"; then
+    warn "Kong write failed (PUT $1): $(printf '%s' "$out" | tail -n1)"
+    return 1
+  fi
 }
 
 # Create-or-update the Kong services and routes for our domains. Idempotent.
 ensure_kong_routes() {
-  if ! kong_admin_reachable; then
-    warn "Kong Admin API is not reachable ($(kong_admin_url || echo 'URL unknown'))."
-    warn "If it listens on a different address, set KONG_ADMIN_URL in .env and re-run."
+  if ! kong_admin_resolve; then
+    _kong_unreachable_hint
     return 1
   fi
-  log "Configuring Kong services + routes (Admin API)..."
-  local out
-  if ! out="$(kong_api PUT /services/ai-website-frontend \
-      -H 'Content-Type: application/json' \
-      --data '{"url":"http://ai-website-frontend:3000"}' 2>&1)"; then
-    warn "Kong refused the Admin API write: $out"
-    warn "If Kong runs DB-less (declarative config), merge nginx/gateway/kong-routes.yml"
-    warn "into the gateway's declarative config file and reload Kong instead."
-    return 1
-  fi
+  log "Configuring Kong services + routes (Admin API via $(kong_admin_describe))..."
+  local failed=0
+  kong_put /services/ai-website-frontend \
+    '{"url":"http://ai-website-frontend:3000"}' || failed=1
   # Builder AI routes can exceed default proxy timeouts (SSE streams) — raise
   # them on the backend service.
-  kong_api PUT /services/ai-website-backend \
-    -H 'Content-Type: application/json' \
-    --data '{"url":"http://ai-website-backend:4000","connect_timeout":75000,"read_timeout":900000,"write_timeout":900000}' >/dev/null
-  kong_api PUT /services/ai-website-admin \
-    -H 'Content-Type: application/json' \
-    --data '{"url":"http://ai-website-admin:3000"}' >/dev/null
+  kong_put /services/ai-website-backend \
+    '{"url":"http://ai-website-backend:4000","connect_timeout":75000,"read_timeout":900000,"write_timeout":900000}' || failed=1
+  kong_put /services/ai-website-admin \
+    '{"url":"http://ai-website-admin:3000"}' || failed=1
 
   # strip_path=false + preserve_host=true: pass path and Host through unchanged,
   # exactly like a plain nginx proxy_pass. Longer prefixes win over "/".
-  kong_api PUT /routes/ai-website-web \
-    -H 'Content-Type: application/json' \
-    --data '{"service":{"name":"ai-website-frontend"},"hosts":["ai-web-builder.com","www.ai-web-builder.com"],"paths":["/"],"strip_path":false,"preserve_host":true}' >/dev/null
-  kong_api PUT /routes/ai-website-api \
-    -H 'Content-Type: application/json' \
-    --data '{"service":{"name":"ai-website-backend"},"hosts":["ai-web-builder.com","www.ai-web-builder.com"],"paths":["/api","/health","/live","/ready"],"strip_path":false,"preserve_host":true}' >/dev/null
-  kong_api PUT /routes/ai-website-admin \
-    -H 'Content-Type: application/json' \
-    --data '{"service":{"name":"ai-website-admin"},"hosts":["admin.ai-web-builder.com"],"paths":["/"],"strip_path":false,"preserve_host":true}' >/dev/null
+  kong_put /routes/ai-website-web \
+    '{"service":{"name":"ai-website-frontend"},"hosts":["ai-web-builder.com","www.ai-web-builder.com"],"paths":["/"],"strip_path":false,"preserve_host":true}' || failed=1
+  kong_put /routes/ai-website-api \
+    '{"service":{"name":"ai-website-backend"},"hosts":["ai-web-builder.com","www.ai-web-builder.com"],"paths":["/api","/health","/live","/ready"],"strip_path":false,"preserve_host":true}' || failed=1
+  kong_put /routes/ai-website-admin \
+    '{"service":{"name":"ai-website-admin"},"hosts":["admin.ai-web-builder.com"],"paths":["/"],"strip_path":false,"preserve_host":true}' || failed=1
+  if [[ "$failed" -ne 0 ]]; then
+    _kong_db_less_hint
+    return 1
+  fi
   ok "Kong routes configured for $DOMAIN (+ www, admin)."
 }
 
@@ -171,30 +238,44 @@ host_bridge_ip() {
 # Route /.well-known/acme-challenge on our domains to the host's ACME port.
 # Kept permanently so renewals work without reconfiguration.
 kong_ensure_acme_route() {
+  if ! kong_admin_resolve; then
+    _kong_unreachable_hint
+    return 1
+  fi
   local bip
   bip="$(host_bridge_ip || true)"
   if [[ -z "$bip" ]]; then
     warn "Could not determine the host IP on network ${GATEWAY_NETWORK:-<unknown>}."
     return 1
   fi
-  kong_api PUT /services/ai-website-acme \
-    -H 'Content-Type: application/json' \
-    --data "{\"url\":\"http://$bip:$ACME_PORT\"}" >/dev/null
-  kong_api PUT /routes/ai-website-acme \
-    -H 'Content-Type: application/json' \
-    --data '{"service":{"name":"ai-website-acme"},"hosts":["ai-web-builder.com","www.ai-web-builder.com","admin.ai-web-builder.com"],"paths":["/.well-known/acme-challenge"],"strip_path":false,"preserve_host":true,"protocols":["http"]}' >/dev/null
+  kong_put /services/ai-website-acme \
+    "{\"url\":\"http://$bip:$ACME_PORT\"}" || return 1
+  kong_put /routes/ai-website-acme \
+    '{"service":{"name":"ai-website-acme"},"hosts":["ai-web-builder.com","www.ai-web-builder.com","admin.ai-web-builder.com"],"paths":["/.well-known/acme-challenge"],"strip_path":false,"preserve_host":true,"protocols":["http"]}' || return 1
   ok "ACME challenge route configured (Kong -> host:$ACME_PORT)."
+}
+
+# JSON-encode the PEM pair for the Admin API. PEM base64 needs no JSON
+# escaping beyond the newlines, which awk turns into literal \n sequences.
+# Transport-agnostic: works over docker exec / sidecar where host file paths
+# (-F cert=@...) would not be visible.
+_kong_cert_json() {  # _kong_cert_json FULLCHAIN KEY
+  local cert_json key_json
+  cert_json="$(awk '{printf "%s\\n", $0}' "$1")"
+  key_json="$(awk '{printf "%s\\n", $0}' "$2")"
+  printf '{"cert":"%s","key":"%s","snis":["%s","www.%s","admin.%s"]}' \
+    "$cert_json" "$key_json" "$DOMAIN" "$DOMAIN" "$DOMAIN"
 }
 
 # Upload the issued certificate to Kong (SNI-based; no mounts or reloads).
 # Handles the root-only /etc/letsencrypt permissions via sudo when needed.
 kong_upload_cert() {
   certs_exist || { warn "No certificate on the host to upload."; return 1; }
-  if ! kong_admin_reachable; then
-    warn "Kong Admin API is not reachable — cannot upload the certificate."
+  if ! kong_admin_resolve; then
+    _kong_unreachable_hint
     return 1
   fi
-  local tmp fullchain key
+  local tmp payload out
   tmp="$(mktemp -d)"
   if ! cp "$CERT_FULLCHAIN" "$CERT_KEY" "$tmp/" 2>/dev/null; then
     if sudo -n true 2>/dev/null; then
@@ -206,18 +287,14 @@ kong_upload_cert() {
       return 1
     fi
   fi
-  fullchain="$tmp/$(basename "$CERT_FULLCHAIN")"
-  key="$tmp/$(basename "$CERT_KEY")"
-  if kong_api PUT "/certificates/$DOMAIN" \
-      -F "cert=@$fullchain;type=application/x-pem-file" \
-      -F "key=@$key;type=application/x-pem-file" \
-      -F "snis[]=$DOMAIN" -F "snis[]=www.$DOMAIN" -F "snis[]=admin.$DOMAIN" >/dev/null; then
+  payload="$(_kong_cert_json "$tmp/$(basename "$CERT_FULLCHAIN")" "$tmp/$(basename "$CERT_KEY")")"
+  rm -rf "$tmp"
+  if out="$(printf '%s' "$payload" | kong_api PUT "/certificates/$DOMAIN" \
+      -H 'Content-Type: application/json' --data-binary @- 2>&1)"; then
     ok "Certificate uploaded to Kong (SNI: $DOMAIN, www, admin)."
-    rm -rf "$tmp"
     return 0
   fi
-  warn "Uploading the certificate to Kong failed."
-  rm -rf "$tmp"
+  warn "Uploading the certificate to Kong failed: $(printf '%s' "$out" | tail -n1)"
   return 1
 }
 
@@ -275,7 +352,7 @@ probe_gateway() {
     ok "Gateway serves $DOMAIN (backend /health returned 200)."
   else
     warn "Gateway probe for http://$DOMAIN/health returned HTTP '$code'."
-    warn "Check routes: curl -s \$(bash -c 'source scripts/lib.sh; kong_admin_url')/routes | less"
+    warn "Inspect Kong routes: bash scripts/kong-admin.sh GET /routes | less"
   fi
 }
 

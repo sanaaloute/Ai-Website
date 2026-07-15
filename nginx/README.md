@@ -3,9 +3,19 @@
 This EC2 runs **multiple services**, and the `neoshop-api-gateway` container —
 **Kong Gateway** — owns `0.0.0.0:80/443` (Kong proxy ports 8000/8443). Host
 nginx is unused (leave it disabled). Kong is configured through its **Admin
-API** (container port 8001, reachable from the host via the container IP) —
-the deploy scripts do this automatically; no config files, mounts, or reloads,
-and everything persists in Kong's database across container recreates.
+API** (container port 8001) — the deploy scripts do this automatically; no
+config files, mounts, or reloads, and everything persists in Kong's database
+across container recreates.
+
+Kong often binds the Admin API to the container's loopback only (its default),
+so the scripts auto-discover the first transport that answers `/status`:
+
+1. `$KONG_ADMIN_URL` (env or `.env`), if set
+2. `http://127.0.0.1:8001` on the host (if the port is published)
+3. `http://<gateway-container-ip>:8001`
+4. `docker exec <gateway> curl … http://127.0.0.1:8001` (if the image has curl)
+5. a throwaway `curlimages/curl` container sharing the gateway's network
+   namespace (works with zero changes to the gateway image)
 
 Traffic flow:
 
@@ -49,8 +59,9 @@ curl -H 'Host: ai-web-builder.com' http://localhost/health   # 200 from the back
 curl -I http://ai-web-builder.com/                           # 200 from the frontend
 ```
 
-If the Admin API isn't reachable, set `KONG_ADMIN_URL` in `.env`
-(e.g. `http://<kong-container-ip>:8001`) and re-run.
+If the Admin API isn't reachable by any transport, set `KONG_ADMIN_URL` in
+`.env` (e.g. `http://<kong-container-ip>:8001`) and re-run. Inspect what Kong
+serves with `bash scripts/kong-admin.sh GET /services` (or `/routes`).
 
 ## 2) Enable HTTPS (after DNS A records point to this instance)
 
@@ -91,5 +102,6 @@ bash scripts/upgrade.sh        # git pull, rebuild, recreate changed services
   shared network (Kong's default). That's a property of the existing gateway
   setup, not something these scripts change — consider restricting it in the
   gateway's own config.
-- Inspect what Kong serves: `curl -s http://<kong-ip>:8001/services` and
-  `.../routes` (the scripts print the resolved Admin API URL when checks fail).
+- Inspect what Kong serves: `bash scripts/kong-admin.sh GET /services` and
+  `bash scripts/kong-admin.sh GET /routes` (uses the same transport
+  auto-discovery as the deploy scripts).
