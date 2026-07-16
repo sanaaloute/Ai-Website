@@ -6,13 +6,13 @@ declare const readLogsSchema: z.ZodObject<{
     searchTerm: z.ZodOptional<z.ZodString>;
     limit: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    type?: "build" | "all" | "client" | "server" | undefined;
     limit?: number | undefined;
+    type?: "all" | "client" | "server" | "build" | undefined;
     level?: "error" | "info" | "warn" | "all" | undefined;
     searchTerm?: string | undefined;
 }, {
-    type?: "build" | "all" | "client" | "server" | undefined;
     limit?: number | undefined;
+    type?: "all" | "client" | "server" | "build" | undefined;
     level?: "error" | "info" | "warn" | "all" | undefined;
     searchTerm?: string | undefined;
 }>;
@@ -25,13 +25,13 @@ export declare class ReadLogsTool extends AgentTool {
         searchTerm: z.ZodOptional<z.ZodString>;
         limit: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
-        type?: "build" | "all" | "client" | "server" | undefined;
         limit?: number | undefined;
+        type?: "all" | "client" | "server" | "build" | undefined;
         level?: "error" | "info" | "warn" | "all" | undefined;
         searchTerm?: string | undefined;
     }, {
-        type?: "build" | "all" | "client" | "server" | undefined;
         limit?: number | undefined;
+        type?: "all" | "client" | "server" | "build" | undefined;
         level?: "error" | "info" | "warn" | "all" | undefined;
         searchTerm?: string | undefined;
     }>;

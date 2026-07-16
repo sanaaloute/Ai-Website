@@ -1229,10 +1229,10 @@ export class E2BService {
       throw new Error(`PocketBase download failed: ${downloadRes.stderr || downloadRes.stdout}`);
     }
 
-    // Category templates no longer ship PocketBase migrations/hooks (removed
-    // in the backend rework — all templates are now Next.js + Prisma). Copy
-    // them only if a category re-introduces them; otherwise PocketBase simply
-    // runs with an empty schema for ad-hoc use by generated apps.
+    // Bootstrap with the ecommerce migration/hooks as the default schema; the
+    // agent's template-selector node reconfigures PocketBase for the selected
+    // category right after the template copy. If the files are missing,
+    // PocketBase simply runs with an empty schema for ad-hoc use.
     const category = 'ecommerce';
     const templateDir = await this.resolvePocketbaseTemplateDir(category);
     const migrationFile = '1749767600_ecommerce.js';
@@ -1379,9 +1379,8 @@ export class E2BService {
     }
 
     // Copy category-specific migration and hook files when the template ships
-    // them. Templates without a `pocketbase/` directory (the default since the
-    // Next.js + Prisma rework) start PocketBase with an empty schema instead of
-    // failing the whole reconfiguration.
+    // them. Templates without a `pocketbase/` directory start PocketBase with
+    // an empty schema instead of failing the whole reconfiguration.
     const templateDir = await this.resolvePocketbaseTemplateDir(category);
     const migrationFile = `1749767600_${category}.js`;
     const migrationSource = path.join(templateDir, 'pb_migrations', migrationFile);

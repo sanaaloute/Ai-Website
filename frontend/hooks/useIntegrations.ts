@@ -203,9 +203,18 @@ export function useIntegrations(deps: IntegrationsDeps) {
           // part of every generated project, so it is not optional.
           try {
             const pbProjectName = conversationContext.currentProject || 'ai-website-app';
+            // The template copy already placed the correct category's PocketBase
+            // migrations in the sandbox (pocketbase/pb_migrations/<ts>_<category>.js).
+            // Detect it so the deployment overlay renders the SAME category —
+            // otherwise it falls back to ecommerce and would add a wrong-schema
+            // migration next to the correct one.
+            const pbCategory = files
+              .map((f) => f.path.match(/^pocketbase\/pb_migrations\/\d+_(.+)\.js$/))
+              .find((m) => m && m[1] !== 'seed_admin_user')?.[1];
             const pbDeployment = await preparePocketbaseDeploy({
               projectName: pbProjectName,
               domain: pbProjectName,
+              category: pbCategory,
             });
             if (pbDeployment.ok && pbDeployment.data.files?.length) {
               const existingPaths = new Set(files.map((f) => f.path));

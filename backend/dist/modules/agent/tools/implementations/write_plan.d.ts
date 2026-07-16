@@ -5,12 +5,12 @@ declare const writePlanSchema: z.ZodObject<{
     summary: z.ZodString;
     plan: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    summary: string;
     title: string;
+    summary: string;
     plan: string;
 }, {
-    summary: string;
     title: string;
+    summary: string;
     plan: string;
 }>;
 export declare class WritePlanTool extends AgentTool {
@@ -21,12 +21,12 @@ export declare class WritePlanTool extends AgentTool {
         summary: z.ZodString;
         plan: z.ZodString;
     }, "strip", z.ZodTypeAny, {
-        summary: string;
         title: string;
+        summary: string;
         plan: string;
     }, {
-        summary: string;
         title: string;
+        summary: string;
         plan: string;
     }>;
     _call(args: z.infer<typeof writePlanSchema>): Promise<string>;

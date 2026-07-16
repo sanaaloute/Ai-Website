@@ -881,6 +881,7 @@ export async function preparePocketbaseDeploy(body: {
   projectName: string;
   domain: string;
   pbSubdomainPrefix?: string;
+  category?: string;
 }) {
   return apiPost<{
     success: boolean;

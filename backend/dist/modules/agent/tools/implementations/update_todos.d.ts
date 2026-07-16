@@ -8,25 +8,25 @@ declare const updateTodosSchema: z.ZodObject<{
         status: z.ZodOptional<z.ZodEnum<["pending", "in_progress", "completed"]>>;
     }, "strip", z.ZodTypeAny, {
         id: string;
-        status?: "completed" | "pending" | "in_progress" | undefined;
         content?: string | undefined;
+        status?: "completed" | "pending" | "in_progress" | undefined;
     }, {
         id: string;
-        status?: "completed" | "pending" | "in_progress" | undefined;
         content?: string | undefined;
+        status?: "completed" | "pending" | "in_progress" | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     todos: {
         id: string;
-        status?: "completed" | "pending" | "in_progress" | undefined;
         content?: string | undefined;
+        status?: "completed" | "pending" | "in_progress" | undefined;
     }[];
     merge: boolean;
 }, {
     todos: {
         id: string;
-        status?: "completed" | "pending" | "in_progress" | undefined;
         content?: string | undefined;
+        status?: "completed" | "pending" | "in_progress" | undefined;
     }[];
     merge: boolean;
 }>;
@@ -41,25 +41,25 @@ export declare class UpdateTodosTool extends AgentTool {
             status: z.ZodOptional<z.ZodEnum<["pending", "in_progress", "completed"]>>;
         }, "strip", z.ZodTypeAny, {
             id: string;
-            status?: "completed" | "pending" | "in_progress" | undefined;
             content?: string | undefined;
+            status?: "completed" | "pending" | "in_progress" | undefined;
         }, {
             id: string;
-            status?: "completed" | "pending" | "in_progress" | undefined;
             content?: string | undefined;
+            status?: "completed" | "pending" | "in_progress" | undefined;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
         todos: {
             id: string;
-            status?: "completed" | "pending" | "in_progress" | undefined;
             content?: string | undefined;
+            status?: "completed" | "pending" | "in_progress" | undefined;
         }[];
         merge: boolean;
     }, {
         todos: {
             id: string;
-            status?: "completed" | "pending" | "in_progress" | undefined;
             content?: string | undefined;
+            status?: "completed" | "pending" | "in_progress" | undefined;
         }[];
         merge: boolean;
     }>;

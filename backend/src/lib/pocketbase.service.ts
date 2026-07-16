@@ -35,14 +35,20 @@ export class PocketbaseService {
 
   /**
    * Resolve the template directory whether running from TypeScript source
-   * or compiled JavaScript in dist/.
+   * or compiled JavaScript in dist/. Unknown/invalid categories fall back to
+   * the default so a bad `category` param can never crash or escape the
+   * templates root.
    */
   private async resolveTemplateDir(category = 'ecommerce'): Promise<string> {
     // Deployment assets (Dockerfile, docker-compose.yaml, nginx.conf, pocketbase/)
     // now live inside each self-contained category template.
-    const fromSource = path.resolve(process.cwd(), 'src', 'templates', category);
-    const fromDist = path.resolve(process.cwd(), 'dist', 'templates', category);
-    return (await this.directoryExists(fromDist)) ? fromDist : fromSource;
+    const safeCategory = /^[a-z0-9_]+$/i.test(category) ? category : 'ecommerce';
+    const fromDist = path.resolve(process.cwd(), 'dist', 'templates', safeCategory);
+    const fromSource = path.resolve(process.cwd(), 'src', 'templates', safeCategory);
+    if (await this.directoryExists(fromDist)) return fromDist;
+    if (await this.directoryExists(fromSource)) return fromSource;
+    if (safeCategory !== 'ecommerce') return this.resolveTemplateDir('ecommerce');
+    return fromSource;
   }
 
   private async directoryExists(dir: string): Promise<boolean> {

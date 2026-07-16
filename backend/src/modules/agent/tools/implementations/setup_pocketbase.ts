@@ -6,7 +6,7 @@ const setupPocketBaseSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Optional PocketBase template id to apply. One of: ecommerce, education, saas, healthcare, real_estate, generic. If omitted, the domain is inferred from the project."
+      "Optional PocketBase template id to apply. One of: ecommerce, education, saas, portfolio, blog, restaurant, real_estate, health, travel, job_portal, fashion, automobile, personal, generic. If omitted, the domain is inferred from the project."
     ),
 });
 

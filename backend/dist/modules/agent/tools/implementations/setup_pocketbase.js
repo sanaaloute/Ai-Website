@@ -7,7 +7,7 @@ const setupPocketBaseSchema = zod_1.z.object({
     templateId: zod_1.z
         .string()
         .optional()
-        .describe("Optional PocketBase template id to apply. One of: ecommerce, education, saas, healthcare, real_estate, generic. If omitted, the domain is inferred from the project."),
+        .describe("Optional PocketBase template id to apply. One of: ecommerce, education, saas, portfolio, blog, restaurant, real_estate, health, travel, job_portal, fashion, automobile, personal, generic. If omitted, the domain is inferred from the project."),
 });
 class SetupPocketBaseTool extends types_1.AgentTool {
     constructor() {

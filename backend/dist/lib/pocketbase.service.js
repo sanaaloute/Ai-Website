@@ -46,15 +46,22 @@ const common_1 = require("@nestjs/common");
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
 exports.DEFAULT_POCKETBASE_ADMIN_EMAIL = 'admin@ai-web-builder.com';
-exports.DEFAULT_POCKETBASE_ADMIN_PASSWORD = 'admin@lovecode';
+exports.DEFAULT_POCKETBASE_ADMIN_PASSWORD = 'admin@aiwebsite';
 let PocketbaseService = PocketbaseService_1 = class PocketbaseService {
     constructor() {
         this.logger = new common_1.Logger(PocketbaseService_1.name);
     }
     async resolveTemplateDir(category = 'ecommerce') {
-        const fromSource = path.resolve(process.cwd(), 'src', 'templates', category);
-        const fromDist = path.resolve(process.cwd(), 'dist', 'templates', category);
-        return (await this.directoryExists(fromDist)) ? fromDist : fromSource;
+        const safeCategory = /^[a-z0-9_]+$/i.test(category) ? category : 'ecommerce';
+        const fromDist = path.resolve(process.cwd(), 'dist', 'templates', safeCategory);
+        const fromSource = path.resolve(process.cwd(), 'src', 'templates', safeCategory);
+        if (await this.directoryExists(fromDist))
+            return fromDist;
+        if (await this.directoryExists(fromSource))
+            return fromSource;
+        if (safeCategory !== 'ecommerce')
+            return this.resolveTemplateDir('ecommerce');
+        return fromSource;
     }
     async directoryExists(dir) {
         try {
