@@ -33,28 +33,26 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.runVisualQa = runVisualQa;
 exports.visualQaNode = visualQaNode;
 const playwright_1 = require("playwright");
+const concurrency_1 = require("../../../lib/concurrency");
 const promises_1 = require("fs/promises");
 const os_1 = require("os");
 const path = __importStar(require("path"));
 const route_discovery_1 = require("../utils/route-discovery");
-async function visualQaNode(state, deps) {
+const ROUTE_CONCURRENCY = 3;
+async function runVisualQa(state, deps, previewUrl, routesSource) {
     const sandboxId = state.sandboxId;
     const issues = [];
     let screenshotDir;
     let screenshotCount = 0;
+    const screenshots = [];
     try {
         await deps.emit({
             type: 'status',
             data: { status: 'reviewing', message: 'Running visual QA (screenshots + smoke tests)...' },
         });
-        const restarted = await deps.e2b.restartPreview(sandboxId);
-        if (!restarted) {
-            issues.push('Preview server failed to start or become reachable.');
-        }
-        const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
-        const routesSource = await (0, route_discovery_1.readRoutes)(deps.e2b, sandboxId);
         const routes = (0, route_discovery_1.discoverRoutes)(routesSource, state.needsIntegration);
         screenshotDir = await (0, promises_1.mkdtemp)(path.join((0, os_1.tmpdir)(), `visual-qa-${sandboxId}-`));
         let browser;
@@ -69,12 +67,14 @@ async function visualQaNode(state, deps) {
                 visualIssues: issues,
                 screenshots: [],
                 lastVerificationStage: 'visual_qa',
-                verificationFailures: [...(state.verificationFailures ?? []), ...issues.map((i) => `visual_qa: ${i}`)].slice(-20),
+                verificationFailures: issues.map((i) => `visual_qa: ${i}`),
                 messages: [{ role: 'assistant', content: `Visual QA skipped: ${message}` }],
             };
         }
         try {
-            for (const route of routes) {
+            const limit = (0, concurrency_1.pLimit)(ROUTE_CONCURRENCY);
+            const routeResults = await Promise.all(routes.map((route) => limit(async () => {
+                const routeIssues = [];
                 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
                 const consoleErrors = [];
                 const pageErrors = [];
@@ -88,38 +88,43 @@ async function visualQaNode(state, deps) {
                 try {
                     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
                     if (!response) {
-                        issues.push(`${route}: no HTTP response`);
-                        continue;
+                        routeIssues.push(`${route}: no HTTP response`);
+                        return routeIssues;
                     }
                     if (!response.ok() && response.status() !== 304) {
-                        issues.push(`${route}: HTTP ${response.status()}`);
+                        routeIssues.push(`${route}: HTTP ${response.status()}`);
                     }
                     const title = await page.title().catch(() => '');
                     if (!title.trim()) {
-                        issues.push(`${route}: empty page title`);
+                        routeIssues.push(`${route}: empty page title`);
                     }
                     const bodyText = await page.locator('body').innerText({ timeout: 5_000 }).catch(() => '');
                     if (bodyText.trim().length < 20) {
-                        issues.push(`${route}: page body is nearly empty`);
+                        routeIssues.push(`${route}: page body is nearly empty`);
                     }
                     const safeRoute = route.replace(/\//g, '_') || 'root';
                     const screenshotPath = path.join(screenshotDir, `${safeRoute}.png`);
                     await page.screenshot({ path: screenshotPath, fullPage: true });
+                    screenshots.push({ path: screenshotPath, route });
                     screenshotCount++;
                     if (pageErrors.length) {
-                        issues.push(`${route}: JavaScript errors — ${pageErrors.slice(0, 3).join('; ')}`);
+                        routeIssues.push(`${route}: JavaScript errors — ${pageErrors.slice(0, 3).join('; ')}`);
                     }
                     if (consoleErrors.length) {
-                        issues.push(`${route}: console errors — ${consoleErrors.slice(0, 3).join('; ')}`);
+                        routeIssues.push(`${route}: console errors — ${consoleErrors.slice(0, 3).join('; ')}`);
                     }
                 }
                 catch (navErr) {
                     const message = navErr instanceof Error ? navErr.message : String(navErr);
-                    issues.push(`${route}: navigation failed — ${message}`);
+                    routeIssues.push(`${route}: navigation failed — ${message}`);
                 }
                 finally {
                     await page.close();
                 }
+                return routeIssues;
+            })));
+            for (const result of routeResults) {
+                issues.push(...result);
             }
         }
         finally {
@@ -142,14 +147,11 @@ async function visualQaNode(state, deps) {
             }
         }
     }
-    const nextFailures = issues.length
-        ? [...(state.verificationFailures ?? []), ...issues.map((i) => `visual_qa: ${i}`)].slice(-20)
-        : state.verificationFailures;
     return {
         visualIssues: issues,
         screenshots: [],
         lastVerificationStage: issues.length > 0 ? 'visual_qa' : undefined,
-        verificationFailures: nextFailures,
+        verificationFailures: issues.map((i) => `visual_qa: ${i}`),
         messages: [
             {
                 role: 'assistant',
@@ -157,5 +159,38 @@ async function visualQaNode(state, deps) {
             },
         ],
     };
+}
+async function visualQaNode(state, deps) {
+    const sandboxId = state.sandboxId;
+    const issues = [];
+    let screenshotCount = 0;
+    try {
+        const restarted = await deps.e2b.restartPreview(sandboxId);
+        if (!restarted) {
+            issues.push('Preview server failed to start or become reachable.');
+        }
+        const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
+        const routesSource = (await deps.e2b.readFile(sandboxId, 'src/lib/routes.ts')) ?? '';
+        const result = await runVisualQa(state, deps, previewUrl, routesSource);
+        const nextFailures = result.visualIssues.length
+            ? [...(state.verificationFailures ?? []), ...result.visualIssues.map((i) => `visual_qa: ${i}`)].slice(-20)
+            : state.verificationFailures;
+        return {
+            ...result,
+            verificationFailures: nextFailures,
+        };
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        deps.logger.error(`Visual QA node failed: ${message}`);
+        issues.push(`Visual QA system error: ${message}`);
+        return {
+            visualIssues: issues,
+            screenshots: [],
+            lastVerificationStage: 'visual_qa',
+            verificationFailures: [...(state.verificationFailures ?? []), ...issues.map((i) => `visual_qa: ${i}`)].slice(-20),
+            messages: [{ role: 'assistant', content: `Visual QA error: ${message}` }],
+        };
+    }
 }
 //# sourceMappingURL=visual-qa.node.js.map

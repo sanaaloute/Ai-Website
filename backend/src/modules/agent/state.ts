@@ -127,6 +127,10 @@ export const AgentStateAnnotation = Annotation.Root({
   needsClarification: Annotation<boolean | undefined>,
   clarificationQuestions: Annotation<string[] | undefined>,
 
+  // Caching / performance
+  previewHealthy: Annotation<boolean | undefined>,
+  routesSource: Annotation<string | undefined>,
+
   // Analyzer output
   intent: Annotation<string | undefined>,
   scope: Annotation<string | undefined>,

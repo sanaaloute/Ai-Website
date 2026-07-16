@@ -773,6 +773,16 @@ let E2BService = E2BService_1 = class E2BService {
             }
             await sandbox.files.write(fullPath, content);
             this.logger.debug(`writeFile ok: ${fullPath}`);
+            if (relativePath === 'package.json' || relativePath === 'package-lock.json') {
+                try {
+                    const currentId = await this.getCurrentSandboxId(sandboxId);
+                    await this.state.clearPackageJsonHash(currentId);
+                }
+                catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    this.logger.warn(`Could not clear package.json hash after write: ${msg}`);
+                }
+            }
             return true;
         }
         catch (err) {
@@ -824,7 +834,7 @@ let E2BService = E2BService_1 = class E2BService {
             throw new Error(msg);
         }
     }
-    async restartPreview(sandboxId) {
+    async restartPreview(sandboxId, opts) {
         if (!this.configured) {
             throw new E2BNotConfiguredError();
         }
@@ -833,7 +843,15 @@ let E2BService = E2BService_1 = class E2BService {
         if (!sandbox) {
             throw new SandboxNotFoundError();
         }
-        await this.runCommand(sandboxId, 'test -d node_modules || npm install', exports.WORKDIR, { timeoutMs: 300_000 });
+        const shouldInstall = opts?.force || (await this.shouldInstallDependencies(sandboxId));
+        if (shouldInstall) {
+            const installRes = await this.runCommand(sandboxId, 'npm install --no-audit --no-fund', exports.WORKDIR, { timeoutMs: 300_000 });
+            if (installRes.exitCode !== 0) {
+                this.logger.error(`npm install failed for sandbox ${sandboxId}: exitCode=${installRes.exitCode}, stderr=${installRes.error}, stdout=${installRes.output}`);
+                return false;
+            }
+            await this.recordPackageJsonHash(sandboxId);
+        }
         const res = await this.runCommand(sandboxId, `setsid nohup npm run dev > ${VITE_LOG} 2>&1 < /dev/null &`, exports.WORKDIR);
         if (res.exitCode !== 0) {
             return false;
@@ -853,6 +871,43 @@ let E2BService = E2BService_1 = class E2BService {
             `Status code: ${lastHealth.statusCode ?? 'none'}. ` +
             `Recent vite log:\n${logResult.output || logResult.error || '(empty)'}`);
         return false;
+    }
+    async shouldInstallDependencies(sandboxId) {
+        const nodeModulesCheck = await this.runCommand(sandboxId, 'test -d node_modules && echo yes || echo no', exports.WORKDIR);
+        if (nodeModulesCheck.output.trim() !== 'yes') {
+            return true;
+        }
+        const hashRes = await this.runCommand(sandboxId, "sha256sum package.json | awk '{print $1}' || echo none", exports.WORKDIR);
+        const currentHash = hashRes.output.trim();
+        if (currentHash === 'none') {
+            return true;
+        }
+        const currentId = await this.getCurrentSandboxId(sandboxId);
+        const cachedHash = await this.state.getPackageJsonHash(currentId);
+        return cachedHash !== currentHash;
+    }
+    async recordPackageJsonHash(sandboxId) {
+        const hashRes = await this.runCommand(sandboxId, "sha256sum package.json | awk '{print $1}' || echo none", exports.WORKDIR);
+        const currentHash = hashRes.output.trim();
+        if (currentHash !== 'none') {
+            const currentId = await this.getCurrentSandboxId(sandboxId);
+            await this.state.setPackageJsonHash(currentId, currentHash);
+        }
+    }
+    async ensurePreviewRunning(sandboxId) {
+        if (!this.configured) {
+            throw new E2BNotConfiguredError();
+        }
+        const sandbox = await this.getSandbox(sandboxId);
+        if (!sandbox) {
+            throw new SandboxNotFoundError();
+        }
+        const url = this.previewUrl(sandbox);
+        const health = await this.previewHealth(url);
+        if (health.reachable) {
+            return true;
+        }
+        return this.restartPreview(sandboxId);
     }
     async previewHealth(previewUrl) {
         if (!this.configured) {

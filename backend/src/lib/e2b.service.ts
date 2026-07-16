@@ -980,6 +980,18 @@ export class E2BService {
       }
       await sandbox.files.write(fullPath, content);
       this.logger.debug(`writeFile ok: ${fullPath}`);
+
+      // Dependency manifest changed — the cached install hash is now stale.
+      if (relativePath === 'package.json' || relativePath === 'package-lock.json') {
+        try {
+          const currentId = await this.getCurrentSandboxId(sandboxId);
+          await this.state.clearPackageJsonHash(currentId);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.warn(`Could not clear package.json hash after write: ${msg}`);
+        }
+      }
+
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1054,7 +1066,7 @@ export class E2BService {
     }
   }
 
-  async restartPreview(sandboxId: string): Promise<boolean> {
+  async restartPreview(sandboxId: string, opts?: { force?: boolean }): Promise<boolean> {
     if (!this.configured) {
       throw new E2BNotConfiguredError();
     }
@@ -1069,8 +1081,24 @@ export class E2BService {
       throw new SandboxNotFoundError();
     }
 
-    // Templates ship package.json but not node_modules. Install on first run.
-    await this.runCommand(sandboxId, 'test -d node_modules || npm install', WORKDIR, { timeoutMs: 300_000 });
+    const shouldInstall = opts?.force || (await this.shouldInstallDependencies(sandboxId));
+    if (shouldInstall) {
+      // Templates ship package.json but not node_modules. Install on first run,
+      // or when package.json changed since the last install.
+      const installRes = await this.runCommand(
+        sandboxId,
+        'npm install --no-audit --no-fund',
+        WORKDIR,
+        { timeoutMs: 300_000 },
+      );
+      if (installRes.exitCode !== 0) {
+        this.logger.error(
+          `npm install failed for sandbox ${sandboxId}: exitCode=${installRes.exitCode}, stderr=${installRes.error}, stdout=${installRes.output}`,
+        );
+        return false;
+      }
+      await this.recordPackageJsonHash(sandboxId);
+    }
 
     // Use setsid + redirected stdin so the dev server survives after the
     // E2B command shell exits.
@@ -1103,6 +1131,71 @@ export class E2BService {
       `Recent vite log:\n${logResult.output || logResult.error || '(empty)'}`,
     );
     return false;
+  }
+
+  /**
+   * Check whether `npm install` needs to run. It is skipped when `node_modules`
+   * exists and the sandbox package.json hash matches the last installed hash.
+   */
+  private async shouldInstallDependencies(sandboxId: string): Promise<boolean> {
+    const nodeModulesCheck = await this.runCommand(
+      sandboxId,
+      'test -d node_modules && echo yes || echo no',
+      WORKDIR,
+    );
+    if (nodeModulesCheck.output.trim() !== 'yes') {
+      return true;
+    }
+
+    const hashRes = await this.runCommand(
+      sandboxId,
+      "sha256sum package.json | awk '{print $1}' || echo none",
+      WORKDIR,
+    );
+    const currentHash = hashRes.output.trim();
+    if (currentHash === 'none') {
+      return true;
+    }
+
+    const currentId = await this.getCurrentSandboxId(sandboxId);
+    const cachedHash = await this.state.getPackageJsonHash(currentId);
+    return cachedHash !== currentHash;
+  }
+
+  private async recordPackageJsonHash(sandboxId: string): Promise<void> {
+    const hashRes = await this.runCommand(
+      sandboxId,
+      "sha256sum package.json | awk '{print $1}' || echo none",
+      WORKDIR,
+    );
+    const currentHash = hashRes.output.trim();
+    if (currentHash !== 'none') {
+      const currentId = await this.getCurrentSandboxId(sandboxId);
+      await this.state.setPackageJsonHash(currentId, currentHash);
+    }
+  }
+
+  /**
+   * Lightweight check: if the Vite preview is already reachable, return true
+   * without restarting. Otherwise fall back to `restartPreview`.
+   */
+  async ensurePreviewRunning(sandboxId: string): Promise<boolean> {
+    if (!this.configured) {
+      throw new E2BNotConfiguredError();
+    }
+
+    const sandbox = await this.getSandbox(sandboxId);
+    if (!sandbox) {
+      throw new SandboxNotFoundError();
+    }
+
+    const url = this.previewUrl(sandbox);
+    const health = await this.previewHealth(url);
+    if (health.reachable) {
+      return true;
+    }
+
+    return this.restartPreview(sandboxId);
   }
 
   async previewHealth(previewUrl: string): Promise<{ reachable: boolean; statusCode?: number }> {

@@ -8,25 +8,25 @@ declare const updateTodosSchema: z.ZodObject<{
         status: z.ZodOptional<z.ZodEnum<["pending", "in_progress", "completed"]>>;
     }, "strip", z.ZodTypeAny, {
         id: string;
-        content?: string | undefined;
         status?: "completed" | "pending" | "in_progress" | undefined;
+        content?: string | undefined;
     }, {
         id: string;
-        content?: string | undefined;
         status?: "completed" | "pending" | "in_progress" | undefined;
+        content?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     todos: {
         id: string;
-        content?: string | undefined;
         status?: "completed" | "pending" | "in_progress" | undefined;
+        content?: string | undefined;
     }[];
     merge: boolean;
 }, {
     todos: {
         id: string;
-        content?: string | undefined;
         status?: "completed" | "pending" | "in_progress" | undefined;
+        content?: string | undefined;
     }[];
     merge: boolean;
 }>;
@@ -41,25 +41,25 @@ export declare class UpdateTodosTool extends AgentTool {
             status: z.ZodOptional<z.ZodEnum<["pending", "in_progress", "completed"]>>;
         }, "strip", z.ZodTypeAny, {
             id: string;
-            content?: string | undefined;
             status?: "completed" | "pending" | "in_progress" | undefined;
+            content?: string | undefined;
         }, {
             id: string;
-            content?: string | undefined;
             status?: "completed" | "pending" | "in_progress" | undefined;
+            content?: string | undefined;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
         todos: {
             id: string;
-            content?: string | undefined;
             status?: "completed" | "pending" | "in_progress" | undefined;
+            content?: string | undefined;
         }[];
         merge: boolean;
     }, {
         todos: {
             id: string;
-            content?: string | undefined;
             status?: "completed" | "pending" | "in_progress" | undefined;
+            content?: string | undefined;
         }[];
         merge: boolean;
     }>;

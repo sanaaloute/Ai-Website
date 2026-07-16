@@ -133,6 +133,9 @@ class SandboxProvider {
     async restartPreview() {
         return this.e2b.restartPreview(this.sandboxId);
     }
+    async ensurePreviewRunning() {
+        return this.e2b.ensurePreviewRunning(this.sandboxId);
+    }
     async isPreviewHealthy() {
         try {
             const result = await this.runCommand("curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/", WORKSPACE_ROOT, { timeoutMs: 5_000 });

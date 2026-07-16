@@ -26,6 +26,8 @@ exports.AgentStateAnnotation = langgraph_1.Annotation.Root({
     verificationFailures: (0, langgraph_1.Annotation)(),
     needsClarification: (langgraph_1.Annotation),
     clarificationQuestions: (langgraph_1.Annotation),
+    previewHealthy: (langgraph_1.Annotation),
+    routesSource: (langgraph_1.Annotation),
     intent: (langgraph_1.Annotation),
     scope: (langgraph_1.Annotation),
     relevantFiles: (langgraph_1.Annotation),

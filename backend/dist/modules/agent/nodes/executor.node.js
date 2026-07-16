@@ -145,7 +145,8 @@ async function executorNode(state, deps) {
     const failedPackages = [];
     try {
         await context.sandboxProvider.ensureAlive(state.userId);
-        const maxIterations = 15;
+        const todoCount = state.todos?.length ?? 0;
+        const maxIterations = Math.min(10, Math.max(5, todoCount + 2));
         let iteration = 0;
         let finalContent = '';
         await deps.emit({

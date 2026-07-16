@@ -7,6 +7,8 @@ export interface SandboxInfo {
   renewing?: boolean;
   /** Owner of the sandbox (authenticated creator); used for usage metering. */
   userId?: string;
+  /** SHA-256 hash of the last installed package.json, used to skip redundant npm installs. */
+  packageJsonHash?: string;
 }
 
 export interface PocketbaseInfo {
@@ -142,6 +144,26 @@ export class SandboxStateService {
     const keys = await this.redisClient.keys(this.key(sandboxId, '*'));
     if (keys.length > 0) {
       await this.redisClient.del(...keys);
+    }
+  }
+
+  async setPackageJsonHash(sandboxId: string, hash: string): Promise<void> {
+    const info = await this.getSandboxInfo(sandboxId);
+    if (info) {
+      await this.setSandboxInfo(sandboxId, { ...info, packageJsonHash: hash });
+    }
+  }
+
+  async getPackageJsonHash(sandboxId: string): Promise<string | undefined> {
+    const info = await this.getSandboxInfo(sandboxId);
+    return info?.packageJsonHash;
+  }
+
+  async clearPackageJsonHash(sandboxId: string): Promise<void> {
+    const info = await this.getSandboxInfo(sandboxId);
+    if (info) {
+      const { packageJsonHash: _, ...rest } = info;
+      await this.setSandboxInfo(sandboxId, rest);
     }
   }
 }

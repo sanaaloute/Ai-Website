@@ -32,12 +32,7 @@ import { typeCheckerNode } from './nodes/type-checker.node';
 import { databaseInitializerNode } from './nodes/database-initializer.node';
 import { designerNode } from './nodes/designer.node';
 import { componentSelectorNode } from './nodes/component-selector.node';
-import { visualQaNode } from './nodes/visual-qa.node';
-import { functionalQaNode } from './nodes/functional-qa.node';
-import { a11yReviewerNode } from './nodes/a11y-reviewer.node';
-import { e2eTestGeneratorNode } from './nodes/e2e-test-generator.node';
-import { securityReviewerNode } from './nodes/security-reviewer.node';
-import { seoMetaNode } from './nodes/seo-meta.node';
+import { verificationNode } from './nodes/verification.node';
 import type { TemplateCopyResult } from './nodes/template-selector.node';
 import {
   isCancellation,
@@ -149,9 +144,9 @@ function wrapNode(name: string, fn: NodeFunction) {
       }
     }
 
-    // Attempts exhausted: if the node returned a failed status, hand that
-    // result back so existing error routing (e.g. executor -> reviewer) still
-    // applies; otherwise rethrow the last unexpected error.
+    // Attempts exhausted: if a node returned a failed status, hand that
+    // result back so existing error routing still applies; otherwise rethrow
+    // the last unexpected error.
     if (failedResult) return failedResult;
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   };
@@ -195,50 +190,23 @@ function routeAfterDebugger(state: AgentState): string {
 }
 
 function routeAfterReviewer(state: AgentState): string {
-  if (state.reviewPassed) return 'visual_qa';
+  if (state.reviewPassed) return 'verification';
   if ((state.retryCount ?? 0) < 3) return 'debugger';
   // Review has failed repeatedly; stop burning retries and surface the result.
   return 'finalize';
 }
 
-function routeAfterVisualQa(state: AgentState): string {
-  const issues = state.visualIssues ?? [];
-  if (issues.length === 0) return 'functional_qa';
-  if ((state.retryCount ?? 0) < 3) return 'increment_retry';
-  // Exceeded retry budget; continue to next verification stage rather than loop forever.
-  return 'functional_qa';
-}
+function routeAfterVerification(state: AgentState): string {
+  const hasIssues =
+    (state.visualIssues ?? []).length > 0 ||
+    (state.functionalIssues ?? []).length > 0 ||
+    (state.a11yIssues ?? []).length > 0 ||
+    (state.e2eFailures ?? []).length > 0 ||
+    (state.securityIssues ?? []).length > 0 ||
+    (state.verificationFailures ?? []).some((f) => f.startsWith('seo_meta:'));
 
-function routeAfterFunctionalQa(state: AgentState): string {
-  const issues = state.functionalIssues ?? [];
-  if (issues.length === 0) return 'a11y_reviewer';
+  if (!hasIssues) return 'finalize';
   if ((state.retryCount ?? 0) < 3) return 'increment_retry';
-  // Exceeded retry budget; continue to next verification stage rather than loop forever.
-  return 'a11y_reviewer';
-}
-
-function routeAfterA11yReviewer(state: AgentState): string {
-  const issues = state.a11yIssues ?? [];
-  if (issues.length === 0) return 'e2e_test_generator';
-  if ((state.retryCount ?? 0) < 3) return 'increment_retry';
-  return 'e2e_test_generator';
-}
-
-function routeAfterE2eTestGenerator(state: AgentState): string {
-  const failures = state.e2eFailures ?? [];
-  if (failures.length === 0) return 'security_reviewer';
-  if ((state.retryCount ?? 0) < 3) return 'increment_retry';
-  return 'security_reviewer';
-}
-
-function routeAfterSecurityReviewer(state: AgentState): string {
-  const issues = state.securityIssues ?? [];
-  if (issues.length === 0) return 'seo_meta';
-  if ((state.retryCount ?? 0) < 3) return 'increment_retry';
-  return 'seo_meta';
-}
-
-function routeAfterSeoMeta(_state: AgentState): string {
   return 'finalize';
 }
 
@@ -292,12 +260,7 @@ export function buildAgentGraph(
     .addNode('database_initializer', wrapNode('database_initializer', databaseInitializerNode))
     .addNode('designer', wrapNode('designer', designerNode))
     .addNode('component_selector', wrapNode('component_selector', componentSelectorNode))
-    .addNode('visual_qa', wrapNode('visual_qa', visualQaNode))
-    .addNode('functional_qa', wrapNode('functional_qa', functionalQaNode))
-    .addNode('a11y_reviewer', wrapNode('a11y_reviewer', a11yReviewerNode))
-    .addNode('e2e_test_generator', wrapNode('e2e_test_generator', e2eTestGeneratorNode))
-    .addNode('security_reviewer', wrapNode('security_reviewer', securityReviewerNode))
-    .addNode('seo_meta', wrapNode('seo_meta', seoMetaNode))
+    .addNode('verification', wrapNode('verification', verificationNode))
     // Entry / linear segments
     .addEdge(START, 'coordinator')
     .addEdge('coordinator', 'analyzer')
@@ -332,16 +295,14 @@ export function buildAgentGraph(
     .addConditionalEdges('file_state_tracker', routeAfterFileStateTracker, ['type_checker', 'executor', 'reviewer'])
     .addConditionalEdges('type_checker', routeAfterTypeChecker, ['reviewer', 'executor'])
     .addConditionalEdges('reviewer', routeAfterReviewer, [
-      'visual_qa',
+      'verification',
       'debugger',
       'finalize',
     ])
-    .addConditionalEdges('visual_qa', routeAfterVisualQa, ['functional_qa', 'increment_retry'])
-    .addConditionalEdges('functional_qa', routeAfterFunctionalQa, ['a11y_reviewer', 'increment_retry'])
-    .addConditionalEdges('a11y_reviewer', routeAfterA11yReviewer, ['e2e_test_generator', 'increment_retry'])
-    .addConditionalEdges('e2e_test_generator', routeAfterE2eTestGenerator, ['security_reviewer', 'increment_retry'])
-    .addConditionalEdges('security_reviewer', routeAfterSecurityReviewer, ['seo_meta', 'increment_retry'])
-    .addConditionalEdges('seo_meta', routeAfterSeoMeta, ['finalize']);
+    .addConditionalEdges('verification', routeAfterVerification, [
+      'finalize',
+      'increment_retry',
+    ]);
 
   return workflow.compile({ checkpointer }) as CompiledStateGraph<
     AgentState,

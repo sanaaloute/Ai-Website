@@ -1,8 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.runFunctionalQa = runFunctionalQa;
 exports.functionalQaNode = functionalQaNode;
 const playwright_1 = require("playwright");
+const concurrency_1 = require("../../../lib/concurrency");
 const route_discovery_1 = require("../utils/route-discovery");
+const ROUTE_CONCURRENCY = 3;
 function isDetailRoute(route) {
     return /:[^/]+/.test(route);
 }
@@ -98,7 +101,7 @@ async function checkCardNavigation(page, route, detailRoutes) {
     }
     return null;
 }
-async function functionalQaNode(state, deps) {
+async function runFunctionalQa(state, deps, previewUrl, routesSource) {
     const sandboxId = state.sandboxId;
     const issues = [];
     try {
@@ -106,17 +109,15 @@ async function functionalQaNode(state, deps) {
             type: 'status',
             data: { status: 'reviewing', message: 'Running functional QA (images + interactivity)...' },
         });
-        const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
         if (!previewUrl) {
             issues.push('Preview server URL is not available.');
             return {
                 functionalIssues: issues,
                 lastVerificationStage: 'functional_qa',
-                verificationFailures: [...(state.verificationFailures ?? []), ...issues.map((i) => `functional_qa: ${i}`)].slice(-20),
+                verificationFailures: issues.map((i) => `functional_qa: ${i}`),
                 messages: [{ role: 'assistant', content: `Functional QA skipped: preview URL missing` }],
             };
         }
-        const routesSource = await (0, route_discovery_1.readRoutes)(deps.e2b, sandboxId);
         const routes = (0, route_discovery_1.discoverRoutes)(routesSource, state.needsIntegration).filter((r) => r && r !== '*' && !r.includes('*'));
         const detailRoutes = routes.filter(isDetailRoute);
         const listRoutes = routes.filter((r) => !isDetailRoute(r));
@@ -131,20 +132,21 @@ async function functionalQaNode(state, deps) {
             return {
                 functionalIssues: issues,
                 lastVerificationStage: 'functional_qa',
-                verificationFailures: [...(state.verificationFailures ?? []), ...issues.map((i) => `functional_qa: ${i}`)].slice(-20),
+                verificationFailures: issues.map((i) => `functional_qa: ${i}`),
                 messages: [{ role: 'assistant', content: `Functional QA skipped: ${message}` }],
             };
         }
         try {
-            for (const route of listRoutes) {
+            const limit = (0, concurrency_1.pLimit)(ROUTE_CONCURRENCY);
+            const routeResults = await Promise.all(listRoutes.map((route) => limit(async () => {
+                const routeIssues = [];
                 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
                 const url = `${previewUrl}${route}`;
                 try {
                     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
                     if (!response || !response.ok()) {
-                        issues.push(`${route}: page failed to load (HTTP ${response?.status() ?? 'unknown'})`);
-                        await page.close();
-                        continue;
+                        routeIssues.push(`${route}: page failed to load (HTTP ${response?.status() ?? 'unknown'})`);
+                        return routeIssues;
                     }
                     const imageChecks = await checkImages(page);
                     for (const check of imageChecks) {
@@ -152,23 +154,27 @@ async function functionalQaNode(state, deps) {
                             const detail = check.status
                                 ? `HTTP ${check.status}, content-type: ${check.contentType ?? 'unknown'}`
                                 : check.error ?? 'request failed';
-                            issues.push(`${route}: broken image ${check.src} — ${detail}`);
+                            routeIssues.push(`${route}: broken image ${check.src} — ${detail}`);
                         }
                     }
                     if (detailRoutes.length > 0) {
                         const navIssue = await checkCardNavigation(page, route, detailRoutes);
                         if (navIssue) {
-                            issues.push(navIssue);
+                            routeIssues.push(navIssue);
                         }
                     }
                 }
                 catch (navErr) {
                     const message = navErr instanceof Error ? navErr.message : String(navErr);
-                    issues.push(`${route}: functional QA navigation failed — ${message}`);
+                    routeIssues.push(`${route}: functional QA navigation failed — ${message}`);
                 }
                 finally {
                     await page.close();
                 }
+                return routeIssues;
+            })));
+            for (const result of routeResults) {
+                issues.push(...result);
             }
         }
         finally {
@@ -180,19 +186,28 @@ async function functionalQaNode(state, deps) {
         deps.logger.error(`Functional QA node failed: ${message}`);
         issues.push(`Functional QA system error: ${message}`);
     }
-    const nextFailures = issues.length
-        ? [...(state.verificationFailures ?? []), ...issues.map((i) => `functional_qa: ${i}`)].slice(-20)
-        : state.verificationFailures;
     return {
         functionalIssues: issues,
         lastVerificationStage: issues.length > 0 ? 'functional_qa' : undefined,
-        verificationFailures: nextFailures,
+        verificationFailures: issues.map((i) => `functional_qa: ${i}`),
         messages: [
             {
                 role: 'assistant',
                 content: `Functional QA: ${issues.length} issues found`,
             },
         ],
+    };
+}
+async function functionalQaNode(state, deps) {
+    const previewUrl = await deps.e2b.getPreviewUrl(state.sandboxId);
+    const routesSource = (await deps.e2b.readFile(state.sandboxId, 'src/lib/routes.ts')) ?? '';
+    const result = await runFunctionalQa(state, deps, previewUrl, routesSource);
+    const nextFailures = result.functionalIssues.length
+        ? [...(state.verificationFailures ?? []), ...result.functionalIssues.map((i) => `functional_qa: ${i}`)].slice(-20)
+        : state.verificationFailures;
+    return {
+        ...result,
+        verificationFailures: nextFailures,
     };
 }
 //# sourceMappingURL=functional-qa.node.js.map

@@ -4,6 +4,7 @@ export interface SandboxInfo {
     endAt: string;
     renewing?: boolean;
     userId?: string;
+    packageJsonHash?: string;
 }
 export interface PocketbaseInfo {
     url: string;
@@ -34,4 +35,7 @@ export declare class SandboxStateService {
     acquireRenewalLock(sandboxId: string, ttlSeconds?: number): Promise<boolean>;
     releaseRenewalLock(sandboxId: string): Promise<void>;
     clearSandboxState(sandboxId: string): Promise<void>;
+    setPackageJsonHash(sandboxId: string, hash: string): Promise<void>;
+    getPackageJsonHash(sandboxId: string): Promise<string | undefined>;
+    clearPackageJsonHash(sandboxId: string): Promise<void>;
 }

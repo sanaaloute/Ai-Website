@@ -62,7 +62,7 @@ async function reviewerNode(state, deps) {
             type: 'status',
             data: { status: 'reviewing', message: 'Reviewing the full project for issues...' },
         });
-        const { finalContent } = await (0, tools_2.runToolLoop)(deps, state, (ctx, docs) => (0, tools_2.buildReadOnlyToolSet)(ctx, docs), messages, 'reviewer', aiCredentials, 15);
+        const { finalContent } = await (0, tools_2.runToolLoop)(deps, state, (ctx, docs) => (0, tools_2.buildReadOnlyToolSet)(ctx, docs), messages, 'reviewer', aiCredentials, 8);
         const result = extractJson(finalContent) || {};
         const passed = !!result.passed;
         const issues = Array.isArray(result.issues) ? result.issues : [];

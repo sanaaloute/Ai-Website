@@ -1,7 +1,10 @@
 import { chromium } from 'playwright';
+import { pLimit } from '@/lib/concurrency';
 import { AgentState } from '../state';
 import { GraphDependencies } from '../graph';
-import { discoverRoutes, readRoutes } from '../utils/route-discovery';
+import { discoverRoutes } from '../utils/route-discovery';
+
+const ROUTE_CONCURRENCY = 3;
 
 interface ImageCheck {
   src: string;
@@ -9,6 +12,13 @@ interface ImageCheck {
   status?: number;
   contentType?: string;
   error?: string;
+}
+
+export interface FunctionalQaResult {
+  functionalIssues: string[];
+  lastVerificationStage?: string;
+  verificationFailures?: string[];
+  messages: Array<{ role: string; content: string }>;
 }
 
 function isDetailRoute(route: string): boolean {
@@ -132,10 +142,12 @@ async function checkCardNavigation(
   return null;
 }
 
-export async function functionalQaNode(
+export async function runFunctionalQa(
   state: AgentState,
   deps: GraphDependencies,
-): Promise<Partial<AgentState>> {
+  previewUrl: string,
+  routesSource: string,
+): Promise<FunctionalQaResult> {
   const sandboxId = state.sandboxId;
   const issues: string[] = [];
 
@@ -145,18 +157,16 @@ export async function functionalQaNode(
       data: { status: 'reviewing', message: 'Running functional QA (images + interactivity)...' },
     });
 
-    const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
     if (!previewUrl) {
       issues.push('Preview server URL is not available.');
       return {
         functionalIssues: issues,
         lastVerificationStage: 'functional_qa',
-        verificationFailures: [...(state.verificationFailures ?? []), ...issues.map((i) => `functional_qa: ${i}`)].slice(-20),
+        verificationFailures: issues.map((i) => `functional_qa: ${i}`),
         messages: [{ role: 'assistant', content: `Functional QA skipped: preview URL missing` }],
       };
     }
 
-    const routesSource = await readRoutes(deps.e2b, sandboxId);
     const routes = discoverRoutes(routesSource, state.needsIntegration).filter(
       (r) => r && r !== '*' && !r.includes('*'),
     );
@@ -173,48 +183,58 @@ export async function functionalQaNode(
       return {
         functionalIssues: issues,
         lastVerificationStage: 'functional_qa',
-        verificationFailures: [...(state.verificationFailures ?? []), ...issues.map((i) => `functional_qa: ${i}`)].slice(-20),
+        verificationFailures: issues.map((i) => `functional_qa: ${i}`),
         messages: [{ role: 'assistant', content: `Functional QA skipped: ${message}` }],
       };
     }
 
     try {
-      for (const route of listRoutes) {
-        const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-        const url = `${previewUrl}${route}`;
+      const limit = pLimit(ROUTE_CONCURRENCY);
+      const routeResults = await Promise.all(
+        listRoutes.map((route) =>
+          limit(async () => {
+            const routeIssues: string[] = [];
+            const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+            const url = `${previewUrl}${route}`;
 
-        try {
-          const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
-          if (!response || !response.ok()) {
-            issues.push(`${route}: page failed to load (HTTP ${response?.status() ?? 'unknown'})`);
-            await page.close();
-            continue;
-          }
+            try {
+              const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
+              if (!response || !response.ok()) {
+                routeIssues.push(`${route}: page failed to load (HTTP ${response?.status() ?? 'unknown'})`);
+                return routeIssues;
+              }
 
-          // Check PocketBase-backed images resolve correctly.
-          const imageChecks = await checkImages(page);
-          for (const check of imageChecks) {
-            if (!check.ok) {
-              const detail = check.status
-                ? `HTTP ${check.status}, content-type: ${check.contentType ?? 'unknown'}`
-                : check.error ?? 'request failed';
-              issues.push(`${route}: broken image ${check.src} — ${detail}`);
+              // Check PocketBase-backed images resolve correctly.
+              const imageChecks = await checkImages(page);
+              for (const check of imageChecks) {
+                if (!check.ok) {
+                  const detail = check.status
+                    ? `HTTP ${check.status}, content-type: ${check.contentType ?? 'unknown'}`
+                    : check.error ?? 'request failed';
+                  routeIssues.push(`${route}: broken image ${check.src} — ${detail}`);
+                }
+              }
+
+              // Check list → detail navigation when detail routes exist.
+              if (detailRoutes.length > 0) {
+                const navIssue = await checkCardNavigation(page, route, detailRoutes);
+                if (navIssue) {
+                  routeIssues.push(navIssue);
+                }
+              }
+            } catch (navErr) {
+              const message = navErr instanceof Error ? navErr.message : String(navErr);
+              routeIssues.push(`${route}: functional QA navigation failed — ${message}`);
+            } finally {
+              await page.close();
             }
-          }
+            return routeIssues;
+          }),
+        ),
+      );
 
-          // Check list → detail navigation when detail routes exist.
-          if (detailRoutes.length > 0) {
-            const navIssue = await checkCardNavigation(page, route, detailRoutes);
-            if (navIssue) {
-              issues.push(navIssue);
-            }
-          }
-        } catch (navErr) {
-          const message = navErr instanceof Error ? navErr.message : String(navErr);
-          issues.push(`${route}: functional QA navigation failed — ${message}`);
-        } finally {
-          await page.close();
-        }
+      for (const result of routeResults) {
+        issues.push(...result);
       }
     } finally {
       await browser.close();
@@ -225,19 +245,33 @@ export async function functionalQaNode(
     issues.push(`Functional QA system error: ${message}`);
   }
 
-  const nextFailures = issues.length
-    ? [...(state.verificationFailures ?? []), ...issues.map((i) => `functional_qa: ${i}`)].slice(-20)
-    : state.verificationFailures;
-
   return {
     functionalIssues: issues,
     lastVerificationStage: issues.length > 0 ? 'functional_qa' : undefined,
-    verificationFailures: nextFailures,
+    verificationFailures: issues.map((i) => `functional_qa: ${i}`),
     messages: [
       {
         role: 'assistant',
         content: `Functional QA: ${issues.length} issues found`,
       },
     ],
+  };
+}
+
+export async function functionalQaNode(
+  state: AgentState,
+  deps: GraphDependencies,
+): Promise<Partial<AgentState>> {
+  const previewUrl = await deps.e2b.getPreviewUrl(state.sandboxId);
+  const routesSource = (await deps.e2b.readFile(state.sandboxId, 'src/lib/routes.ts')) ?? '';
+  const result = await runFunctionalQa(state, deps, previewUrl, routesSource);
+
+  const nextFailures = result.functionalIssues.length
+    ? [...(state.verificationFailures ?? []), ...result.functionalIssues.map((i) => `functional_qa: ${i}`)].slice(-20)
+    : state.verificationFailures;
+
+  return {
+    ...result,
+    verificationFailures: nextFailures,
   };
 }

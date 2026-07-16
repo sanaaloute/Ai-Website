@@ -76,12 +76,21 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
                     };
                 }
                 if (update.status === "completed" && update.id !== currentInProgressId) {
-                    return {
-                        valid: false,
-                        message: currentInProgressId
-                            ? `Cannot mark todo "${update.id}" as completed while todo "${currentInProgressId}" is in progress. Complete "${currentInProgressId}" first.`
-                            : `Cannot mark todo "${update.id}" as completed because no todo is currently in progress.`,
-                    };
+                    const isFirstPending = update.id === expectedNextId;
+                    if (!currentInProgressId && isFirstPending) {
+                        const todo = workingMap.get(update.id);
+                        if (todo) {
+                            workingMap.set(update.id, { ...todo, status: "in_progress" });
+                        }
+                    }
+                    else {
+                        return {
+                            valid: false,
+                            message: currentInProgressId
+                                ? `Cannot mark todo "${update.id}" as completed while todo "${currentInProgressId}" is in progress. Complete "${currentInProgressId}" first.`
+                                : `Cannot mark todo "${update.id}" as completed because no todo is currently in progress.`,
+                        };
+                    }
                 }
             }
             if (working) {
@@ -102,7 +111,6 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
         return { valid: true };
     }
     validateFinalTodoOrder(todos) {
-        let seenPending = false;
         let seenInProgress = false;
         for (const todo of todos) {
             if (todo.status === "in_progress") {
@@ -112,22 +120,15 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
                         message: "Only one todo may be in_progress at a time.",
                     };
                 }
-                if (seenPending) {
-                    return {
-                        valid: false,
-                        message: `Todo "${todo.id}" is in_progress but an earlier todo is still pending.`,
-                    };
-                }
                 seenInProgress = true;
             }
-            else if (todo.status === "pending") {
+            else if (todo.status === "completed") {
                 if (seenInProgress) {
                     return {
                         valid: false,
-                        message: `Todo "${todo.id}" is pending while an earlier todo is in_progress. Todos must be sequential.`,
+                        message: `Todo "${todo.id}" is completed while an earlier todo is still in_progress. Complete the in-progress todo first.`,
                     };
                 }
-                seenPending = true;
             }
         }
         return { valid: true };

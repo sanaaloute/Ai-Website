@@ -1,4 +1,5 @@
 import { E2BService } from '@/lib/e2b.service';
+import { AgentState } from '../state';
 
 export function discoverRoutes(source: string, needsIntegration?: string | null): string[] {
   const routes: string[] = [];
@@ -36,4 +37,21 @@ export async function readRoutes(e2b: E2BService, sandboxId: string): Promise<st
   }
 
   return '';
+}
+
+/**
+ * Returns the cached route source from state when available, otherwise reads it
+ * from the sandbox once and returns it. Callers should merge `routesSource` back
+ * into state if they want to cache it for downstream nodes.
+ */
+export async function getRoutesSource(
+  e2b: E2BService,
+  sandboxId: string,
+  state: AgentState,
+): Promise<{ source: string; cached: boolean }> {
+  if (state.routesSource) {
+    return { source: state.routesSource, cached: true };
+  }
+  const source = await readRoutes(e2b, sandboxId);
+  return { source, cached: false };
 }

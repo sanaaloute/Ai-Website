@@ -134,6 +134,9 @@ let TemplateService = TemplateService_1 = class TemplateService {
             '.agent_state',
             '.playwright-mcp',
         ]);
+        this.fileCache = new Map();
+        this.manifestCache = new Map();
+        this.schemaCache = new Map();
         const fromDist = path.resolve(process.cwd(), 'dist', 'templates');
         const fromSource = path.resolve(process.cwd(), 'src', 'templates');
         this.templatesDir = (0, fs_1.existsSync)(fromDist) ? fromDist : fromSource;
@@ -142,11 +145,16 @@ let TemplateService = TemplateService_1 = class TemplateService {
         return { ...TEMPLATE_CATEGORIES };
     }
     async getTemplateFiles(category) {
+        const cached = this.fileCache.get(category);
+        if (cached)
+            return { ...cached };
         const templateDir = this.resolveCategoryDir(category);
         try {
             const files = {};
             await this.collectFiles(templateDir, templateDir, files);
-            return this.injectSharedFiles(files);
+            const result = this.injectSharedFiles(files);
+            this.fileCache.set(category, result);
+            return { ...result };
         }
         catch (err) {
             this.logger.warn(`Could not read template directory ${templateDir}: ${err instanceof Error ? err.message : String(err)}`);
@@ -154,26 +162,39 @@ let TemplateService = TemplateService_1 = class TemplateService {
         }
     }
     async getTemplateManifest(category) {
+        const cached = this.manifestCache.get(category);
+        if (cached)
+            return { ...cached };
         const manifestPath = path.join(this.resolveCategoryDir(category), 'manifest.json');
         try {
             const content = await fs_1.promises.readFile(manifestPath, 'utf-8');
-            return JSON.parse(content);
+            const parsed = JSON.parse(content);
+            this.manifestCache.set(category, parsed);
+            return { ...parsed };
         }
         catch {
-            return {
+            const fallback = {
                 name: category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
                 category,
                 recommended_packages: ['react', 'react-dom', 'lucide-react', 'pocketbase'],
             };
+            this.manifestCache.set(category, fallback);
+            return { ...fallback };
         }
     }
     async getDbSchema(category) {
+        const cached = this.schemaCache.get(category);
+        if (cached)
+            return { ...cached };
         const schemaPath = path.join(this.resolveCategoryDir(category), 'db_schema.json');
         try {
             const content = await fs_1.promises.readFile(schemaPath, 'utf-8');
-            return JSON.parse(content);
+            const parsed = JSON.parse(content);
+            this.schemaCache.set(category, parsed);
+            return { ...parsed };
         }
         catch {
+            this.schemaCache.set(category, {});
             return {};
         }
     }

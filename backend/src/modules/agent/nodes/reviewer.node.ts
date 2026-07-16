@@ -74,7 +74,7 @@ export async function reviewerNode(state: AgentState, deps: GraphDependencies): 
       messages,
       'reviewer',
       aiCredentials,
-      15,
+      8,
     );
 
     const result = extractJson(finalContent) || {};

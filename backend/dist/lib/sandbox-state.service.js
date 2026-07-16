@@ -117,6 +117,23 @@ let SandboxStateService = SandboxStateService_1 = class SandboxStateService {
             await this.redisClient.del(...keys);
         }
     }
+    async setPackageJsonHash(sandboxId, hash) {
+        const info = await this.getSandboxInfo(sandboxId);
+        if (info) {
+            await this.setSandboxInfo(sandboxId, { ...info, packageJsonHash: hash });
+        }
+    }
+    async getPackageJsonHash(sandboxId) {
+        const info = await this.getSandboxInfo(sandboxId);
+        return info?.packageJsonHash;
+    }
+    async clearPackageJsonHash(sandboxId) {
+        const info = await this.getSandboxInfo(sandboxId);
+        if (info) {
+            const { packageJsonHash: _, ...rest } = info;
+            await this.setSandboxInfo(sandboxId, rest);
+        }
+    }
 };
 exports.SandboxStateService = SandboxStateService;
 exports.SandboxStateService = SandboxStateService = SandboxStateService_1 = __decorate([

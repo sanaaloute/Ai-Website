@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { AgentState } from '../state';
 import { GraphDependencies } from '../graph';
-import { discoverRoutes, readRoutes } from '../utils/route-discovery';
+import { discoverRoutes } from '../utils/route-discovery';
 
 const execAsync = promisify(exec);
 
@@ -40,7 +40,20 @@ async function ensureTestRunnerDependencies(testDir: string): Promise<void> {
   await fs.symlink(backendNodeModules, nodeModulesLink, 'dir');
 }
 
-export async function e2eTestGeneratorNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
+export interface E2eTestResult {
+  e2eFailures: string[];
+  e2eTestsWritten: string[];
+  lastVerificationStage?: string;
+  verificationFailures?: string[];
+  messages: Array<{ role: string; content: string }>;
+}
+
+export async function runE2eTests(
+  state: AgentState,
+  deps: GraphDependencies,
+  previewUrl: string,
+  routesSource: string,
+): Promise<E2eTestResult> {
   const sandboxId = state.sandboxId;
   const failures: string[] = [];
   const testsWritten: string[] = [];
@@ -51,8 +64,6 @@ export async function e2eTestGeneratorNode(state: AgentState, deps: GraphDepende
       data: { status: 'reviewing', message: 'Generating and running E2E tests...' },
     });
 
-    const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
-    const routesSource = await readRoutes(deps.e2b, sandboxId);
     const routes = discoverRoutes(routesSource, state.needsIntegration);
 
     const systemPrompt = await deps.promptLoader.load('e2e-test-generator');
@@ -132,9 +143,25 @@ export default defineConfig({
     e2eFailures: failures,
     e2eTestsWritten: testsWritten,
     lastVerificationStage: failures.length > 0 ? 'e2e_test_generator' : undefined,
-    verificationFailures: failures.length
-      ? [...(state.verificationFailures ?? []), ...failures.map((f) => `e2e_test_generator: ${f}`)].slice(-20)
-      : state.verificationFailures,
+    verificationFailures: failures.map((f) => `e2e_test_generator: ${f}`),
     messages: [{ role: 'assistant', content: `E2E tests: ${failures.length ? 'failed' : 'passed'} (${testsWritten.length} spec files)` }],
+  };
+}
+
+export async function e2eTestGeneratorNode(
+  state: AgentState,
+  deps: GraphDependencies,
+): Promise<Partial<AgentState>> {
+  const previewUrl = await deps.e2b.getPreviewUrl(state.sandboxId);
+  const routesSource = (await deps.e2b.readFile(state.sandboxId, 'src/lib/routes.ts')) ?? '';
+  const result = await runE2eTests(state, deps, previewUrl, routesSource);
+
+  const nextFailures = result.e2eFailures.length
+    ? [...(state.verificationFailures ?? []), ...result.e2eFailures.map((f) => `e2e_test_generator: ${f}`)].slice(-20)
+    : state.verificationFailures;
+
+  return {
+    ...result,
+    verificationFailures: nextFailures,
   };
 }

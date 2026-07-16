@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.runE2eTests = runE2eTests;
 exports.e2eTestGeneratorNode = e2eTestGeneratorNode;
 const child_process_1 = require("child_process");
 const util_1 = require("util");
@@ -66,7 +67,7 @@ async function ensureTestRunnerDependencies(testDir) {
     }
     await fs_1.promises.symlink(backendNodeModules, nodeModulesLink, 'dir');
 }
-async function e2eTestGeneratorNode(state, deps) {
+async function runE2eTests(state, deps, previewUrl, routesSource) {
     const sandboxId = state.sandboxId;
     const failures = [];
     const testsWritten = [];
@@ -75,8 +76,6 @@ async function e2eTestGeneratorNode(state, deps) {
             type: 'status',
             data: { status: 'reviewing', message: 'Generating and running E2E tests...' },
         });
-        const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
-        const routesSource = await (0, route_discovery_1.readRoutes)(deps.e2b, sandboxId);
         const routes = (0, route_discovery_1.discoverRoutes)(routesSource, state.needsIntegration);
         const systemPrompt = await deps.promptLoader.load('e2e-test-generator');
         const context = JSON.stringify({
@@ -139,10 +138,20 @@ export default defineConfig({
         e2eFailures: failures,
         e2eTestsWritten: testsWritten,
         lastVerificationStage: failures.length > 0 ? 'e2e_test_generator' : undefined,
-        verificationFailures: failures.length
-            ? [...(state.verificationFailures ?? []), ...failures.map((f) => `e2e_test_generator: ${f}`)].slice(-20)
-            : state.verificationFailures,
+        verificationFailures: failures.map((f) => `e2e_test_generator: ${f}`),
         messages: [{ role: 'assistant', content: `E2E tests: ${failures.length ? 'failed' : 'passed'} (${testsWritten.length} spec files)` }],
+    };
+}
+async function e2eTestGeneratorNode(state, deps) {
+    const previewUrl = await deps.e2b.getPreviewUrl(state.sandboxId);
+    const routesSource = (await deps.e2b.readFile(state.sandboxId, 'src/lib/routes.ts')) ?? '';
+    const result = await runE2eTests(state, deps, previewUrl, routesSource);
+    const nextFailures = result.e2eFailures.length
+        ? [...(state.verificationFailures ?? []), ...result.e2eFailures.map((f) => `e2e_test_generator: ${f}`)].slice(-20)
+        : state.verificationFailures;
+    return {
+        ...result,
+        verificationFailures: nextFailures,
     };
 }
 //# sourceMappingURL=e2e-test-generator.node.js.map

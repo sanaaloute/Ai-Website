@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.discoverRoutes = discoverRoutes;
 exports.readRoutes = readRoutes;
+exports.getRoutesSource = getRoutesSource;
 function discoverRoutes(source, needsIntegration) {
     const routes = [];
     const pathRegex = /path\s*[:=]\s*['"`]([^'"`]+)['"`]/g;
@@ -36,5 +37,12 @@ async function readRoutes(e2b, sandboxId) {
     catch {
     }
     return '';
+}
+async function getRoutesSource(e2b, sandboxId, state) {
+    if (state.routesSource) {
+        return { source: state.routesSource, cached: true };
+    }
+    const source = await readRoutes(e2b, sandboxId);
+    return { source, cached: false };
 }
 //# sourceMappingURL=route-discovery.js.map

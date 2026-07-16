@@ -171,6 +171,16 @@ export declare const AgentStateAnnotation: import("@langchain/langgraph").Annota
         (): import("@langchain/langgraph").LastValue<string[] | undefined>;
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
+    previewHealthy: {
+        (annotation: import("@langchain/langgraph").SingleReducer<boolean | undefined, boolean | undefined>): import("@langchain/langgraph").BaseChannel<boolean | undefined, boolean | import("@langchain/langgraph").OverwriteValue<boolean | undefined> | undefined, unknown>;
+        (): import("@langchain/langgraph").LastValue<boolean | undefined>;
+        Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
+    };
+    routesSource: {
+        (annotation: import("@langchain/langgraph").SingleReducer<string | undefined, string | undefined>): import("@langchain/langgraph").BaseChannel<string | undefined, string | import("@langchain/langgraph").OverwriteValue<string | undefined> | undefined, unknown>;
+        (): import("@langchain/langgraph").LastValue<string | undefined>;
+        Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
+    };
     intent: {
         (annotation: import("@langchain/langgraph").SingleReducer<string | undefined, string | undefined>): import("@langchain/langgraph").BaseChannel<string | undefined, string | import("@langchain/langgraph").OverwriteValue<string | undefined> | undefined, unknown>;
         (): import("@langchain/langgraph").LastValue<string | undefined>;

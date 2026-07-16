@@ -113,6 +113,14 @@ export class TemplateService {
     '.playwright-mcp',
   ]);
 
+  /**
+   * In-memory cache of template payloads. Templates are immutable on disk during
+   * a deployment, so caching them avoids repeated disk reads on every new project.
+   */
+  private readonly fileCache = new Map<string, Record<string, string>>();
+  private readonly manifestCache = new Map<string, Record<string, unknown>>();
+  private readonly schemaCache = new Map<string, Record<string, unknown>>();
+
   constructor() {
     // Resolve templates relative to the project root, preferring the compiled dist/
     // output when it exists so the Docker image works without source files.
@@ -126,11 +134,16 @@ export class TemplateService {
   }
 
   async getTemplateFiles(category: string): Promise<Record<string, string>> {
+    const cached = this.fileCache.get(category);
+    if (cached) return { ...cached };
+
     const templateDir = this.resolveCategoryDir(category);
     try {
       const files: Record<string, string> = {};
       await this.collectFiles(templateDir, templateDir, files);
-      return this.injectSharedFiles(files);
+      const result = this.injectSharedFiles(files);
+      this.fileCache.set(category, result);
+      return { ...result };
     } catch (err) {
       this.logger.warn(`Could not read template directory ${templateDir}: ${err instanceof Error ? err.message : String(err)}`);
       return {};
@@ -138,25 +151,38 @@ export class TemplateService {
   }
 
   async getTemplateManifest(category: string): Promise<Record<string, unknown>> {
+    const cached = this.manifestCache.get(category);
+    if (cached) return { ...cached };
+
     const manifestPath = path.join(this.resolveCategoryDir(category), 'manifest.json');
     try {
       const content = await fs.readFile(manifestPath, 'utf-8');
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      this.manifestCache.set(category, parsed);
+      return { ...parsed };
     } catch {
-      return {
+      const fallback = {
         name: category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
         category,
         recommended_packages: ['react', 'react-dom', 'lucide-react', 'pocketbase'],
       };
+      this.manifestCache.set(category, fallback);
+      return { ...fallback };
     }
   }
 
   async getDbSchema(category: string): Promise<Record<string, unknown>> {
+    const cached = this.schemaCache.get(category);
+    if (cached) return { ...cached };
+
     const schemaPath = path.join(this.resolveCategoryDir(category), 'db_schema.json');
     try {
       const content = await fs.readFile(schemaPath, 'utf-8');
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      this.schemaCache.set(category, parsed);
+      return { ...parsed };
     } catch {
+      this.schemaCache.set(category, {});
       return {};
     }
   }

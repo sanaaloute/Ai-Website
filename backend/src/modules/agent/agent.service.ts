@@ -327,6 +327,7 @@ function mapNodeToStatus(nodeName: string): string {
     case 'answer_generator':
       return 'executing';
     case 'reviewer':
+    case 'verification':
       return 'reviewing';
     case 'debugger':
     case 'increment_retry':

@@ -109,12 +109,23 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
         }
 
         if (update.status === "completed" && update.id !== currentInProgressId) {
-          return {
-            valid: false,
-            message: currentInProgressId
-              ? `Cannot mark todo "${update.id}" as completed while todo "${currentInProgressId}" is in progress. Complete "${currentInProgressId}" first.`
-              : `Cannot mark todo "${update.id}" as completed because no todo is currently in progress.`,
-          };
+          // LLMs often skip the explicit in_progress step and mark the first
+          // pending todo as completed. Allow that as an implicit start+finish
+          // instead of forcing a wasteful retry loop.
+          const isFirstPending = update.id === expectedNextId;
+          if (!currentInProgressId && isFirstPending) {
+            const todo = workingMap.get(update.id);
+            if (todo) {
+              workingMap.set(update.id, { ...todo, status: "in_progress" });
+            }
+          } else {
+            return {
+              valid: false,
+              message: currentInProgressId
+                ? `Cannot mark todo "${update.id}" as completed while todo "${currentInProgressId}" is in progress. Complete "${currentInProgressId}" first.`
+                : `Cannot mark todo "${update.id}" as completed because no todo is currently in progress.`,
+            };
+          }
         }
       }
 
@@ -145,7 +156,6 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
     valid: boolean;
     message?: string;
   } {
-    let seenPending = false;
     let seenInProgress = false;
 
     for (const todo of todos) {
@@ -156,22 +166,19 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
             message: "Only one todo may be in_progress at a time.",
           };
         }
-        if (seenPending) {
-          return {
-            valid: false,
-            message: `Todo "${todo.id}" is in_progress but an earlier todo is still pending.`,
-          };
-        }
         seenInProgress = true;
-      } else if (todo.status === "pending") {
+      } else if (todo.status === "completed") {
+        // A completed todo must not appear after an in_progress one; that
+        // would mean a later todo finished before the current one.
         if (seenInProgress) {
           return {
             valid: false,
-            message: `Todo "${todo.id}" is pending while an earlier todo is in_progress. Todos must be sequential.`,
+            message: `Todo "${todo.id}" is completed while an earlier todo is still in_progress. Complete the in-progress todo first.`,
           };
         }
-        seenPending = true;
       }
+      // Pending todos are allowed anywhere (before, after, or around
+      // in_progress), representing future work.
     }
 
     return { valid: true };

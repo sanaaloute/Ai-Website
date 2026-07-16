@@ -193,6 +193,10 @@ export class SandboxProvider {
     return this.e2b.restartPreview(this.sandboxId);
   }
 
+  async ensurePreviewRunning(): Promise<boolean> {
+    return this.e2b.ensurePreviewRunning(this.sandboxId);
+  }
+
   /**
    * Checks whether the Vite dev server is responding inside the sandbox.
    * This is used by finalizeNode to avoid restarting an already-healthy preview

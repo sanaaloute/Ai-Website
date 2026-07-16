@@ -37,13 +37,13 @@ export async function finalizeNode(state: AgentState, deps: GraphDependencies): 
       }
     }
 
-    // Always make sure the preview server is running before returning. For edits
-    // without new deps we health-check first so we don't pay for an unnecessary
-    // restart when Vite HMR is already handling the changes.
-    const previewHealthy = await tools.isPreviewHealthy();
-    if (!previewHealthy) {
+    // Always make sure the preview server is running before returning. The
+    // verification stage already started it and set previewHealthy; if we reach
+    // finalize without that flag (e.g. error path), do a lightweight health check
+    // and restart only when necessary.
+    if (!state.previewHealthy) {
       await deps.emit({ type: 'status', data: { status: 'finalizing', message: 'Starting preview server...' } });
-      await tools.restartPreview();
+      await tools.ensurePreviewRunning();
     }
 
     const previewUrl = await tools.getSandboxUrl();

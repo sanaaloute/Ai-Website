@@ -1,7 +1,13 @@
 import { AgentState } from '../state';
 import { GraphDependencies } from '../graph';
-import { discoverRoutes, readRoutes } from '../utils/route-discovery';
+import { discoverRoutes } from '../utils/route-discovery';
 import { createFileUpdateEvent } from '../tools/stream-writer';
+
+export interface SeoMetaResult {
+  seoGenerated: boolean;
+  verificationFailures?: string[];
+  messages: Array<{ role: string; content: string }>;
+}
 
 async function generateMetaDescription(state: AgentState, deps: GraphDependencies): Promise<{ title: string; description: string }> {
   const siteName = state.designSpec?.brandName || state.websiteCategory || 'Website';
@@ -33,7 +39,12 @@ async function generateMetaDescription(state: AgentState, deps: GraphDependencie
   };
 }
 
-export async function seoMetaNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
+export async function runSeoMeta(
+  state: AgentState,
+  deps: GraphDependencies,
+  previewUrl: string,
+  routesSource: string,
+): Promise<SeoMetaResult> {
   const sandboxId = state.sandboxId;
 
   try {
@@ -42,8 +53,6 @@ export async function seoMetaNode(state: AgentState, deps: GraphDependencies): P
       data: { status: 'reviewing', message: 'Generating SEO meta tags, robots.txt, and sitemap...' },
     });
 
-    const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
-    const routesSource = await readRoutes(deps.e2b, sandboxId);
     const routes = discoverRoutes(routesSource, state.needsIntegration);
 
     const { title, description } = await generateMetaDescription(state, deps);
@@ -90,7 +99,17 @@ export async function seoMetaNode(state: AgentState, deps: GraphDependencies): P
     deps.logger.error(`SEO meta node failed: ${message}`);
     return {
       seoGenerated: false,
+      verificationFailures: [`seo_meta: ${message}`],
       messages: [{ role: 'assistant', content: `SEO generation error: ${message}` }],
     };
   }
+}
+
+export async function seoMetaNode(
+  state: AgentState,
+  deps: GraphDependencies,
+): Promise<Partial<AgentState>> {
+  const previewUrl = await deps.e2b.getPreviewUrl(state.sandboxId);
+  const routesSource = (await deps.e2b.readFile(state.sandboxId, 'src/lib/routes.ts')) ?? '';
+  return runSeoMeta(state, deps, previewUrl, routesSource);
 }

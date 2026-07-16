@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, memo } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo, memo } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { GenerationCognitionLoader, GenerationOrb, GenerationThinkingStrip } from '@/components/builder/GenerationCognitionLoader';
@@ -45,6 +45,37 @@ function GenerationWorkspace({ workspace }: GenerationWorkspaceProps) {
     handleFixPreviewHealthIssue, reviewMaxReached, reviewMaxIssues,
     onContinueFixing, onStopAndRender, renameSandboxFile, deleteSandboxFile,
   } = workspace;
+
+  const loaderTitle = useMemo(() => {
+    const s = (generationProgress.status || '').toLowerCase();
+    if (s.includes('analyz')) return 'AI is analyzing your request';
+    if (s.includes('plan')) return 'AI is planning your app';
+    if (s.includes('writing') || s.includes('execut')) return 'AI is writing your code';
+    if (s.includes('review')) return 'AI is reviewing code';
+    if (s.includes('debug') || s.includes('fix')) return 'AI is fixing issues';
+    if (s.includes('building') || s.includes('finaliz') || s.includes('install')) return 'AI is building the preview';
+    return 'AI is working on your request';
+  }, [generationProgress.status]);
+
+  const { loaderSteps, loaderActiveStep } = useMemo(() => {
+    if (generationProgress.todoList && generationProgress.todoList.length > 0) {
+      const steps = generationProgress.todoList.map((t, i) => ({
+        label: t.label,
+        key: String(i),
+      }));
+      const firstIncomplete = generationProgress.todoList.findIndex((t) => !t.done);
+      const activeStep = firstIncomplete >= 0 ? firstIncomplete : steps.length;
+      return { loaderSteps: steps, loaderActiveStep: activeStep };
+    }
+    return {
+      loaderSteps: [
+        { label: 'Parse request', key: 'parse' },
+        { label: 'Plan structure', key: 'plan' },
+        { label: 'Generate code', key: 'generate' },
+      ],
+      loaderActiveStep: generationProgress.isGenerating ? 2 : generationProgress.status ? 1 : 0,
+    };
+  }, [generationProgress.todoList, generationProgress.isGenerating, generationProgress.status]);
 
   const [explorerWidth, setExplorerWidth] = useState(DEFAULT_EXPLORER_WIDTH);
   const isDraggingRef = useRef(false);
@@ -274,17 +305,13 @@ function GenerationWorkspace({ workspace }: GenerationWorkspaceProps) {
                 </div>
               ) : generationProgress.isThinking || (generationProgress.isGenerating && !generationProgress.currentFile) ? (
                 <GenerationCognitionLoader
-                  title="AI is analyzing your request"
+                  title={loaderTitle}
                   subtitle={generationProgress.status || 'Mapping structure, dependencies, and UI intent…'}
                   progress={generationEstimatedPercent}
                   autoProgress
                   taskId={`analysis:${generationProgress.status || "mapping"}`}
-                  steps={[
-                    { label: 'Parse request', key: 'parse' },
-                    { label: 'Plan structure', key: 'plan' },
-                    { label: 'Generate code', key: 'generate' },
-                  ]}
-                  activeStep={generationProgress.isGenerating ? 2 : generationProgress.status ? 1 : 0}
+                  steps={loaderSteps}
+                  activeStep={loaderActiveStep}
                 />
               ) : generationProgress.currentFile ? (
                 <div className="overflow-clip rounded-xl border border-white/[0.06] bg-black/40">

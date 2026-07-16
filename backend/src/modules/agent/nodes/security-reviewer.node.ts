@@ -40,7 +40,17 @@ export const PATTERNS: SecurityPattern[] = [
   },
 ];
 
-export async function securityReviewerNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
+export interface SecurityReviewResult {
+  securityIssues: string[];
+  lastVerificationStage?: string;
+  verificationFailures?: string[];
+  messages: Array<{ role: string; content: string }>;
+}
+
+export async function runSecurityReview(
+  state: AgentState,
+  deps: GraphDependencies,
+): Promise<SecurityReviewResult> {
   const sandboxId = state.sandboxId;
   const issues: string[] = [];
 
@@ -50,23 +60,28 @@ export async function securityReviewerNode(state: AgentState, deps: GraphDepende
       data: { status: 'reviewing', message: 'Running security audit...' },
     });
 
-    for (let i = 0; i < PATTERNS.length; i++) {
-      const pattern = PATTERNS[i];
-      // Write the pattern to a sandbox temp file so we can invoke grep with -f
-      // instead of embedding the regex in a single-quoted shell string. This
-      // avoids shell-quoting bugs when the regex itself contains quotes.
-      const patternFile = `/tmp/security-pattern-${i}.txt`;
-      await deps.e2b.writeFile(sandboxId, patternFile, pattern.regex);
+    // Run all grep checks concurrently. Each pattern is written to its own temp
+    // file so the regex is not shell-escaped.
+    const results = await Promise.all(
+      PATTERNS.map(async (pattern, i) => {
+        const patternFile = `/tmp/security-pattern-${i}.txt`;
+        await deps.e2b.writeFile(sandboxId, patternFile, pattern.regex);
 
-      const res = await deps.e2b.runCommand(
-        sandboxId,
-        `grep -R -n -E -f ${patternFile} src/ --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' || true`,
-        '/home/user/app',
-      );
-      if (res.output.trim()) {
-        const lines = res.output.split('\n').filter(Boolean).slice(0, 20);
-        issues.push(`[${pattern.severity}] ${pattern.name} found in:\n${lines.join('\n')}`);
-      }
+        const res = await deps.e2b.runCommand(
+          sandboxId,
+          `grep -R -n -E -f ${patternFile} src/ --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' || true`,
+          '/home/user/app',
+        );
+        if (res.output.trim()) {
+          const lines = res.output.split('\n').filter(Boolean).slice(0, 20);
+          return `[${pattern.severity}] ${pattern.name} found in:\n${lines.join('\n')}`;
+        }
+        return null;
+      }),
+    );
+
+    for (const issue of results) {
+      if (issue) issues.push(issue);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -77,9 +92,23 @@ export async function securityReviewerNode(state: AgentState, deps: GraphDepende
   return {
     securityIssues: issues,
     lastVerificationStage: issues.length > 0 ? 'security_reviewer' : undefined,
-    verificationFailures: issues.length
-      ? [...(state.verificationFailures ?? []), ...issues.map((i) => `security_reviewer: ${i}`)].slice(-20)
-      : state.verificationFailures,
+    verificationFailures: issues.map((i) => `security_reviewer: ${i}`),
     messages: [{ role: 'assistant', content: `Security review: ${issues.length} issues` }],
+  };
+}
+
+export async function securityReviewerNode(
+  state: AgentState,
+  deps: GraphDependencies,
+): Promise<Partial<AgentState>> {
+  const result = await runSecurityReview(state, deps);
+
+  const nextFailures = result.securityIssues.length
+    ? [...(state.verificationFailures ?? []), ...result.securityIssues.map((i) => `security_reviewer: ${i}`)].slice(-20)
+    : state.verificationFailures;
+
+  return {
+    ...result,
+    verificationFailures: nextFailures,
   };
 }

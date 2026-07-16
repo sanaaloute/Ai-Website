@@ -84,7 +84,12 @@ export declare class E2BService {
         relativePath: string;
         content: string;
     }>): Promise<string[]>;
-    restartPreview(sandboxId: string): Promise<boolean>;
+    restartPreview(sandboxId: string, opts?: {
+        force?: boolean;
+    }): Promise<boolean>;
+    private shouldInstallDependencies;
+    private recordPackageJsonHash;
+    ensurePreviewRunning(sandboxId: string): Promise<boolean>;
     previewHealth(previewUrl: string): Promise<{
         reachable: boolean;
         statusCode?: number;

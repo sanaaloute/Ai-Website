@@ -19,12 +19,7 @@ const type_checker_node_1 = require("./nodes/type-checker.node");
 const database_initializer_node_1 = require("./nodes/database-initializer.node");
 const designer_node_1 = require("./nodes/designer.node");
 const component_selector_node_1 = require("./nodes/component-selector.node");
-const visual_qa_node_1 = require("./nodes/visual-qa.node");
-const functional_qa_node_1 = require("./nodes/functional-qa.node");
-const a11y_reviewer_node_1 = require("./nodes/a11y-reviewer.node");
-const e2e_test_generator_node_1 = require("./nodes/e2e-test-generator.node");
-const security_reviewer_node_1 = require("./nodes/security-reviewer.node");
-const seo_meta_node_1 = require("./nodes/seo-meta.node");
+const verification_node_1 = require("./nodes/verification.node");
 const cancellation_1 = require("../../lib/cancellation");
 const MAX_NODE_ATTEMPTS = 3;
 function wrapNode(name, fn) {
@@ -123,52 +118,22 @@ function routeAfterDebugger(state) {
 }
 function routeAfterReviewer(state) {
     if (state.reviewPassed)
-        return 'visual_qa';
+        return 'verification';
     if ((state.retryCount ?? 0) < 3)
         return 'debugger';
     return 'finalize';
 }
-function routeAfterVisualQa(state) {
-    const issues = state.visualIssues ?? [];
-    if (issues.length === 0)
-        return 'functional_qa';
+function routeAfterVerification(state) {
+    const hasIssues = (state.visualIssues ?? []).length > 0 ||
+        (state.functionalIssues ?? []).length > 0 ||
+        (state.a11yIssues ?? []).length > 0 ||
+        (state.e2eFailures ?? []).length > 0 ||
+        (state.securityIssues ?? []).length > 0 ||
+        (state.verificationFailures ?? []).some((f) => f.startsWith('seo_meta:'));
+    if (!hasIssues)
+        return 'finalize';
     if ((state.retryCount ?? 0) < 3)
         return 'increment_retry';
-    return 'functional_qa';
-}
-function routeAfterFunctionalQa(state) {
-    const issues = state.functionalIssues ?? [];
-    if (issues.length === 0)
-        return 'a11y_reviewer';
-    if ((state.retryCount ?? 0) < 3)
-        return 'increment_retry';
-    return 'a11y_reviewer';
-}
-function routeAfterA11yReviewer(state) {
-    const issues = state.a11yIssues ?? [];
-    if (issues.length === 0)
-        return 'e2e_test_generator';
-    if ((state.retryCount ?? 0) < 3)
-        return 'increment_retry';
-    return 'e2e_test_generator';
-}
-function routeAfterE2eTestGenerator(state) {
-    const failures = state.e2eFailures ?? [];
-    if (failures.length === 0)
-        return 'security_reviewer';
-    if ((state.retryCount ?? 0) < 3)
-        return 'increment_retry';
-    return 'security_reviewer';
-}
-function routeAfterSecurityReviewer(state) {
-    const issues = state.securityIssues ?? [];
-    if (issues.length === 0)
-        return 'seo_meta';
-    if ((state.retryCount ?? 0) < 3)
-        return 'increment_retry';
-    return 'seo_meta';
-}
-function routeAfterSeoMeta(_state) {
     return 'finalize';
 }
 function routeAfterDatabaseInitializer(state) {
@@ -211,12 +176,7 @@ function buildAgentGraph(checkpointer) {
         .addNode('database_initializer', wrapNode('database_initializer', database_initializer_node_1.databaseInitializerNode))
         .addNode('designer', wrapNode('designer', designer_node_1.designerNode))
         .addNode('component_selector', wrapNode('component_selector', component_selector_node_1.componentSelectorNode))
-        .addNode('visual_qa', wrapNode('visual_qa', visual_qa_node_1.visualQaNode))
-        .addNode('functional_qa', wrapNode('functional_qa', functional_qa_node_1.functionalQaNode))
-        .addNode('a11y_reviewer', wrapNode('a11y_reviewer', a11y_reviewer_node_1.a11yReviewerNode))
-        .addNode('e2e_test_generator', wrapNode('e2e_test_generator', e2e_test_generator_node_1.e2eTestGeneratorNode))
-        .addNode('security_reviewer', wrapNode('security_reviewer', security_reviewer_node_1.securityReviewerNode))
-        .addNode('seo_meta', wrapNode('seo_meta', seo_meta_node_1.seoMetaNode))
+        .addNode('verification', wrapNode('verification', verification_node_1.verificationNode))
         .addEdge(langgraph_1.START, 'coordinator')
         .addEdge('coordinator', 'analyzer')
         .addEdge('designer', 'component_selector')
@@ -249,16 +209,14 @@ function buildAgentGraph(checkpointer) {
         .addConditionalEdges('file_state_tracker', routeAfterFileStateTracker, ['type_checker', 'executor', 'reviewer'])
         .addConditionalEdges('type_checker', routeAfterTypeChecker, ['reviewer', 'executor'])
         .addConditionalEdges('reviewer', routeAfterReviewer, [
-        'visual_qa',
+        'verification',
         'debugger',
         'finalize',
     ])
-        .addConditionalEdges('visual_qa', routeAfterVisualQa, ['functional_qa', 'increment_retry'])
-        .addConditionalEdges('functional_qa', routeAfterFunctionalQa, ['a11y_reviewer', 'increment_retry'])
-        .addConditionalEdges('a11y_reviewer', routeAfterA11yReviewer, ['e2e_test_generator', 'increment_retry'])
-        .addConditionalEdges('e2e_test_generator', routeAfterE2eTestGenerator, ['security_reviewer', 'increment_retry'])
-        .addConditionalEdges('security_reviewer', routeAfterSecurityReviewer, ['seo_meta', 'increment_retry'])
-        .addConditionalEdges('seo_meta', routeAfterSeoMeta, ['finalize']);
+        .addConditionalEdges('verification', routeAfterVerification, [
+        'finalize',
+        'increment_retry',
+    ]);
     return workflow.compile({ checkpointer });
 }
 //# sourceMappingURL=graph.js.map

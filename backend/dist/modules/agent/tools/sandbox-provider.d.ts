@@ -35,6 +35,7 @@ export declare class SandboxProvider {
         templateId?: string;
     }): Promise<StartPocketBaseResult>;
     restartPreview(): Promise<boolean>;
+    ensurePreviewRunning(): Promise<boolean>;
     isPreviewHealthy(): Promise<boolean>;
     installPackage(packageName: string): Promise<CommandResult>;
     private toRelativePath;

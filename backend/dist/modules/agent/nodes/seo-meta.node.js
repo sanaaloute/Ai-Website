@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.runSeoMeta = runSeoMeta;
 exports.seoMetaNode = seoMetaNode;
 const route_discovery_1 = require("../utils/route-discovery");
 const stream_writer_1 = require("../tools/stream-writer");
@@ -25,15 +26,13 @@ async function generateMetaDescription(state, deps) {
         description: `Welcome to ${siteName}.`,
     };
 }
-async function seoMetaNode(state, deps) {
+async function runSeoMeta(state, deps, previewUrl, routesSource) {
     const sandboxId = state.sandboxId;
     try {
         await deps.emit({
             type: 'status',
             data: { status: 'reviewing', message: 'Generating SEO meta tags, robots.txt, and sitemap...' },
         });
-        const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
-        const routesSource = await (0, route_discovery_1.readRoutes)(deps.e2b, sandboxId);
         const routes = (0, route_discovery_1.discoverRoutes)(routesSource, state.needsIntegration);
         const { title, description } = await generateMetaDescription(state, deps);
         const metaBlock = [
@@ -73,8 +72,14 @@ async function seoMetaNode(state, deps) {
         deps.logger.error(`SEO meta node failed: ${message}`);
         return {
             seoGenerated: false,
+            verificationFailures: [`seo_meta: ${message}`],
             messages: [{ role: 'assistant', content: `SEO generation error: ${message}` }],
         };
     }
+}
+async function seoMetaNode(state, deps) {
+    const previewUrl = await deps.e2b.getPreviewUrl(state.sandboxId);
+    const routesSource = (await deps.e2b.readFile(state.sandboxId, 'src/lib/routes.ts')) ?? '';
+    return runSeoMeta(state, deps, previewUrl, routesSource);
 }
 //# sourceMappingURL=seo-meta.node.js.map

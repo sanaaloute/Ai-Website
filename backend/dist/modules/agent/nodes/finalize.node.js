@@ -28,10 +28,9 @@ async function finalizeNode(state, deps) {
                 };
             }
         }
-        const previewHealthy = await tools.isPreviewHealthy();
-        if (!previewHealthy) {
+        if (!state.previewHealthy) {
             await deps.emit({ type: 'status', data: { status: 'finalizing', message: 'Starting preview server...' } });
-            await tools.restartPreview();
+            await tools.ensurePreviewRunning();
         }
         const previewUrl = await tools.getSandboxUrl();
         const filesWritten = state.filesWritten ?? [];
