@@ -13,14 +13,12 @@ async function runTemplateCopy(deps, sandboxId, category) {
         templateFiles = await deps.templateService.getGenericTemplate();
         resolvedCategory = 'generic';
     }
-    const framework = await deps.templateService.getTemplateKind(resolvedCategory);
     const templateEntries = Object.entries(templateFiles)
         .filter(([filePath]) => !(0, e2b_service_1.isForbiddenPath)(filePath))
         .map(([filePath, content]) => ({ relativePath: filePath, content }));
     const written = await deps.e2b.writeFilesBatch(sandboxId, templateEntries);
     return {
         category: resolvedCategory,
-        framework,
         templateFiles,
         writtenCount: written.length,
     };
@@ -89,7 +87,6 @@ async function templateSelectorNode(state, deps) {
         (0, cancellation_1.throwIfCancelled)(deps.signal);
         await tools.ensureAlive(state.userId);
         let templateFiles;
-        let framework;
         let loadedCount = 0;
         const failedCount = 0;
         const pendingCopy = deps.templateCopy;
@@ -115,7 +112,6 @@ async function templateSelectorNode(state, deps) {
         }
         category = copyResult.category;
         templateFiles = copyResult.templateFiles;
-        framework = copyResult.framework;
         loadedCount = copyResult.writtenCount;
         for (const [filePath, content] of Object.entries(templateFiles)) {
             await deps.emit((0, tools_1.createFileUpdateEvent)(filePath, content, 'created'));
@@ -135,33 +131,23 @@ async function templateSelectorNode(state, deps) {
                 deps.logger.warn(`Failed to write design spec files: ${message}`);
             }
         }
-        await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring ${framework === 'next' ? 'database (Prisma)' : 'PocketBase'} for ${category}...` } });
+        await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring PocketBase for ${category}...` } });
         let backendReady = false;
-        if (framework === 'next') {
-            const next = await (0, e2b_service_1.withTransientRetry)('prepareNextSandbox', () => deps.e2b.prepareNextSandbox(state.sandboxId, category), deps.logger);
-            backendReady = next.ok;
-            if (!next.ok) {
-                deps.logger.warn(`Prisma setup failed for category ${category}; continuing without a migrated database`);
-            }
-        }
-        else {
-            const pbInfo = await (0, e2b_service_1.withTransientRetry)('reconfigurePocketbaseForCategory', () => deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category), deps.logger);
-            backendReady = !!pbInfo;
-            if (!pbInfo) {
-                deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
-            }
+        const pbInfo = await (0, e2b_service_1.withTransientRetry)('reconfigurePocketbaseForCategory', () => deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category), deps.logger);
+        backendReady = !!pbInfo;
+        if (!pbInfo) {
+            deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
         }
         const currentSandboxId = await tools.ensureAlive(state.userId);
         return {
             sandboxId: currentSandboxId,
             templateId: category,
-            framework,
             templateLoaded: true,
             packagesToInstall: [],
             packagesInstalled: [],
             dbSchemaTemplate: dbSchema,
             filesWritten: [],
-            messages: [{ role: 'assistant', content: `Loaded '${category}' (${framework}) template with ${loadedCount} files${failedCount ? ` (${failedCount} failed)` : ''}${backendReady ? (framework === 'next' ? ' and migrated the Prisma database' : ' and configured PocketBase') : ''}` }],
+            messages: [{ role: 'assistant', content: `Loaded '${category}' template with ${loadedCount} files${failedCount ? ` (${failedCount} failed)` : ''}${backendReady ? ' and configured PocketBase' : ''}` }],
         };
     }
     catch (e) {

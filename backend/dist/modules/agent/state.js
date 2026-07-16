@@ -13,7 +13,6 @@ exports.AgentStateAnnotation = langgraph_1.Annotation.Root({
     websiteCategory: (langgraph_1.Annotation),
     websiteType: (langgraph_1.Annotation),
     templateId: (langgraph_1.Annotation),
-    framework: (langgraph_1.Annotation),
     templateLoaded: (langgraph_1.Annotation),
     needsIntegration: (langgraph_1.Annotation),
     userPocketbaseConnected: (langgraph_1.Annotation),

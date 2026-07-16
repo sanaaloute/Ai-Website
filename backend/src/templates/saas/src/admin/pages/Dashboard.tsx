@@ -1,0 +1,126 @@
+import { useEffect, useState } from 'react';
+import { Tags, Users, Zap } from 'lucide-react';
+import {
+  listAllFeatures, listAllPlans, listAllSubscribers,
+  listAllUsers, type Subscribers,
+} from '@/lib/pocketbase';
+import { AdminCard, PageHeader, Skeleton } from '@/admin/components/ui';
+import { Badge } from '@/components/ui/Badge';
+import { useToast } from '@/hooks/useToast';
+
+export default function AdminDashboard() {
+  const { addToast } = useToast();
+  const [stats, setStats] = useState({
+    features: 0,
+    plans: 0,
+    subscribers: 0,
+    recentRequests: [] as Subscribers[],
+    users: 0,
+    loading: true
+  });
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const features = await listAllFeatures(1, 1);
+        const plans = await listAllPlans();
+        const subscribers = await listAllSubscribers(1, 5);
+        const users = await listAllUsers(1, 1);
+
+        setStats({
+          features: features.totalItems,
+          plans: plans.length,
+          subscribers: subscribers.totalItems,
+          recentRequests: subscribers.items,
+          users: users.totalItems,
+          loading: false,
+        });
+      } catch (err) {
+        addToast({
+          variant: 'error',
+          title: 'Failed to load dashboard',
+          message: err instanceof Error ? err.message : 'Could not load dashboard data.',
+        });
+        setStats((s) => ({ ...s, loading: false }));
+      }
+    }
+    load();
+  }, [addToast]);
+
+  const statCards = [
+    { label: 'Features', value: stats.features, icon: Zap },
+    { label: 'Subscribers', value: stats.subscribers, icon: Users },
+    { label: 'Plans', value: stats.plans, icon: Tags },
+    { label: 'Users', value: stats.users, icon: Users }
+  ];
+
+  if (stats.loading) {
+    return (
+      <div>
+        <PageHeader title="Dashboard" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <AdminCard key={i}>
+              <Skeleton className="h-16" />
+            </AdminCard>
+          ))}
+        </div>
+        <AdminCard className="mt-6 lg:col-span-2">
+          <Skeleton className="h-32" />
+        </AdminCard>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHeader title="Dashboard" />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((card) => (
+          <AdminCard key={card.label}>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-gray-100 p-2">
+                <card.icon className="h-5 w-5 text-gray-700" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">{card.label}</p>
+                <p className="text-2xl font-semibold text-gray-900">{card.value}</p>
+              </div>
+            </div>
+          </AdminCard>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <AdminCard className="lg:col-span-2">
+          <h2 className="text-lg font-semibold text-gray-900">Recent Subscribers</h2>
+          {stats.recentRequests.length === 0 ? (
+            <p className="mt-2 text-sm text-gray-600">No subscribers yet.</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[30rem] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-600">
+                    <th className="pb-2 font-medium">ID</th>
+                    <th className="pb-2 font-medium">User</th>
+                    <th className="pb-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.recentRequests.map((r) => (
+                    <tr key={r.id} className="border-b border-gray-100 last:border-0">
+                      <td className="py-3 font-medium text-gray-900">#{r.id.slice(-6)}</td>
+                      <td className="py-3 text-gray-600">{r.expand?.user?.email || r.user}</td>
+                      <td className="py-3"><Badge>{r.status}</Badge></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </AdminCard>
+      </div>
+    </div>
+  );
+}

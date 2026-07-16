@@ -107,16 +107,16 @@ export declare const queryDocsSchema: z.ZodObject<{
     tokens?: number | undefined;
 }>;
 export declare const frameworkDocsSchema: z.ZodObject<{
-    framework: z.ZodEnum<["react", "vite", "next", "nextjs", "prisma", "node", "nodejs", "pocketbase", "playwright"]>;
+    framework: z.ZodEnum<["react", "vite", "node", "nodejs", "pocketbase", "playwright"]>;
     query: z.ZodString;
     tokens: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     query: string;
-    framework: "react" | "vite" | "next" | "nextjs" | "prisma" | "node" | "nodejs" | "pocketbase" | "playwright";
+    framework: "react" | "pocketbase" | "node" | "vite" | "nodejs" | "playwright";
     tokens?: number | undefined;
 }, {
     query: string;
-    framework: "react" | "vite" | "next" | "nextjs" | "prisma" | "node" | "nodejs" | "pocketbase" | "playwright";
+    framework: "react" | "pocketbase" | "node" | "vite" | "nodejs" | "playwright";
     tokens?: number | undefined;
 }>;
 export declare const singleFrameworkDocsSchema: (framework: string) => z.ZodObject<{

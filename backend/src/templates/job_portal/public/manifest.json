@@ -1,9 +1,0 @@
-{
-  "name": "Job Portal",
-  "short_name": "Job Portal",
-  "description": "A generated full-stack app.",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0a0a0f",
-  "theme_color": "#6366f1"
-}

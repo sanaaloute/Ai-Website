@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI-Website App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Preview readiness handshake with the AI-Website workspace.
+      // The React app should set window.__aiWebsitePreviewReady = true once it mounts.
+      // If it doesn't, we report a blank-page/error state back to the parent.
+      window.__aiWebsitePreviewReady = false;
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          if (window.__aiWebsitePreviewReady) return;
+          var root = document.getElementById('root');
+          var isBlank = !root || root.childElementCount === 0;
+          if (window.parent !== window) {
+            window.parent.postMessage(
+              {
+                type: isBlank ? 'AI_WEBSITE_PREVIEW_ERROR' : 'AI_WEBSITE_PREVIEW_READY',
+                text: isBlank
+                  ? 'Preview rendered a blank page. The React app may have crashed during startup.'
+                  : undefined,
+                ts: Date.now(),
+              },
+              '*'
+            );
+          }
+        }, 5000);
+      });
+    </script>
+  </body>
+</html>

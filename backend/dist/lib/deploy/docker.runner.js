@@ -156,21 +156,18 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
                     `(deploy only supports PUBLIC repositories; make sure the repo is public)`);
             }
             const framework = params.framework ?? this.detectFramework(workspace);
-            if (framework !== 'next') {
-                return {
-                    ok: false,
-                    requestId,
-                    error: 'The docker self-host provider deploys Next.js (single-container) sites. ' +
-                        'Vite + PocketBase (multi-container) sites should use DEPLOY_PROVIDER=coolify.',
-                };
-            }
             const build = await docker(['build', '-t', image, '--label', 'aiwebsite.managed=true', '--label', `aiwebsite.site=${slug}`, workspace], { timeoutMs: (0, env_1.env)().siteBuildTimeoutSeconds * 1000 });
             if (build.code !== 0) {
                 throw new Error(`docker build failed: ${build.stderr || build.stdout}`);
             }
+            if (framework === 'vite') {
+                await this.deployPocketbase({ slug, domain, tls, workspace });
+            }
             await docker(['rm', '-f', container]);
-            await docker(['volume', 'create', volume]);
-            const runArgs = this.buildRunArgs({ slug, domain, domainUrl, tls, container, volume, image, params });
+            if (framework === 'next') {
+                await docker(['volume', 'create', volume]);
+            }
+            const runArgs = this.buildRunArgs({ slug, domain, domainUrl, tls, container, volume, image, framework, params });
             const start = await docker(runArgs, { timeoutMs: 60_000 });
             if (start.code !== 0) {
                 throw new Error(`docker run failed: ${(start.stderr || start.stdout).trim()}`);
@@ -216,18 +213,67 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
             return { success: false, app: { uuid: appUuid }, latestDeployment: { uuid: deploymentUuid } };
         }
     }
+    async deployPocketbase(args) {
+        const { slug, domain, tls, workspace } = args;
+        const pbDir = path.join(workspace, 'pocketbase');
+        if (!(0, node_fs_1.existsSync)(path.join(pbDir, 'Dockerfile'))) {
+            throw new Error('Vite + PocketBase site is missing pocketbase/Dockerfile in the exported repository.');
+        }
+        const network = (0, env_1.env)().siteNetwork;
+        const image = `aiwebsite/site-${slug}-pb:${Date.now()}`;
+        const container = `site-${slug}-pb`;
+        const volume = `${container}-data`;
+        const router = `site-${slug}-api`;
+        const build = await docker(['build', '-t', image, '--label', 'aiwebsite.managed=true', '--label', `aiwebsite.site=${slug}`, pbDir], { timeoutMs: (0, env_1.env)().siteBuildTimeoutSeconds * 1000 });
+        if (build.code !== 0) {
+            throw new Error(`pocketbase docker build failed: ${build.stderr || build.stdout}`);
+        }
+        await docker(['rm', '-f', container]);
+        await docker(['volume', 'create', volume]);
+        const runArgs = [
+            'run',
+            '-d',
+            '--name', container,
+            '--network', network,
+            '--restart', 'unless-stopped',
+            '--cpus', (0, env_1.env)().siteCpuLimit,
+            '--memory', (0, env_1.env)().siteMemoryLimit,
+            '-v', `${volume}:/pb/pb_data`,
+            '--label', 'aiwebsite.managed=true',
+            '--label', `aiwebsite.site=${slug}`,
+            '--label', 'traefik.enable=true',
+            '--label', `traefik.http.routers.${router}.rule=Host(\`${domain}\`) && PathPrefix(\`/api\`)`,
+            '--label', `traefik.http.routers.${router}.entrypoints=${tls ? 'websecure' : 'web'}`,
+            '--label', `traefik.http.services.${router}.loadbalancer.server.port=8090`,
+            '--label', `traefik.docker.network=${network}`,
+        ];
+        if (tls) {
+            runArgs.push('--label', `traefik.http.routers.${router}.tls.certresolver=le`);
+        }
+        runArgs.push(image);
+        const start = await docker(runArgs, { timeoutMs: 60_000 });
+        if (start.code !== 0) {
+            throw new Error(`pocketbase docker run failed: ${(start.stderr || start.stdout).trim()}`);
+        }
+    }
     buildRunArgs(args) {
-        const { slug, domain, domainUrl, tls, container, volume, image, params } = args;
+        const { slug, domain, domainUrl, tls, container, volume, image, framework, params } = args;
         const network = (0, env_1.env)().siteNetwork;
         const router = `site-${slug}`;
-        const siteEnv = {
-            DATABASE_URL: 'file:./data/dev.db',
-            JWT_SECRET: this.siteSecret(slug),
-            NEXT_PUBLIC_APP_URL: domainUrl,
-            NEXT_PUBLIC_SITE_NAME: params.projectName,
-            NODE_ENV: 'production',
-            ...(params.env ?? {}),
-        };
+        const siteEnv = framework === 'next'
+            ? {
+                DATABASE_URL: 'file:./data/dev.db',
+                JWT_SECRET: this.siteSecret(slug),
+                NEXT_PUBLIC_APP_URL: domainUrl,
+                NEXT_PUBLIC_SITE_NAME: params.projectName,
+                NODE_ENV: 'production',
+                ...(params.env ?? {}),
+            }
+            : {
+                VITE_POCKETBASE_URL: '/',
+                NODE_ENV: 'production',
+                ...(params.env ?? {}),
+            };
         const out = [
             'run',
             '-d',
@@ -241,8 +287,6 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
             (0, env_1.env)().siteCpuLimit,
             '--memory',
             (0, env_1.env)().siteMemoryLimit,
-            '-v',
-            `${volume}:/app/data`,
             '--label',
             'aiwebsite.managed=true',
             '--label',
@@ -254,6 +298,9 @@ let DockerDeployRunner = DockerDeployRunner_1 = class DockerDeployRunner {
             '--label',
             `traefik.http.routers.${router}.entrypoints=${tls ? 'websecure' : 'web'}`,
         ];
+        if (framework === 'next') {
+            out.push('-v', `${volume}:/app/data`);
+        }
         if (tls) {
             out.push('--label', `traefik.http.routers.${router}.tls.certresolver=le`);
         }

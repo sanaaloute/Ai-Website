@@ -5,7 +5,6 @@ export declare class TemplateService {
     private readonly skipDirs;
     constructor();
     listCategories(): Record<string, string>;
-    getTemplateKind(category: string): Promise<'next' | 'vite'>;
     getTemplateFiles(category: string): Promise<Record<string, string>>;
     getTemplateManifest(category: string): Promise<Record<string, unknown>>;
     getDbSchema(category: string): Promise<Record<string, unknown>>;

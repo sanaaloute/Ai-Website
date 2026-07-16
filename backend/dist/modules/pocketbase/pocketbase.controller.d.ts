@@ -6,6 +6,7 @@ declare class PrepareDeployDto {
     projectName: string;
     domain: string;
     pbSubdomainPrefix?: string;
+    category?: string;
 }
 export declare class PocketbaseController {
     private readonly pocketbase;

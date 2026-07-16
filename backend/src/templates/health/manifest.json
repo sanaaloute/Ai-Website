@@ -3,12 +3,9 @@
   "category": "health",
   "description": "Minimal scaffold for Health projects",
   "recommended_packages": [
-    "next",
+    "lucide-react",
+    "pocketbase",
     "react",
-    "react-dom",
-    "@prisma/client",
-    "prisma",
-    "lucide-react"
-  ],
-  "framework": "next"
+    "react-dom"
+  ]
 }

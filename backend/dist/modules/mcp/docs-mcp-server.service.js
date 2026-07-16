@@ -14,9 +14,6 @@ const env_1 = require("../../config/env");
 const FRAMEWORK_LIBRARY_IDS = {
     react: '/react/react',
     vite: '/vitejs/vite',
-    next: '/vercel/next.js',
-    nextjs: '/vercel/next.js',
-    prisma: '/prisma/prisma',
     node: '/nodejs/node',
     nodejs: '/nodejs/node',
     pocketbase: '/pocketbase/pocketbase',
@@ -234,7 +231,7 @@ exports.queryDocsSchema = zod_1.z.object({
     tokens: zod_1.z.number().optional().describe('Maximum tokens of documentation to retrieve (default 3000).'),
 });
 exports.frameworkDocsSchema = zod_1.z.object({
-    framework: zod_1.z.enum(['react', 'vite', 'next', 'nextjs', 'prisma', 'node', 'nodejs', 'pocketbase', 'playwright']).describe('Framework shorthand.'),
+    framework: zod_1.z.enum(['react', 'vite', 'node', 'nodejs', 'pocketbase', 'playwright']).describe('Framework shorthand.'),
     query: zod_1.z.string().describe('The specific API or topic to look up.'),
     tokens: zod_1.z.number().optional().describe('Maximum tokens of documentation to retrieve (default 3000).'),
 });

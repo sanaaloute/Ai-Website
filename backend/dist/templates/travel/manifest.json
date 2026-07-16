@@ -3,12 +3,9 @@
   "category": "travel",
   "description": "Minimal scaffold for Travel projects",
   "recommended_packages": [
-    "next",
+    "lucide-react",
+    "pocketbase",
     "react",
-    "react-dom",
-    "@prisma/client",
-    "prisma",
-    "lucide-react"
-  ],
-  "framework": "next"
+    "react-dom"
+  ]
 }

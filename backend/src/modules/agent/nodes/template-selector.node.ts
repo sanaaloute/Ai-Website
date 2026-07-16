@@ -6,7 +6,6 @@ import { throwIfCancelled } from '@/lib/cancellation';
 
 export interface TemplateCopyResult {
   category: string;
-  framework: 'next' | 'vite';
   templateFiles: Record<string, string>;
   writtenCount: number;
 }
@@ -29,15 +28,12 @@ async function runTemplateCopy(
     resolvedCategory = 'generic';
   }
 
-  const framework = await deps.templateService.getTemplateKind(resolvedCategory);
-
   const templateEntries = Object.entries(templateFiles)
     .filter(([filePath]) => !isForbiddenPath(filePath))
     .map(([filePath, content]) => ({ relativePath: filePath, content }));
   const written = await deps.e2b.writeFilesBatch(sandboxId, templateEntries);
   return {
     category: resolvedCategory,
-    framework,
     templateFiles,
     writtenCount: written.length,
   };
@@ -121,9 +117,6 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
     throwIfCancelled(deps.signal);
     await tools.ensureAlive(state.userId);
 
-    // Detect the template framework (next | vite) so downstream setup branches
-    // to the right runtime (Next.js + Prisma vs Vite + PocketBase).
-    //
     // The template copy may have been started in parallel during the designer
     // node (see startTemplateCopy). If so, await its result; otherwise copy
     // the template now in a single batched upload (one mkdir + one multipart
@@ -134,7 +127,6 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
     // are scaffold, not agent-generated changes, and including them causes the
     // reviewer to waste context reading the entire template.
     let templateFiles: Record<string, string>;
-    let framework: 'next' | 'vite';
     let loadedCount = 0;
     const failedCount = 0;
 
@@ -161,7 +153,6 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
 
     category = copyResult.category;
     templateFiles = copyResult.templateFiles;
-    framework = copyResult.framework;
     loadedCount = copyResult.writtenCount;
     // Stream lightweight file_update events so the frontend knows the
     // template files exist and can fetch their content lazily.
@@ -188,29 +179,17 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
       }
     }
 
-    // Configure the sandbox backend to match the selected category/framework.
-    await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring ${framework === 'next' ? 'database (Prisma)' : 'PocketBase'} for ${category}...` } });
+    // Configure the PocketBase backend to match the selected category.
+    await deps.emit({ type: 'status', data: { status: 'executing', message: `Configuring PocketBase for ${category}...` } });
     let backendReady = false;
-    if (framework === 'next') {
-      const next = await withTransientRetry(
-        'prepareNextSandbox',
-        () => deps.e2b.prepareNextSandbox(state.sandboxId, category),
-        deps.logger,
-      );
-      backendReady = next.ok;
-      if (!next.ok) {
-        deps.logger.warn(`Prisma setup failed for category ${category}; continuing without a migrated database`);
-      }
-    } else {
-      const pbInfo = await withTransientRetry(
-        'reconfigurePocketbaseForCategory',
-        () => deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category),
-        deps.logger,
-      );
-      backendReady = !!pbInfo;
-      if (!pbInfo) {
-        deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
-      }
+    const pbInfo = await withTransientRetry(
+      'reconfigurePocketbaseForCategory',
+      () => deps.e2b.reconfigurePocketbaseForCategory(state.sandboxId, category),
+      deps.logger,
+    );
+    backendReady = !!pbInfo;
+    if (!pbInfo) {
+      deps.logger.warn(`PocketBase reconfiguration failed for category ${category}; continuing without live backend`);
     }
 
     const currentSandboxId = await tools.ensureAlive(state.userId);
@@ -218,14 +197,13 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
     return {
       sandboxId: currentSandboxId,
       templateId: category,
-      framework,
       templateLoaded: true,
       packagesToInstall: [],
       packagesInstalled: [],
       dbSchemaTemplate: dbSchema,
       // Do not return template files as filesWritten — they are not agent changes.
       filesWritten: [],
-      messages: [{ role: 'assistant', content: `Loaded '${category}' (${framework}) template with ${loadedCount} files${failedCount ? ` (${failedCount} failed)` : ''}${backendReady ? (framework === 'next' ? ' and migrated the Prisma database' : ' and configured PocketBase') : ''}` }],
+      messages: [{ role: 'assistant', content: `Loaded '${category}' template with ${loadedCount} files${failedCount ? ` (${failedCount} failed)` : ''}${backendReady ? ' and configured PocketBase' : ''}` }],
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

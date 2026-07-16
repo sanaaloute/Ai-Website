@@ -3,12 +3,9 @@
   "category": "portfolio",
   "description": "Minimal scaffold for Portfolio projects",
   "recommended_packages": [
-    "next",
+    "lucide-react",
+    "pocketbase",
     "react",
-    "react-dom",
-    "@prisma/client",
-    "prisma",
-    "lucide-react"
-  ],
-  "framework": "next"
+    "react-dom"
+  ]
 }

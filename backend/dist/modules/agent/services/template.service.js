@@ -141,26 +141,6 @@ let TemplateService = TemplateService_1 = class TemplateService {
     listCategories() {
         return { ...TEMPLATE_CATEGORIES };
     }
-    async getTemplateKind(category) {
-        const dir = this.resolveCategoryDir(category);
-        try {
-            const manifest = await this.getTemplateManifest(category);
-            const fw = manifest.framework;
-            if (fw === 'next' || fw === 'vite')
-                return fw;
-        }
-        catch {
-        }
-        const nextConfigs = ['next.config.ts', 'next.config.js', 'next.config.mjs', 'next.config.cjs'];
-        for (const name of nextConfigs) {
-            if ((0, fs_1.existsSync)(path.join(dir, name)))
-                return 'next';
-        }
-        if ((0, fs_1.existsSync)(path.join(dir, 'src', 'app')) && !(0, fs_1.existsSync)(path.join(dir, 'vite.config.ts'))) {
-            return 'next';
-        }
-        return 'vite';
-    }
     async getTemplateFiles(category) {
         const templateDir = this.resolveCategoryDir(category);
         try {
@@ -183,8 +163,7 @@ let TemplateService = TemplateService_1 = class TemplateService {
             return {
                 name: category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
                 category,
-                framework: 'next',
-                recommended_packages: ['next', 'react', 'react-dom', '@prisma/client', 'prisma', 'lucide-react'],
+                recommended_packages: ['react', 'react-dom', 'lucide-react', 'pocketbase'],
             };
         }
     }
@@ -250,7 +229,7 @@ let TemplateService = TemplateService_1 = class TemplateService {
     }
     injectSharedFiles(files) {
         const result = { ...files };
-        const bridgePath = path.join(this.templatesDir, '_shared', 'lovecode-editor-bridge.js');
+        const bridgePath = path.join(this.templatesDir, '_shared', 'ai-website-editor-bridge.js');
         let bridgeContent = null;
         try {
             bridgeContent = (0, fs_1.existsSync)(bridgePath) ? (0, fs_1.readFileSync)(bridgePath, 'utf-8') : null;
@@ -259,10 +238,10 @@ let TemplateService = TemplateService_1 = class TemplateService {
             this.logger.warn(`Could not read visual-editing bridge ${bridgePath}: ${err instanceof Error ? err.message : String(err)}`);
         }
         if (bridgeContent) {
-            result['public/lovecode-editor-bridge.js'] = bridgeContent;
+            result['public/ai-website-editor-bridge.js'] = bridgeContent;
             const indexHtml = result['index.html'];
-            if (indexHtml && !indexHtml.includes('lovecode-editor-bridge.js')) {
-                result['index.html'] = indexHtml.replace('</body>', '  <script src="/lovecode-editor-bridge.js"></script>\n  </body>');
+            if (indexHtml && !indexHtml.includes('ai-website-editor-bridge.js')) {
+                result['index.html'] = indexHtml.replace('</body>', '  <script src="/ai-website-editor-bridge.js"></script>\n  </body>');
             }
         }
         const sharedDir = path.join(this.templatesDir, '_shared');

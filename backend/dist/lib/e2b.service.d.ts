@@ -8,7 +8,6 @@ export declare function withTransientRetry<T>(label: string, fn: () => Promise<T
 }, maxAttempts?: number, delayMs?: number): Promise<T>;
 export declare const FORBIDDEN_PATH_PREFIXES: string[];
 export declare const FORBIDDEN_FILE_NAMES: Set<string>;
-export type SandboxFramework = 'next' | 'vite';
 export declare function isForbiddenPath(relativePath: string): boolean;
 export declare class E2BNotConfiguredError extends Error {
     constructor();
@@ -27,7 +26,6 @@ export declare class E2BService {
     private readonly entitlements;
     private readonly logger;
     private readonly sandboxes;
-    private readonly frameworks;
     constructor(state: SandboxStateService, entitlements: EntitlementsService);
     get configured(): boolean;
     createSandbox(opts?: {
@@ -103,14 +101,9 @@ export declare class E2BService {
         adminEmail: string;
         adminPassword: string;
     } | null>;
-    prepareNextSandbox(sandboxId: string, _category: string): Promise<{
-        ok: boolean;
-        url: string;
-    }>;
     private ensurePocketbaseAdminUser;
     private initializeProject;
     private previewUrl;
-    detectFramework(sandboxId: string): Promise<SandboxFramework>;
     getPreviewUrl(sandboxId: string): Promise<string>;
     getSandboxUrl(sandboxId: string): Promise<string>;
 }

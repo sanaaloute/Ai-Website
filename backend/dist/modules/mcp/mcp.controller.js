@@ -26,7 +26,7 @@ let McpController = McpController_1 = class McpController {
         this.transports = new Map();
     }
     createServer() {
-        const server = new index_js_1.Server({ name: 'lovecode-docs', version: '1.0.0' }, { capabilities: { tools: {} } });
+        const server = new index_js_1.Server({ name: 'ai-website-docs', version: '1.0.0' }, { capabilities: { tools: {} } });
         server.setRequestHandler(types_js_1.ListToolsRequestSchema, async () => ({
             tools: [
                 {
@@ -56,13 +56,13 @@ let McpController = McpController_1 = class McpController {
                 },
                 {
                     name: 'framework_docs',
-                    description: 'Fetch up-to-date documentation for a supported framework (react, vite, next, prisma, node, pocketbase, playwright).',
+                    description: 'Fetch up-to-date documentation for a supported framework (react, vite, node, pocketbase, playwright).',
                     inputSchema: {
                         type: 'object',
                         properties: {
                             framework: {
                                 type: 'string',
-                                enum: ['react', 'vite', 'next', 'nextjs', 'prisma', 'node', 'nodejs', 'pocketbase', 'playwright'],
+                                enum: ['react', 'vite', 'node', 'nodejs', 'pocketbase', 'playwright'],
                                 description: 'Framework shorthand.',
                             },
                             query: { type: 'string', description: 'The specific API or topic to look up.' },

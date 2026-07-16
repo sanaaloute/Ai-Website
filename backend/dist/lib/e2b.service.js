@@ -50,7 +50,6 @@ const common_1 = require("@nestjs/common");
 const e2b_1 = require("e2b");
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
-const node_crypto_1 = require("node:crypto");
 const env_1 = require("../config/env");
 const pocketbase_service_1 = require("./pocketbase.service");
 const entitlements_service_1 = require("../modules/billing/entitlements.service");
@@ -58,9 +57,7 @@ const template_service_1 = require("../modules/agent/services/template.service")
 const sandbox_state_service_1 = require("./sandbox-state.service");
 exports.WORKDIR = '/home/user/app';
 const PORT = 5173;
-const NEXT_PORT = 3000;
 const VITE_LOG = '/tmp/vite.log';
-const NEXT_LOG = '/tmp/next.log';
 const POCKETBASE_PORT = 8090;
 const POCKETBASE_DIR = '/home/user/pb';
 const POCKETBASE_VERSION = '0.22.46';
@@ -114,12 +111,6 @@ exports.FORBIDDEN_FILE_NAMES = new Set([
     'pnpm-lock.yaml',
     'bun.lockb',
 ]);
-function portFor(framework) {
-    return framework === 'next' ? NEXT_PORT : PORT;
-}
-function logFor(framework) {
-    return framework === 'next' ? NEXT_LOG : VITE_LOG;
-}
 function isForbiddenPath(relativePath) {
     const normalized = path.posix.normalize(relativePath).replace(/^\.\//, '').replace(/^\//, '');
     if (exports.FORBIDDEN_PATH_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
@@ -162,7 +153,6 @@ let E2BService = E2BService_1 = class E2BService {
         this.entitlements = entitlements;
         this.logger = new common_1.Logger(E2BService_1.name);
         this.sandboxes = new Map();
-        this.frameworks = new Map();
     }
     get configured() {
         return !!(0, env_1.env)().e2bApiKey;
@@ -199,7 +189,6 @@ let E2BService = E2BService_1 = class E2BService {
             throw new E2BProviderError(message);
         }
         this.sandboxes.set(sandbox.sandboxId, sandbox);
-        this.frameworks.set(sandbox.sandboxId, 'vite');
         const createdAt = new Date().toISOString();
         const endAt = new Date(Date.now() + SANDBOX_LIFETIME_MS).toISOString();
         let initRes;
@@ -839,24 +828,18 @@ let E2BService = E2BService_1 = class E2BService {
         if (!this.configured) {
             throw new E2BNotConfiguredError();
         }
-        const framework = await this.detectFramework(sandboxId);
-        const log = logFor(framework);
-        const killPattern = framework === 'next' ? 'pkill -f "[n]ext" || true' : 'pkill -f "[v]ite" || true';
-        await this.runCommand(sandboxId, killPattern, exports.WORKDIR);
+        await this.runCommand(sandboxId, 'pkill -f "[v]ite" || true', exports.WORKDIR);
         const sandbox = await this.getSandbox(sandboxId);
         if (!sandbox) {
             throw new SandboxNotFoundError();
         }
         await this.runCommand(sandboxId, 'test -d node_modules || npm install', exports.WORKDIR, { timeoutMs: 300_000 });
-        if (framework === 'next') {
-            await this.runCommand(sandboxId, 'test -d node_modules/@prisma/client || npx prisma generate', exports.WORKDIR, { timeoutMs: 180_000 });
-        }
-        const res = await this.runCommand(sandboxId, `setsid nohup npm run dev > ${log} 2>&1 < /dev/null &`, exports.WORKDIR);
+        const res = await this.runCommand(sandboxId, `setsid nohup npm run dev > ${VITE_LOG} 2>&1 < /dev/null &`, exports.WORKDIR);
         if (res.exitCode !== 0) {
             return false;
         }
-        const url = this.previewUrl(sandbox, framework);
-        const deadline = Date.now() + (framework === 'next' ? 90_000 : 60_000);
+        const url = this.previewUrl(sandbox);
+        const deadline = Date.now() + 60_000;
         while (Date.now() < deadline) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             const health = await this.previewHealth(url);
@@ -864,11 +847,11 @@ let E2BService = E2BService_1 = class E2BService {
                 return true;
             }
         }
-        const logResult = await this.runCommand(sandboxId, `tail -n 60 ${log} 2>/dev/null || echo "(no dev log)"`, exports.WORKDIR);
+        const logResult = await this.runCommand(sandboxId, `tail -n 60 ${VITE_LOG} 2>/dev/null || echo "(no vite log)"`, exports.WORKDIR);
         const lastHealth = await this.previewHealth(url);
-        this.logger.warn(`${framework === 'next' ? 'Next.js' : 'Vite'} dev server for sandbox ${sandboxId} did not become reachable within ${framework === 'next' ? 90 : 60}s. ` +
+        this.logger.warn(`Vite dev server for sandbox ${sandboxId} did not become reachable within 60s. ` +
             `Status code: ${lastHealth.statusCode ?? 'none'}. ` +
-            `Recent log:\n${logResult.output || logResult.error || '(empty)'}`);
+            `Recent vite log:\n${logResult.output || logResult.error || '(empty)'}`);
         return false;
     }
     async previewHealth(previewUrl) {
@@ -1061,44 +1044,6 @@ let E2BService = E2BService_1 = class E2BService {
         await this.ensurePocketbaseAdminUser(pbInfo);
         return pbInfo;
     }
-    async prepareNextSandbox(sandboxId, _category) {
-        if (!this.configured) {
-            throw new E2BNotConfiguredError();
-        }
-        const sandbox = await this.getSandbox(sandboxId);
-        if (!sandbox) {
-            throw new SandboxNotFoundError();
-        }
-        this.frameworks.set(sandboxId, 'next');
-        const appUrl = `https://${sandbox.getHost(NEXT_PORT)}`;
-        const jwtSecret = (0, node_crypto_1.randomBytes)(32).toString('hex');
-        const envContents = [
-            'DATABASE_URL=file:./dev.db',
-            `JWT_SECRET=${jwtSecret}`,
-            `NEXT_PUBLIC_APP_URL=${appUrl}`,
-            'NEXT_PUBLIC_SITE_NAME=My App',
-        ].join('\n') + '\n';
-        try {
-            await sandbox.files.write(`${exports.WORKDIR}/.env`, envContents);
-        }
-        catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            this.logger.warn(`Could not write Next.js .env for sandbox ${sandboxId}: ${message}`);
-        }
-        await this.runCommand(sandboxId, 'pkill -f "[p]ocketbase serve" || true', exports.WORKDIR);
-        await this.runCommand(sandboxId, 'test -d node_modules || npm install', exports.WORKDIR, { timeoutMs: 300_000 });
-        await this.runCommand(sandboxId, 'npx prisma generate', exports.WORKDIR, { timeoutMs: 180_000 });
-        const push = await this.runCommand(sandboxId, 'npx prisma db push --accept-data-loss --skip-generate', exports.WORKDIR, { timeoutMs: 180_000 });
-        if (push.exitCode !== 0) {
-            this.logger.warn(`prisma db push failed for sandbox ${sandboxId}: ${push.error || push.output}`);
-            return { ok: false, url: appUrl };
-        }
-        const seed = await this.runCommand(sandboxId, 'npx prisma db seed', exports.WORKDIR, { timeoutMs: 120_000 });
-        if (seed.exitCode !== 0) {
-            this.logger.warn(`prisma db seed failed for sandbox ${sandboxId}: ${seed.error || seed.output}`);
-        }
-        return { ok: true, url: appUrl };
-    }
     async ensurePocketbaseAdminUser(pbInfo) {
         const maxAttempts = 5;
         const baseDelayMs = 500;
@@ -1183,24 +1128,8 @@ let E2BService = E2BService_1 = class E2BService {
         }
         return { ok: true, output: '', error: '', exitCode: 0 };
     }
-    previewUrl(sandbox, framework = 'vite') {
-        return `https://${sandbox.getHost(portFor(framework))}`;
-    }
-    async detectFramework(sandboxId) {
-        const cached = this.frameworks.get(sandboxId);
-        if (cached)
-            return cached;
-        let framework = 'vite';
-        try {
-            const probe = await this.runCommand(sandboxId, `if ls ${exports.WORKDIR}/next.config.* >/dev/null 2>&1; then echo next; elif [ -d ${exports.WORKDIR}/src/app ] && [ ! -f ${exports.WORKDIR}/vite.config.ts ]; then echo next; else echo vite; fi`, exports.WORKDIR);
-            if (probe.output.trim() === 'next')
-                framework = 'next';
-        }
-        catch {
-            framework = 'vite';
-        }
-        this.frameworks.set(sandboxId, framework);
-        return framework;
+    previewUrl(sandbox) {
+        return `https://${sandbox.getHost(PORT)}`;
     }
     async getPreviewUrl(sandboxId) {
         if (!this.configured) {
@@ -1210,8 +1139,7 @@ let E2BService = E2BService_1 = class E2BService {
         if (!sandbox) {
             throw new SandboxNotFoundError();
         }
-        const framework = await this.detectFramework(sandboxId);
-        return this.previewUrl(sandbox, framework);
+        return this.previewUrl(sandbox);
     }
     async getSandboxUrl(sandboxId) {
         return this.getPreviewUrl(sandboxId);

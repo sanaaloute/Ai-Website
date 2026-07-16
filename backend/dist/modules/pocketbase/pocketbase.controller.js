@@ -52,6 +52,7 @@ let PocketbaseController = class PocketbaseController {
             projectName: body.projectName,
             domain: body.domain,
             pbSubdomainPrefix: body.pbSubdomainPrefix,
+            category: body.category,
         });
         return {
             success: true,

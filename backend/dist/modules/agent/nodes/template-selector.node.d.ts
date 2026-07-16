@@ -2,7 +2,6 @@ import { AgentState } from '../state';
 import { GraphDependencies } from '../graph';
 export interface TemplateCopyResult {
     category: string;
-    framework: 'next' | 'vite';
     templateFiles: Record<string, string>;
     writtenCount: number;
 }

@@ -109,9 +109,7 @@ let SandboxController = SandboxController_1 = class SandboxController {
     async sandboxLogs(sandboxId) {
         if (!sandboxId)
             throw new common_1.HttpException({ success: false, error: 'sandboxId required' }, common_1.HttpStatus.BAD_REQUEST);
-        const framework = await this.e2b.detectFramework(sandboxId);
-        const logFile = framework === 'next' ? '/tmp/next.log' : '/tmp/vite.log';
-        const cmd = await this.e2b.runCommand(sandboxId, `tail -n 50 ${logFile} 2>/dev/null || echo "No logs yet"`);
+        const cmd = await this.e2b.runCommand(sandboxId, `tail -n 50 /tmp/vite.log 2>/dev/null || echo "No logs yet"`);
         return { success: true, logs: cmd.output.split('\n'), status: cmd.exitCode === 0 ? 'running' : 'stopped' };
     }
     async getSandboxSnapshot(user, projectId, sandboxId) {

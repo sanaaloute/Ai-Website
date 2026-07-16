@@ -24,7 +24,7 @@ async function databaseInitializerNode(state, deps) {
     try {
         await deps.emit({
             type: 'status',
-            data: { status: 'analyzing', message: `Verifying ${state.framework === 'next' ? 'Prisma tables' : 'PocketBase collections'} for ${category}...` },
+            data: { status: 'analyzing', message: `Verifying PocketBase collections for ${category}...` },
         });
         const status = await (0, e2b_service_1.withTransientRetry)('verifyAndSeed', () => deps.databaseSeeder.verifyAndSeed(state.sandboxId, category, state.dbSchemaTemplate), deps.logger);
         const message = status.message;

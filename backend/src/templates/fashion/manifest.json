@@ -3,12 +3,9 @@
   "category": "fashion",
   "description": "Minimal scaffold for Fashion projects",
   "recommended_packages": [
-    "next",
+    "lucide-react",
+    "pocketbase",
     "react",
-    "react-dom",
-    "@prisma/client",
-    "prisma",
-    "lucide-react"
-  ],
-  "framework": "next"
+    "react-dom"
+  ]
 }

@@ -43,13 +43,6 @@ export class DatabaseSeederService {
     category: string,
     dbSchemaTemplate?: Record<string, unknown>,
   ): Promise<DatabaseStatus> {
-    // Next.js + Prisma templates have no PocketBase; verify the SQLite DB via
-    // the libSQL client instead.
-    const framework = await this.e2b.detectFramework(sandboxId);
-    if (framework === 'next') {
-      return this.verifyAndSeedPrisma(sandboxId, category, dbSchemaTemplate);
-    }
-
     const pbInfo = await this.e2b.getPocketbaseInfo(sandboxId);
     if (!pbInfo) {
       return this.buildStatus('PocketBase is not configured for this sandbox', [], false);
@@ -160,72 +153,6 @@ export class DatabaseSeederService {
       dataAvailable,
       message,
     };
-  }
-
-  /**
-   * Verify a Next.js + Prisma template. Applies the schema (idempotent
-   * `prisma db push`), runs the idempotent seed, then counts rows per base
-   * table directly from the SQLite file using the libSQL client.
-   */
-  private async verifyAndSeedPrisma(
-    sandboxId: string,
-    category: string,
-    dbSchemaTemplate?: Record<string, unknown>,
-  ): Promise<DatabaseStatus> {
-    const expected = this.extractExpectedCollections(dbSchemaTemplate, category);
-    if (!expected.length) {
-      return this.buildStatus(`No Prisma schema found for category ${category}`, [], false);
-    }
-
-    await this.e2b.runCommand(sandboxId, 'test -d node_modules || npm install', undefined, { timeoutMs: 300_000 });
-    await this.e2b.runCommand(sandboxId, 'test -d node_modules/@prisma/client || npx prisma generate', undefined, { timeoutMs: 180_000 });
-    const push = await this.e2b.runCommand(
-      sandboxId,
-      'npx prisma db push --accept-data-loss --skip-generate',
-      undefined,
-      { timeoutMs: 180_000 },
-    );
-    if (push.exitCode !== 0) {
-      return this.buildStatus(`prisma db push failed: ${push.error || push.output}`, [], false);
-    }
-    await this.e2b.runCommand(sandboxId, 'npx prisma db seed', undefined, { timeoutMs: 120_000 });
-
-    const tables = expected.map((c) => c.name);
-    const script = [
-      "import { createClient } from '@libsql/client';",
-      "const db = createClient({ url: 'file:./dev.db' });",
-      "const out = {};",
-      "for (const t of process.argv.slice(2)) {",
-      "  try { const r = await db.execute('SELECT COUNT(*) AS c FROM ' + t); out[t] = Number(r.rows[0].c); }",
-      '  catch { out[t] = -1; }',
-      'console.log(JSON.stringify(out));',
-    ].join('\n');
-    const heredoc = `cat > /tmp/count.mjs <<'EOF'\n${script}\nEOF\nnode /tmp/count.mjs ${tables.join(' ')}`;
-    const res = await this.e2b.runCommand(sandboxId, heredoc, undefined, { timeoutMs: 60_000 });
-
-    let counts: Record<string, number> = {};
-    try {
-      const last = res.output.trim().split('\n').pop() || '{}';
-      counts = JSON.parse(last) as Record<string, number>;
-    } catch {
-      counts = {};
-    }
-
-    const statuses: DatabaseCollectionStatus[] = expected.map((c) => {
-      const n = counts[c.name];
-      const exists = typeof n === 'number' && n >= 0;
-      return { name: c.name, exists, recordCount: exists ? n : 0, seeded: 0 };
-    });
-
-    const allExist = statuses.every((s) => s.exists);
-    const dataAvailable = statuses.some((s) => s.exists && s.recordCount > 0);
-    const message = allExist
-      ? `Database verified for ${category}. ${statuses.length} tables are present.`
-      : `Database verification incomplete for ${category}. Missing: ${statuses
-          .filter((s) => !s.exists)
-          .map((s) => s.name)
-          .join(', ')}`;
-    return this.buildStatus(message, statuses, dataAvailable);
   }
 
   private extractExpectedCollections(

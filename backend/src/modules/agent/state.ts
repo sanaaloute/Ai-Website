@@ -106,7 +106,6 @@ export const AgentStateAnnotation = Annotation.Root({
   websiteCategory: Annotation<string | undefined>,
   websiteType: Annotation<string | undefined>,
   templateId: Annotation<string | undefined>,
-  framework: Annotation<'next' | 'vite' | undefined>,
   templateLoaded: Annotation<boolean | undefined>,
 
   // User Integrations

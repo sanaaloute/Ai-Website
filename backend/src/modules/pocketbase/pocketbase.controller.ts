@@ -19,6 +19,7 @@ class PrepareDeployDto {
   projectName!: string;
   domain!: string;
   pbSubdomainPrefix?: string;
+  category?: string;
 }
 
 @Controller('api/pocketbase')
@@ -65,6 +66,7 @@ export class PocketbaseController {
       projectName: body.projectName,
       domain: body.domain,
       pbSubdomainPrefix: body.pbSubdomainPrefix,
+      category: body.category,
     });
 
     return {

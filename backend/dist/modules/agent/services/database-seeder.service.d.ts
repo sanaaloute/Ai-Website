@@ -6,7 +6,6 @@ export declare class DatabaseSeederService {
     constructor(e2b: E2BService);
     verifyAndSeed(sandboxId: string, category: string, dbSchemaTemplate?: Record<string, unknown>): Promise<DatabaseStatus>;
     private buildStatus;
-    private verifyAndSeedPrisma;
     private extractExpectedCollections;
     private authenticateAdmin;
     private listCollections;

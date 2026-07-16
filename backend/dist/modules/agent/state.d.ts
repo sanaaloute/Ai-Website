@@ -107,8 +107,8 @@ export declare const AgentStateAnnotation: import("@langchain/langgraph").Annota
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     workflow: {
-        (annotation: import("@langchain/langgraph").SingleReducer<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined, "chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined>): import("@langchain/langgraph").BaseChannel<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined, "chat" | "new_app" | "edit" | "debug" | "review_fix" | import("@langchain/langgraph").OverwriteValue<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined> | undefined, unknown>;
-        (): import("@langchain/langgraph").LastValue<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined>;
+        (annotation: import("@langchain/langgraph").SingleReducer<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined, "new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined>): import("@langchain/langgraph").BaseChannel<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined, "new_app" | "edit" | "debug" | "chat" | "review_fix" | import("@langchain/langgraph").OverwriteValue<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined> | undefined, unknown>;
+        (): import("@langchain/langgraph").LastValue<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined>;
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     websiteCategory: {
@@ -124,11 +124,6 @@ export declare const AgentStateAnnotation: import("@langchain/langgraph").Annota
     templateId: {
         (annotation: import("@langchain/langgraph").SingleReducer<string | undefined, string | undefined>): import("@langchain/langgraph").BaseChannel<string | undefined, string | import("@langchain/langgraph").OverwriteValue<string | undefined> | undefined, unknown>;
         (): import("@langchain/langgraph").LastValue<string | undefined>;
-        Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
-    };
-    framework: {
-        (annotation: import("@langchain/langgraph").SingleReducer<"vite" | "next" | undefined, "vite" | "next" | undefined>): import("@langchain/langgraph").BaseChannel<"vite" | "next" | undefined, "vite" | "next" | import("@langchain/langgraph").OverwriteValue<"vite" | "next" | undefined> | undefined, unknown>;
-        (): import("@langchain/langgraph").LastValue<"vite" | "next" | undefined>;
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     templateLoaded: {

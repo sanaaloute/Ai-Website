@@ -11,7 +11,7 @@
 ### 1. Clone the repo on your server
 
 ```bash
-git clone https://github.com/<your-org>/daacoo.git
+git clone https://www.gitcc.com/elsone/daacoo.git
 cd daacoo
 ```
 

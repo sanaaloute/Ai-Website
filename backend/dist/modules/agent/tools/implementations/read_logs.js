@@ -54,7 +54,7 @@ class ReadLogsTool extends types_1.AgentTool {
             let logs = [];
             if (logType === "all" || logType === "server") {
                 try {
-                    const result = await this.agentContext.sandboxProvider.runCommand("cat /tmp/next.log /tmp/vite.log 2>/dev/null || echo ''");
+                    const result = await this.agentContext.sandboxProvider.runCommand("cat /tmp/vite.log 2>/dev/null || echo ''");
                     if (result.stdout) {
                         const lines = result.stdout.split("\n").filter((l) => l.trim());
                         logs.push(...lines.map((l) => `[server] ${l}`));

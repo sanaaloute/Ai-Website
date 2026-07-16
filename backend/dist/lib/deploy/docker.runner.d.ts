@@ -6,6 +6,7 @@ export declare class DockerDeployRunner implements DeployProvider {
     checkDomain(domain: string): Promise<DomainCheck>;
     deploy(params: DeployParams): Promise<DeployResult>;
     status(deploymentUuid: string, appUuid: string): Promise<Record<string, unknown>>;
+    private deployPocketbase;
     private buildRunArgs;
     private detectFramework;
     private container;

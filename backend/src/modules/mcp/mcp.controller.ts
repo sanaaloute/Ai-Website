@@ -47,13 +47,13 @@ export class McpController {
         },
         {
           name: 'framework_docs',
-          description: 'Fetch up-to-date documentation for a supported framework (react, vite, next, prisma, node, pocketbase, playwright).',
+          description: 'Fetch up-to-date documentation for a supported framework (react, vite, node, pocketbase, playwright).',
           inputSchema: {
             type: 'object',
             properties: {
               framework: {
                 type: 'string',
-                enum: ['react', 'vite', 'next', 'nextjs', 'prisma', 'node', 'nodejs', 'pocketbase', 'playwright'],
+                enum: ['react', 'vite', 'node', 'nodejs', 'pocketbase', 'playwright'],
                 description: 'Framework shorthand.',
               },
               query: { type: 'string', description: 'The specific API or topic to look up.' },

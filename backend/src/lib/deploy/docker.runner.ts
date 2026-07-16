@@ -164,18 +164,11 @@ export class DockerDeployRunner implements DeployProvider {
         );
       }
 
-      // 2) Framework guard: this runner handles single-container (Next.js)
-      //    sites. Multi-container (Vite + PocketBase) sites need Coolify.
+      // 2) Framework detection: Next.js sites deploy as a single container;
+      //    Vite + PocketBase sites deploy as frontend + PocketBase containers,
+      //    with Traefik routing /api to PocketBase (replacing the template's
+      //    nginx sidecar).
       const framework = params.framework ?? this.detectFramework(workspace);
-      if (framework !== 'next') {
-        return {
-          ok: false,
-          requestId,
-          error:
-            'The docker self-host provider deploys Next.js (single-container) sites. ' +
-            'Vite + PocketBase (multi-container) sites should use DEPLOY_PROVIDER=coolify.',
-        };
-      }
 
       // 3) Build the image from the template's Dockerfile.
       const build = await docker(
@@ -186,12 +179,20 @@ export class DockerDeployRunner implements DeployProvider {
         throw new Error(`docker build failed: ${build.stderr || build.stdout}`);
       }
 
-      // 4) Replace any previous container + ensure a persistent data volume.
+      // 3b) Vite sites need their PocketBase backend running behind /api.
+      if (framework === 'vite') {
+        await this.deployPocketbase({ slug, domain, tls, workspace });
+      }
+
+      // 4) Replace any previous container + ensure a persistent data volume
+      //    (Next.js/SQLite only; the Vite frontend serves a static bundle).
       await docker(['rm', '-f', container]);
-      await docker(['volume', 'create', volume]);
+      if (framework === 'next') {
+        await docker(['volume', 'create', volume]);
+      }
 
       // 5) Run with resource limits, a volume for SQLite, and Traefik labels.
-      const runArgs = this.buildRunArgs({ slug, domain, domainUrl, tls, container, volume, image, params });
+      const runArgs = this.buildRunArgs({ slug, domain, domainUrl, tls, container, volume, image, framework, params });
       const start = await docker(runArgs, { timeoutMs: 60_000 });
       if (start.code !== 0) {
         throw new Error(`docker run failed: ${(start.stderr || start.stdout).trim()}`);
@@ -240,6 +241,64 @@ export class DockerDeployRunner implements DeployProvider {
     }
   }
 
+  /**
+   * Deploy the PocketBase backend for a Vite + PocketBase site. Builds the
+   * template's pocketbase/Dockerfile (binary + migrations + hooks) and runs it
+   * behind Traefik at Host(domain) && PathPrefix(`/api`), matching the relative
+   * VITE_POCKETBASE_URL=/ baked into the frontend bundle. Traefik's rule-length
+   * priority makes the /api router win over the frontend's plain Host rule.
+   */
+  private async deployPocketbase(args: { slug: string; domain: string; tls: boolean; workspace: string }): Promise<void> {
+    const { slug, domain, tls, workspace } = args;
+    const pbDir = path.join(workspace, 'pocketbase');
+    if (!existsSync(path.join(pbDir, 'Dockerfile'))) {
+      throw new Error('Vite + PocketBase site is missing pocketbase/Dockerfile in the exported repository.');
+    }
+    const network = env().siteNetwork;
+    const image = `aiwebsite/site-${slug}-pb:${Date.now()}`;
+    const container = `site-${slug}-pb`;
+    const volume = `${container}-data`;
+    const router = `site-${slug}-api`;
+
+    const build = await docker(
+      ['build', '-t', image, '--label', 'aiwebsite.managed=true', '--label', `aiwebsite.site=${slug}`, pbDir],
+      { timeoutMs: env().siteBuildTimeoutSeconds * 1000 },
+    );
+    if (build.code !== 0) {
+      throw new Error(`pocketbase docker build failed: ${build.stderr || build.stdout}`);
+    }
+
+    await docker(['rm', '-f', container]);
+    await docker(['volume', 'create', volume]);
+
+    const runArgs = [
+      'run',
+      '-d',
+      '--name', container,
+      '--network', network,
+      '--restart', 'unless-stopped',
+      '--cpus', env().siteCpuLimit,
+      '--memory', env().siteMemoryLimit,
+      '-v', `${volume}:/pb/pb_data`,
+      '--label', 'aiwebsite.managed=true',
+      '--label', `aiwebsite.site=${slug}`,
+      '--label', 'traefik.enable=true',
+      '--label', `traefik.http.routers.${router}.rule=Host(\`${domain}\`) && PathPrefix(\`/api\`)`,
+      '--label', `traefik.http.routers.${router}.entrypoints=${tls ? 'websecure' : 'web'}`,
+      '--label', `traefik.http.services.${router}.loadbalancer.server.port=8090`,
+      '--label', `traefik.docker.network=${network}`,
+    ];
+    if (tls) {
+      runArgs.push('--label', `traefik.http.routers.${router}.tls.certresolver=le`);
+    }
+    runArgs.push(image);
+
+    const start = await docker(runArgs, { timeoutMs: 60_000 });
+    if (start.code !== 0) {
+      throw new Error(`pocketbase docker run failed: ${(start.stderr || start.stdout).trim()}`);
+    }
+  }
+
   private buildRunArgs(args: {
     slug: string;
     domain: string;
@@ -248,19 +307,29 @@ export class DockerDeployRunner implements DeployProvider {
     container: string;
     volume: string;
     image: string;
+    framework: 'next' | 'vite';
     params: DeployParams;
   }): string[] {
-    const { slug, domain, domainUrl, tls, container, volume, image, params } = args;
+    const { slug, domain, domainUrl, tls, container, volume, image, framework, params } = args;
     const network = env().siteNetwork;
     const router = `site-${slug}`;
-    const siteEnv: Record<string, string> = {
-      DATABASE_URL: 'file:./data/dev.db',
-      JWT_SECRET: this.siteSecret(slug),
-      NEXT_PUBLIC_APP_URL: domainUrl,
-      NEXT_PUBLIC_SITE_NAME: params.projectName,
-      NODE_ENV: 'production',
-      ...(params.env ?? {}),
-    };
+    const siteEnv: Record<string, string> =
+      framework === 'next'
+        ? {
+            DATABASE_URL: 'file:./data/dev.db',
+            JWT_SECRET: this.siteSecret(slug),
+            NEXT_PUBLIC_APP_URL: domainUrl,
+            NEXT_PUBLIC_SITE_NAME: params.projectName,
+            NODE_ENV: 'production',
+            ...(params.env ?? {}),
+          }
+        : {
+            // Vite inlines VITE_* at build time (the template Dockerfile bakes
+            // VITE_POCKETBASE_URL=/), so runtime env is informational only.
+            VITE_POCKETBASE_URL: '/',
+            NODE_ENV: 'production',
+            ...(params.env ?? {}),
+          };
 
     const out: string[] = [
       'run',
@@ -275,8 +344,6 @@ export class DockerDeployRunner implements DeployProvider {
       env().siteCpuLimit,
       '--memory',
       env().siteMemoryLimit,
-      '-v',
-      `${volume}:/app/data`,
       '--label',
       'aiwebsite.managed=true',
       '--label',
@@ -288,6 +355,9 @@ export class DockerDeployRunner implements DeployProvider {
       '--label',
       `traefik.http.routers.${router}.entrypoints=${tls ? 'websecure' : 'web'}`,
     ];
+    if (framework === 'next') {
+      out.push('-v', `${volume}:/app/data`);
+    }
     if (tls) {
       out.push('--label', `traefik.http.routers.${router}.tls.certresolver=le`);
     }

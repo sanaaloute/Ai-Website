@@ -10,9 +10,6 @@ export interface DocsToolResult {
 const FRAMEWORK_LIBRARY_IDS: Record<string, string> = {
   react: '/react/react',
   vite: '/vitejs/vite',
-  next: '/vercel/next.js',
-  nextjs: '/vercel/next.js',
-  prisma: '/prisma/prisma',
   node: '/nodejs/node',
   nodejs: '/nodejs/node',
   pocketbase: '/pocketbase/pocketbase',
@@ -266,7 +263,7 @@ export const queryDocsSchema = z.object({
 });
 
 export const frameworkDocsSchema = z.object({
-  framework: z.enum(['react', 'vite', 'next', 'nextjs', 'prisma', 'node', 'nodejs', 'pocketbase', 'playwright']).describe('Framework shorthand.'),
+  framework: z.enum(['react', 'vite', 'node', 'nodejs', 'pocketbase', 'playwright']).describe('Framework shorthand.'),
   query: z.string().describe('The specific API or topic to look up.'),
   tokens: z.number().optional().describe('Maximum tokens of documentation to retrieve (default 3000).'),
 });
