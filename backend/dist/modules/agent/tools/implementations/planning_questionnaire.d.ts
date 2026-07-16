@@ -11,48 +11,48 @@ declare const planningQuestionnaireSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         type: "text" | "radio" | "checkbox";
         question: string;
+        options?: string[] | undefined;
         id?: string | undefined;
         required?: boolean | undefined;
-        options?: string[] | undefined;
         placeholder?: string | undefined;
     }, {
         type: "text" | "radio" | "checkbox";
         question: string;
+        options?: string[] | undefined;
         id?: string | undefined;
         required?: boolean | undefined;
-        options?: string[] | undefined;
         placeholder?: string | undefined;
     }>, {
         type: "text" | "radio" | "checkbox";
         question: string;
+        options?: string[] | undefined;
         id?: string | undefined;
         required?: boolean | undefined;
-        options?: string[] | undefined;
         placeholder?: string | undefined;
     }, {
         type: "text" | "radio" | "checkbox";
         question: string;
+        options?: string[] | undefined;
         id?: string | undefined;
         required?: boolean | undefined;
-        options?: string[] | undefined;
         placeholder?: string | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     questions: {
         type: "text" | "radio" | "checkbox";
         question: string;
+        options?: string[] | undefined;
         id?: string | undefined;
         required?: boolean | undefined;
-        options?: string[] | undefined;
         placeholder?: string | undefined;
     }[];
 }, {
     questions: {
         type: "text" | "radio" | "checkbox";
         question: string;
+        options?: string[] | undefined;
         id?: string | undefined;
         required?: boolean | undefined;
-        options?: string[] | undefined;
         placeholder?: string | undefined;
     }[];
 }>;
@@ -70,48 +70,48 @@ export declare class PlanningQuestionnaireTool extends AgentTool {
         }, "strip", z.ZodTypeAny, {
             type: "text" | "radio" | "checkbox";
             question: string;
+            options?: string[] | undefined;
             id?: string | undefined;
             required?: boolean | undefined;
-            options?: string[] | undefined;
             placeholder?: string | undefined;
         }, {
             type: "text" | "radio" | "checkbox";
             question: string;
+            options?: string[] | undefined;
             id?: string | undefined;
             required?: boolean | undefined;
-            options?: string[] | undefined;
             placeholder?: string | undefined;
         }>, {
             type: "text" | "radio" | "checkbox";
             question: string;
+            options?: string[] | undefined;
             id?: string | undefined;
             required?: boolean | undefined;
-            options?: string[] | undefined;
             placeholder?: string | undefined;
         }, {
             type: "text" | "radio" | "checkbox";
             question: string;
+            options?: string[] | undefined;
             id?: string | undefined;
             required?: boolean | undefined;
-            options?: string[] | undefined;
             placeholder?: string | undefined;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
         questions: {
             type: "text" | "radio" | "checkbox";
             question: string;
+            options?: string[] | undefined;
             id?: string | undefined;
             required?: boolean | undefined;
-            options?: string[] | undefined;
             placeholder?: string | undefined;
         }[];
     }, {
         questions: {
             type: "text" | "radio" | "checkbox";
             question: string;
+            options?: string[] | undefined;
             id?: string | undefined;
             required?: boolean | undefined;
-            options?: string[] | undefined;
             placeholder?: string | undefined;
         }[];
     }>;

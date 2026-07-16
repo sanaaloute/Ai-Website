@@ -185,8 +185,11 @@ function routeAfterPreFlightValidator(_state: AgentState): string {
   return 'executor';
 }
 
-function routeAfterDebugger(state: AgentState): string {
-  return state.debugFixed ? 'reviewer' : 'executor';
+function routeAfterDebugger(_state: AgentState): string {
+  // The debugger is the dedicated fix agent for reviewer/type-checker issues.
+  // It always returns to the reviewer for re-verification; broad rewrites are
+  // intentionally not handed back to the executor.
+  return 'reviewer';
 }
 
 function routeAfterReviewer(state: AgentState): string {
@@ -291,7 +294,7 @@ export function buildAgentGraph(
     .addConditionalEdges('pre_flight_validator', routeAfterPreFlightValidator, [
       'executor',
     ])
-    .addConditionalEdges('debugger', routeAfterDebugger, ['reviewer', 'executor'])
+    .addConditionalEdges('debugger', routeAfterDebugger, ['reviewer'])
     .addConditionalEdges('file_state_tracker', routeAfterFileStateTracker, ['type_checker', 'executor', 'reviewer'])
     .addConditionalEdges('type_checker', routeAfterTypeChecker, ['reviewer', 'executor'])
     .addConditionalEdges('reviewer', routeAfterReviewer, [

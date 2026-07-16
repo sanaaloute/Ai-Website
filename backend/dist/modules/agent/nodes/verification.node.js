@@ -24,7 +24,7 @@ async function verificationNode(state, deps) {
             deps.logger.warn(`Preview server did not become healthy for verification in sandbox ${sandboxId}`);
         }
         const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
-        const { source: routesSource, cached: routesCached } = await (0, route_discovery_1.getRoutesSource)(deps.e2b, sandboxId, state);
+        const routesSource = await (0, route_discovery_1.readRoutes)(deps.e2b, sandboxId);
         const [visualResult, functionalResult, a11yResult, e2eResult, securityResult, seoResult,] = await Promise.all([
             (0, visual_qa_node_1.runVisualQa)(state, deps, previewUrl, routesSource),
             (0, functional_qa_node_1.runFunctionalQa)(state, deps, previewUrl, routesSource),
@@ -81,7 +81,7 @@ async function verificationNode(state, deps) {
             verificationFailures,
             lastVerificationStage,
             previewHealthy: previewRunning,
-            routesSource: routesCached ? undefined : routesSource,
+            routesSource,
             messages,
         };
     }

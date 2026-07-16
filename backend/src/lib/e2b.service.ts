@@ -1162,7 +1162,7 @@ export class E2BService {
     return cachedHash !== currentHash;
   }
 
-  private async recordPackageJsonHash(sandboxId: string): Promise<void> {
+  async recordPackageJsonHash(sandboxId: string): Promise<void> {
     const hashRes = await this.runCommand(
       sandboxId,
       "sha256sum package.json | awk '{print $1}' || echo none",

@@ -27,6 +27,7 @@ async function finalizeNode(state, deps) {
                     messages: [{ role: 'assistant', content: `Dependency install failed: ${errorMessage}` }],
                 };
             }
+            await tools.recordPackageJsonHash();
         }
         if (!state.previewHealthy) {
             await deps.emit({ type: 'status', data: { status: 'finalizing', message: 'Starting preview server...' } });

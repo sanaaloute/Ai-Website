@@ -35,7 +35,7 @@ async function debuggerNode(state, deps) {
     let resultText = '';
     let loopResult;
     try {
-        loopResult = await (0, tools_1.runToolLoop)(deps, state, (ctx, docs) => (0, tools_1.buildDebugToolSet)(ctx, docs), messages, 'debugger', aiCredentials, 5);
+        loopResult = await (0, tools_1.runToolLoop)(deps, state, (ctx, docs) => (0, tools_1.buildDebugToolSet)(ctx, docs), messages, 'debugger', aiCredentials, 8);
         resultText = loopResult.finalContent;
         result = extractJson(resultText) || {};
         if (!Object.keys(result).length) {

@@ -44,7 +44,7 @@ async function runSecurityReview(state, deps) {
             data: { status: 'reviewing', message: 'Running security audit...' },
         });
         const results = await Promise.all(exports.PATTERNS.map(async (pattern, i) => {
-            const patternFile = `/tmp/security-pattern-${i}.txt`;
+            const patternFile = `.agent_state/security-pattern-${i}.txt`;
             await deps.e2b.writeFile(sandboxId, patternFile, pattern.regex);
             const res = await deps.e2b.runCommand(sandboxId, `grep -R -n -E -f ${patternFile} src/ --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' || true`, '/home/user/app');
             if (res.output.trim()) {

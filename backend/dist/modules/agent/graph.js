@@ -113,8 +113,8 @@ function routeAfterPlanner(_state) {
 function routeAfterPreFlightValidator(_state) {
     return 'executor';
 }
-function routeAfterDebugger(state) {
-    return state.debugFixed ? 'reviewer' : 'executor';
+function routeAfterDebugger(_state) {
+    return 'reviewer';
 }
 function routeAfterReviewer(state) {
     if (state.reviewPassed)
@@ -205,7 +205,7 @@ function buildAgentGraph(checkpointer) {
         .addConditionalEdges('pre_flight_validator', routeAfterPreFlightValidator, [
         'executor',
     ])
-        .addConditionalEdges('debugger', routeAfterDebugger, ['reviewer', 'executor'])
+        .addConditionalEdges('debugger', routeAfterDebugger, ['reviewer'])
         .addConditionalEdges('file_state_tracker', routeAfterFileStateTracker, ['type_checker', 'executor', 'reviewer'])
         .addConditionalEdges('type_checker', routeAfterTypeChecker, ['reviewer', 'executor'])
         .addConditionalEdges('reviewer', routeAfterReviewer, [

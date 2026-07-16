@@ -197,6 +197,10 @@ export class SandboxProvider {
     return this.e2b.ensurePreviewRunning(this.sandboxId);
   }
 
+  async recordPackageJsonHash(): Promise<void> {
+    return this.e2b.recordPackageJsonHash(this.sandboxId);
+  }
+
   /**
    * Checks whether the Vite dev server is responding inside the sandbox.
    * This is used by finalizeNode to avoid restarting an already-healthy preview

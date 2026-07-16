@@ -88,7 +88,7 @@ export declare class E2BService {
         force?: boolean;
     }): Promise<boolean>;
     private shouldInstallDependencies;
-    private recordPackageJsonHash;
+    recordPackageJsonHash(sandboxId: string): Promise<void>;
     ensurePreviewRunning(sandboxId: string): Promise<boolean>;
     previewHealth(previewUrl: string): Promise<{
         reachable: boolean;

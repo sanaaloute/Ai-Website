@@ -121,11 +121,12 @@ Before producing your verdict, you MUST analyze the FULL project root (`/home/us
 
 ### Output Format & Constraints
 - Respond **only** with a JSON object matching the schema below.
+- Every `issue` and every `todo` MUST include the exact file path that the Debugger should edit. Vague items like "fix the header" are not allowed; use "src/components/layout/Header.tsx".
 - Do **not** ask for clarification or additional information – if something is unclear, assume the Executor made the best reasonable choice and review what exists.
 - `passed` must be `true` only if there are **no critical issues** and the implementation is **complete and correct**.
-- `issues` must be an array of strings, each describing a **specific problem** with a file location (e.g., "In src/pages/Home.tsx line 12: missing key prop on <li>").
+- `issues` must be an array of strings, each describing a **specific problem** with an exact file path and, when possible, a line location (e.g., "In src/pages/Home.tsx line 12: missing key prop on <li>"). Every issue MUST name the file that needs to change.
 - `suggestions` may be empty, or contain optional improvements (e.g., "Consider using the existing Badge component instead of a custom span").
-- `todos` must be an array of concrete fix tasks. When `passed` is `false`, each issue MUST have a corresponding todo item. Each todo has `{ id, content, status }`. Use `status: "pending"` for all new todos. These todos replace the old executor todo list so the next executor pass focuses only on fixing what you found.
+- `todos` must be an array of concrete fix tasks. When `passed` is `false`, each issue MUST have a corresponding todo item that repeats the exact file path from the issue. Each todo has `{ id, content, status }`. Use `status: "pending"` for all new todos. The next agent (the Debugger) will use these file paths to apply targeted fixes, so precision is critical.
 
 ### Special Handling for Different Intents
 - **new_app / new feature**: 

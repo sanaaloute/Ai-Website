@@ -64,7 +64,7 @@ export async function runSecurityReview(
     // file so the regex is not shell-escaped.
     const results = await Promise.all(
       PATTERNS.map(async (pattern, i) => {
-        const patternFile = `/tmp/security-pattern-${i}.txt`;
+        const patternFile = `.agent_state/security-pattern-${i}.txt`;
         await deps.e2b.writeFile(sandboxId, patternFile, pattern.regex);
 
         const res = await deps.e2b.runCommand(

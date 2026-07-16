@@ -45,7 +45,7 @@ export async function debuggerNode(state: AgentState, deps: GraphDependencies): 
       messages,
       'debugger',
       aiCredentials,
-      5,
+      8,
     );
     resultText = loopResult!.finalContent;
 

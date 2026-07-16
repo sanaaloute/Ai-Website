@@ -35,6 +35,10 @@ export async function finalizeNode(state: AgentState, deps: GraphDependencies): 
           messages: [{ role: 'assistant', content: `Dependency install failed: ${errorMessage}` }],
         };
       }
+
+      // Update the cached package.json hash so future restartPreview calls skip
+      // the install step when dependencies haven't changed.
+      await tools.recordPackageJsonHash();
     }
 
     // Always make sure the preview server is running before returning. The

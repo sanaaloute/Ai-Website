@@ -1,6 +1,6 @@
 import { AgentState } from '../state';
 import { GraphDependencies } from '../graph';
-import { getRoutesSource } from '../utils/route-discovery';
+import { readRoutes } from '../utils/route-discovery';
 import { runVisualQa } from './visual-qa.node';
 import { runFunctionalQa } from './functional-qa.node';
 import { runA11yReview } from './a11y-reviewer.node';
@@ -39,7 +39,10 @@ export async function verificationNode(
     }
 
     const previewUrl = await deps.e2b.getPreviewUrl(sandboxId);
-    const { source: routesSource, cached: routesCached } = await getRoutesSource(deps.e2b, sandboxId, state);
+    // Always read routes fresh for verification: the executor may have changed
+    // routes.ts since the last verification run, and we want to test the latest
+    // routes. The value is still cached in state for other consumers.
+    const routesSource = await readRoutes(deps.e2b, sandboxId);
 
     // Run all verification substages concurrently. Each substage is independent
     // (SEO writes files, security writes temp pattern files, the rest are read-only),
@@ -115,7 +118,7 @@ export async function verificationNode(
       verificationFailures,
       lastVerificationStage,
       previewHealthy: previewRunning,
-      routesSource: routesCached ? undefined : routesSource,
+      routesSource,
       messages,
     };
   } catch (err) {
