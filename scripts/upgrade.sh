@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Update / upgrade an existing production deployment with minimal disruption.
 # Unlike deploy.sh this does NOT tear everything down: it (optionally) pulls
-# the latest code, rebuilds images, and recreates only the services that
-# changed. Prisma migrations run automatically via the backend container
-# entrypoint when it is recreated. The nginx site config is refreshed only
-# when it actually changed (no reload otherwise).
+# the latest code, rebuilds images, runs Prisma migrations (visible output),
+# and recreates only the services that changed. The nginx site config is
+# refreshed only when it actually changed (no reload otherwise).
 #
 # Usage on prod:  bash scripts/upgrade.sh [--no-cache] [--no-git-pull]
 #   --no-cache      rebuild images without using the Docker layer cache
@@ -57,6 +56,21 @@ else
 fi
 
 log "Recreating changed services..."
+
+log "Running Prisma migrations (prisma migrate deploy)..."
+if ! docker compose run --rm --no-deps -T backend npx prisma migrate deploy; then
+  cat >&2 <<'MSG'
+
+✗ Migration failed.
+  If this database was created from raw SQL (users_schema.sql) rather than by
+  Prisma, baseline it ONCE and re-run upgrade, e.g.:
+    docker compose run --rm backend npx prisma migrate resolve --applied 20250630000000_init
+  (mark every already-applied historical migration the same way, oldest first)
+MSG
+  exit 1
+fi
+ok "Migrations applied."
+
 docker compose up -d --remove-orphans
 
 wait_for_backend || warn "Backend health check failed — see logs above."
