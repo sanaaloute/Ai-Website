@@ -165,12 +165,7 @@
   "footer": {
     "brandName": "AI-Website",
     "brandTagline": "构建你所热爱的",
-    "templates": "模板",
-    "pricing": "价格",
-    "howItWorks": "工作流程",
     "contact": "联系我们",
-    "home": "首页",
-    "projects": "项目",
     "copyright": "© {year} AI-Website。保留所有权利。",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",

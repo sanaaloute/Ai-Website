@@ -16,23 +16,8 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-5 text-sm">
-          <Link href="/templates" className="transition hover:text-white">
-            {t("templates")}
-          </Link>
-          <Link href="/how-it-works" className="transition hover:text-white">
-            {t("howItWorks")}
-          </Link>
-          <Link href="/pricing" className="transition hover:text-white">
-            {t("pricing")}
-          </Link>
           <Link href="/contact" className="transition hover:text-white">
             {t("contact")}
-          </Link>
-          <Link href="/" className="transition hover:text-white">
-            {t("home")}
-          </Link>
-          <Link href="/projects" className="transition hover:text-white">
-            {t("projects")}
           </Link>
           <Link href="/terms" className="transition hover:text-white">
             {t("terms")}
