@@ -98,9 +98,8 @@ export class PaddleService {
     const subscriptionIds = sub?.paddle_subscription_id ? [sub.paddle_subscription_id] : [];
 
     const session = await this.paddle.customerPortalSessions.create(customer.id, subscriptionIds);
-    // Paddle customer portal sessions include a `urls` array; fall back to the returnUrl if missing.
-    const urls = (session as unknown as Record<string, unknown>).urls as Array<{ url: string }> | undefined;
-    return urls?.[0]?.url ?? returnUrl;
+    // Paddle customer portal sessions expose the overview URL at urls.general.overview.
+    return session.urls.general.overview ?? returnUrl;
   }
 
   async syncCheckoutSession(transactionId: string): Promise<boolean> {

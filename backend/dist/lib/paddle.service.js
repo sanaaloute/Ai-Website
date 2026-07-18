@@ -92,8 +92,7 @@ let PaddleService = PaddleService_1 = class PaddleService {
             .single();
         const subscriptionIds = sub?.paddle_subscription_id ? [sub.paddle_subscription_id] : [];
         const session = await this.paddle.customerPortalSessions.create(customer.id, subscriptionIds);
-        const urls = session.urls;
-        return urls?.[0]?.url ?? returnUrl;
+        return session.urls.general.overview ?? returnUrl;
     }
     async syncCheckoutSession(transactionId) {
         if (!this.paddle)
