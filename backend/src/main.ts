@@ -38,16 +38,16 @@ async function bootstrap() {
     },
     credentials: e.corsCredentials,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Stripe-Signature'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Paddle-Signature'],
   });
 
   app.use(cookieParser());
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (app.getHttpAdapter().getInstance() as any).set('trust proxy', 1);
 
-  // Raw body for Stripe webhook only
+  // Raw body for Paddle webhook only
   app.use(
-    '/api/stripe/webhook',
+    '/api/paddle/webhook',
     json({
       verify: (req: Request, _res: Response, buf: Buffer) => {
         (req as Request & { rawBody: Buffer }).rawBody = buf;

@@ -40,7 +40,7 @@ export function useCheckout() {
     setLoading(true);
     setError(null);
     try {
-      const result = await syncCheckoutSession({ sessionId });
+      const result = await syncCheckoutSession({ sessionId, transactionId: sessionId });
       if (!result.ok) {
         setError(result.error || "Failed to sync checkout session.");
         return false;

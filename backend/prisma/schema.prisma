@@ -195,7 +195,7 @@ model agent_memories {
 model customers {
   id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id            String    @unique @db.Uuid
-  stripe_customer_id String    @unique @db.VarChar
+  paddle_customer_id String    @unique @db.VarChar
   email              String?   @db.VarChar
   created_at         DateTime  @default(now()) @db.Timestamptz(6)
   updated_at         DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
@@ -207,7 +207,7 @@ model customers {
 model subscriptions {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id                String    @db.Uuid
-  stripe_subscription_id String    @unique @db.VarChar
+  paddle_subscription_id String    @unique @db.VarChar
   status                 String    @db.VarChar
   plan                   String?   @db.VarChar
   amount                 Float?    @default(0)
@@ -216,7 +216,7 @@ model subscriptions {
   current_period_end     DateTime? @db.Timestamp(6)
   created_at             DateTime  @default(now()) @db.Timestamp(6)
   updated_at             DateTime  @default(now()) @updatedAt @db.Timestamp(6)
-  stripe_price_id        String?   @db.VarChar
+  paddle_price_id        String?   @db.VarChar
   current_period_start   DateTime? @db.Timestamp(6)
   cancel_at_period_end   Boolean?  @default(false)
   payment_method         String?   @db.VarChar
@@ -317,7 +317,7 @@ model feature_usage {
 model payments {
   id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id                  String   @db.Uuid
-  stripe_payment_intent_id String   @db.VarChar
+  paddle_transaction_id String   @db.VarChar
   amount                   Int
   currency                 String   @db.VarChar
   status                   String   @db.VarChar

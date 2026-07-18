@@ -33,14 +33,12 @@ The following are validated on startup and the app will fail fast if missing:
 - `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`)
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `E2B_API_KEY`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
 
 Optional integrations become real SDK calls when configured:
 
 - Supabase (`@supabase/supabase-js`)
 - E2B (`e2b`)
-- Stripe (`stripe`)
+- Paddle (`@paddle/paddle-node-sdk`)
 - GitCC/GitLab OAuth
 - OpenHost / Coolify
 
@@ -53,7 +51,7 @@ Optional integrations become real SDK calls when configured:
 - E2B Management: `/api/e2b/attach`, `/api/e2b/clone-repo`, `/api/e2b/sandboxes`, `/api/e2b/terminate`
 - Project Persistence: `/api/projects`, `/api/projects/save`, `/api/projects/open`, `/api/projects/restore-local`, `/api/create-zip`, `/api/download-repo`
 - Integrations: `/api/gitcc/gitlab/authorize`, `/api/gitcc/gitlab/callback`, `/api/gitcc/gitlab/status`, `/api/gitcc/push`, `/api/openhost/check-domain`, `/api/openhost/deploy`, `/api/openhost/deploy-pocketbase`, `/api/openhost/status`, `/api/integrations/user-supabase/*`
-- Billing: `/api/checkout`, `/api/billing/portal`, `/api/billing/sync-checkout-session`, `/api/stripe/webhook`
+- Billing: `/api/checkout`, `/api/billing/portal`, `/api/billing/sync-checkout-session`, `/api/paddle/webhook`
 - User / Account: `/api/profile`, `/api/ai-website-api-key`, `/api/conversation-state`
 - Auth: `/api/auth/session`, `/api/reset`
 - Utilities: `/api/screenshot`, `/api/search`

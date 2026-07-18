@@ -64,7 +64,7 @@ export class ProfileController {
             plan_label: (subscription.plan ?? 'Basic').replace(/^\w/, (c: string) => c.toUpperCase()),
             billing_interval: subscription.billing_interval ?? 'month',
             status: subscription.status ?? 'incomplete',
-            stripe_price_id: subscription.stripe_price_id ?? '',
+            price_id: subscription.paddle_price_id ?? '',
             price_display: '',
           }
         : null,

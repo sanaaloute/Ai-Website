@@ -17,6 +17,7 @@ import {
   ActivityQueryDto,
 } from './dto';
 import { AdminJwtPayload, AdminProfile, AdminUser } from './admin.types';
+import { PaddleService } from '@/lib/paddle.service';
 
 @Injectable()
 export class AdminService {
@@ -25,6 +26,7 @@ export class AdminService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly storage: StorageService,
+    private readonly paddle: PaddleService,
   ) {}
 
   private signToken(payload: AdminJwtPayload): string {
@@ -650,6 +652,14 @@ export class AdminService {
     const { data: existing } = await this.supabase.admin.from('subscriptions').select('*').eq('id', id).single();
     if (!existing) {
       throw new HttpException({ error: 'Subscription not found' }, HttpStatus.NOT_FOUND);
+    }
+
+    if (existing.paddle_subscription_id && this.paddle.configured) {
+      try {
+        await this.paddle.cancelSubscription(existing.paddle_subscription_id);
+      } catch (err) {
+        this.logger.error(`Failed to cancel Paddle subscription ${existing.paddle_subscription_id}: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
 
     const { error } = await this.supabase.admin

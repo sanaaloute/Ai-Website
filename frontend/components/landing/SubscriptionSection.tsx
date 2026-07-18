@@ -108,7 +108,7 @@ export default function SubscriptionSection({
         </dl>
       ) : (
         <div className="mt-4 rounded-xl border border-white/10 bg-background/50 px-3 py-4 text-sm text-zinc-400">
-          <p className="font-medium text-zinc-300">No Stripe subscription on file</p>
+          <p className="font-medium text-zinc-300">No subscription on file</p>
           <p className="mt-1 text-xs">
             Account tier:{" "}
             <span className="capitalize text-white">
@@ -167,7 +167,7 @@ export default function SubscriptionSection({
             ) : (
               <CreditCard size={16} />
             )}
-            Manage billing in Stripe
+            Manage billing
           </button>
           {showUpgrade && (
             <Link
@@ -180,7 +180,7 @@ export default function SubscriptionSection({
           )}
         </div>
         <p className="text-[10px] text-zinc-500">
-          Opens the customer portal when you have an active Stripe customer.
+          Opens the customer portal when you have an active subscription.
         </p>
       </div>
     </section>

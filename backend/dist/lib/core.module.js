@@ -10,7 +10,7 @@ exports.CoreModule = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_service_1 = require("./supabase.service");
 const e2b_service_1 = require("./e2b.service");
-const stripe_service_1 = require("./stripe.service");
+const paddle_service_1 = require("./paddle.service");
 const ai_gateway_service_1 = require("./ai-gateway.service");
 const storage_service_1 = require("./storage.service");
 const encryption_service_1 = require("./encryption.service");
@@ -33,8 +33,8 @@ exports.CoreModule = CoreModule;
 exports.CoreModule = CoreModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
-        providers: [supabase_service_1.SupabaseService, e2b_service_1.E2BService, stripe_service_1.StripeService, ai_gateway_service_1.AiGatewayService, storage_service_1.StorageService, github_service_1.GithubService, vercel_service_1.VercelService, deploy_service_1.DeployService, docker_runner_1.DockerDeployRunner, coolify_runner_1.CoolifyDeployRunner, redis_service_1.RedisService, sandbox_state_service_1.SandboxStateService, idempotency_service_1.IdempotencyService, cookie_service_1.CookieService, prisma_service_1.PrismaService, encryption_service_1.EncryptionService, integration_token_service_1.IntegrationTokenService, provider_keys_service_1.ProviderKeysService, entitlements_service_1.EntitlementsService],
-        exports: [supabase_service_1.SupabaseService, e2b_service_1.E2BService, stripe_service_1.StripeService, ai_gateway_service_1.AiGatewayService, storage_service_1.StorageService, github_service_1.GithubService, vercel_service_1.VercelService, deploy_service_1.DeployService, docker_runner_1.DockerDeployRunner, coolify_runner_1.CoolifyDeployRunner, redis_service_1.RedisService, sandbox_state_service_1.SandboxStateService, idempotency_service_1.IdempotencyService, cookie_service_1.CookieService, prisma_service_1.PrismaService, encryption_service_1.EncryptionService, integration_token_service_1.IntegrationTokenService, provider_keys_service_1.ProviderKeysService, entitlements_service_1.EntitlementsService],
+        providers: [supabase_service_1.SupabaseService, e2b_service_1.E2BService, paddle_service_1.PaddleService, ai_gateway_service_1.AiGatewayService, storage_service_1.StorageService, github_service_1.GithubService, vercel_service_1.VercelService, deploy_service_1.DeployService, docker_runner_1.DockerDeployRunner, coolify_runner_1.CoolifyDeployRunner, redis_service_1.RedisService, sandbox_state_service_1.SandboxStateService, idempotency_service_1.IdempotencyService, cookie_service_1.CookieService, prisma_service_1.PrismaService, encryption_service_1.EncryptionService, integration_token_service_1.IntegrationTokenService, provider_keys_service_1.ProviderKeysService, entitlements_service_1.EntitlementsService],
+        exports: [supabase_service_1.SupabaseService, e2b_service_1.E2BService, paddle_service_1.PaddleService, ai_gateway_service_1.AiGatewayService, storage_service_1.StorageService, github_service_1.GithubService, vercel_service_1.VercelService, deploy_service_1.DeployService, docker_runner_1.DockerDeployRunner, coolify_runner_1.CoolifyDeployRunner, redis_service_1.RedisService, sandbox_state_service_1.SandboxStateService, idempotency_service_1.IdempotencyService, cookie_service_1.CookieService, prisma_service_1.PrismaService, encryption_service_1.EncryptionService, integration_token_service_1.IntegrationTokenService, provider_keys_service_1.ProviderKeysService, entitlements_service_1.EntitlementsService],
     })
 ], CoreModule);
 //# sourceMappingURL=core.module.js.map

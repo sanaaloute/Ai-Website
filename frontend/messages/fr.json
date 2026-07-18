@@ -74,7 +74,7 @@
     "mostPopular": "Le plus populaire",
     "trustNoCard": "Aucune carte bancaire requise pour l’essai",
     "trustCancel": "Annulez à tout moment",
-    "trustRefund": "Garantie de remboursement de 14 jours",
+    "trustRefund": "Non remboursable, annulable à tout moment",
     "plans": {
       "trial": {
         "name": "Essai",
@@ -132,7 +132,11 @@
           "Domaine personnalisé"
         ]
       }
-    }
+    },
+    "agreement": "En vous abonnant, vous acceptez nos",
+    "agreementTerms": "Conditions d'utilisation",
+    "agreementAnd": "et",
+    "agreementRefund": "Politique de remboursement"
   },
   "contact": {
     "overline": "Contact",
@@ -167,7 +171,11 @@
     "contact": "Contact",
     "home": "Accueil",
     "projects": "Projets",
-    "copyright": "© {year} AI-Website. Tous droits réservés."
+    "copyright": "© {year} AI-Website. Tous droits réservés.",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "refundPolicy": "Refund Policy",
+    "contactEmail": "contact@barkosem.com"
   },
   "loginSection": {
     "loginSubtitle": "Connectez-vous pour accéder à votre espace de travail",
@@ -738,5 +746,20 @@
       "fileCount": "{count, plural, one {# fichier} other {# fichiers}}",
       "rootProject": "projet"
     }
+  },
+  "legal": {
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "refund": {
+      "title": "Refund Policy",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "disclaimer": "This is a standard template and does not constitute legal advice. You should have these documents reviewed by a qualified attorney for your jurisdiction."
   }
 }

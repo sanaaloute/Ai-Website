@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { useCheckout } from "@/hooks/useCheckout";
 import { getBillingPlans } from "@/lib/api/client";
 import { useLandingAuthStore } from "@/stores/landingAuthStore";
@@ -90,7 +91,13 @@ export default function PricingSection() {
     () => (plan: PlanId) => {
       const api = apiPrices[plan];
       const fallback = FALLBACK_PRICES[plan];
-      const amount = yearly ? api?.monthly !== undefined ? api.yearly : fallback.yearly : api?.monthly ?? fallback.monthly;
+      const amount = yearly
+        ? api?.yearly !== undefined
+          ? api.yearly
+          : fallback.yearly
+        : api?.monthly !== undefined
+          ? api.monthly
+          : fallback.monthly;
       return amount;
     },
     [apiPrices, yearly]
@@ -222,6 +229,18 @@ export default function PricingSection() {
       {checkoutError && (
         <p className="text-xs text-red-300">{checkoutError}</p>
       )}
+
+      <p className="text-center text-xs text-zinc-500">
+        {t("agreement")}{" "}
+        <Link href="/terms" className="underline hover:text-zinc-300">
+          {t("agreementTerms")}
+        </Link>{" "}
+        {t("agreementAnd")}{" "}
+        <Link href="/refund-policy" className="underline hover:text-zinc-300">
+          {t("agreementRefund")}
+        </Link>
+        .
+      </p>
     </section>
   );
 }

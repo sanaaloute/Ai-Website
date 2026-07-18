@@ -74,7 +74,7 @@
     "mostPopular": "最受欢迎",
     "trustNoCard": "试用版无需信用卡",
     "trustCancel": "随时取消",
-    "trustRefund": "14 天退款保证",
+    "trustRefund": "不可退款，可随时取消",
     "plans": {
       "trial": {
         "name": "试用版",
@@ -132,7 +132,11 @@
           "自定义域名"
         ]
       }
-    }
+    },
+    "agreement": "订阅即表示您同意我们的",
+    "agreementTerms": "服务条款",
+    "agreementAnd": "和",
+    "agreementRefund": "退款政策"
   },
   "contact": {
     "overline": "联系我们",
@@ -167,7 +171,11 @@
     "contact": "联系我们",
     "home": "首页",
     "projects": "项目",
-    "copyright": "© {year} AI-Website。保留所有权利。"
+    "copyright": "© {year} AI-Website。保留所有权利。",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "refundPolicy": "Refund Policy",
+    "contactEmail": "contact@barkosem.com"
   },
   "loginSection": {
     "loginSubtitle": "登录以访问你的工作区",
@@ -738,5 +746,20 @@
       "fileCount": "{count, plural, other {# 个文件}}",
       "rootProject": "项目"
     }
+  },
+  "legal": {
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "refund": {
+      "title": "Refund Policy",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "disclaimer": "This is a standard template and does not constitute legal advice. You should have these documents reviewed by a qualified attorney for your jurisdiction."
   }
 }

@@ -35,11 +35,11 @@ async function bootstrap() {
         },
         credentials: e.corsCredentials,
         methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Stripe-Signature'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Paddle-Signature'],
     });
     app.use((0, cookie_parser_1.default)());
     app.getHttpAdapter().getInstance().set('trust proxy', 1);
-    app.use('/api/stripe/webhook', (0, express_1.json)({
+    app.use('/api/paddle/webhook', (0, express_1.json)({
         verify: (req, _res, buf) => {
             req.rawBody = buf;
         },

@@ -1,7 +1,7 @@
 /**
  * Subscription plan catalog — single source of truth for tiers, limits and
- * feature gating. Prices are display-only; actual billing uses the Stripe
- * price IDs from env (`STRIPE_PRICE_<TIER>_<MONTHLY|YEARLY>`).
+ * feature gating. Prices are display-only; actual billing uses the Paddle
+ * price IDs from env (`PADDLE_PRICE_<TIER>_<MONTHLY|YEARLY>`).
  *
  * Unsubscribed users fall into the free `trial` tier.
  */

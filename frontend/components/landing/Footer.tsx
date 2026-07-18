@@ -34,10 +34,22 @@ export default function Footer() {
           <Link href="/projects" className="transition hover:text-white">
             {t("projects")}
           </Link>
+          <Link href="/terms" className="transition hover:text-white">
+            {t("terms")}
+          </Link>
+          <Link href="/privacy" className="transition hover:text-white">
+            {t("privacy")}
+          </Link>
+          <Link href="/refund-policy" className="transition hover:text-white">
+            {t("refundPolicy")}
+          </Link>
         </div>
 
         <div className="text-sm text-zinc-600">
           {t("copyright", { year: new Date().getFullYear() })}
+        </div>
+        <div className="text-sm text-zinc-500">
+          {t("contactEmail")}
         </div>
       </div>
     </footer>

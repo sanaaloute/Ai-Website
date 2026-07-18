@@ -42,9 +42,10 @@ export interface Env {
   supabaseAnonKey: string;
   supabaseServiceRoleKey: string;
 
-  stripeSecretKey: string;
-  stripeWebhookSecret: string;
-  stripePrices: Record<string, string | undefined>;
+  paddleApiKey: string;
+  paddleWebhookSecret: string;
+  paddleEnvironment: 'sandbox' | 'production';
+  paddlePrices: Record<string, string | undefined>;
 
   githubClientId: string;
   githubClientSecret: string;
@@ -101,12 +102,13 @@ export function buildEnv(): Env {
   const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY', ['NEXT_PUBLIC_SUPABASE_ANON_KEY']) ?? '';
   const supabaseServiceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
   const e2bApiKey = requireEnv('E2B_API_KEY');
-  // Stripe is OPTIONAL: when the keys are absent the app boots with billing
-  // disabled (StripeService already stubs checkout/portal/webhook when
-  // unconfigured). Set STRIPE_SECRET_KEY (+ STRIPE_WEBHOOK_SECRET) to enable.
-  const stripeSecretKey = getEnv('STRIPE_SECRET_KEY') ?? '';
-  const stripeWebhookSecret = getEnv('STRIPE_WEBHOOK_SECRET') ?? '';
-  if (!stripeSecretKey) logger.warn('Stripe disabled: STRIPE_SECRET_KEY not set (billing off)');
+  // Paddle is OPTIONAL: when the keys are absent the app boots with billing
+  // disabled (PaddleService already stubs checkout/portal/webhook when
+  // unconfigured). Set PADDLE_API_KEY (+ PADDLE_WEBHOOK_SECRET) to enable.
+  const paddleApiKey = getEnv('PADDLE_API_KEY') ?? '';
+  const paddleWebhookSecret = getEnv('PADDLE_WEBHOOK_SECRET') ?? '';
+  const paddleEnvironment = (getEnv('PADDLE_ENVIRONMENT') ?? 'sandbox') as 'sandbox' | 'production';
+  if (!paddleApiKey) logger.warn('Paddle disabled: PADDLE_API_KEY not set (billing off)');
 
   const redisUrl = requireEnv('REDIS_URL');
 
@@ -129,9 +131,9 @@ export function buildEnv(): Env {
     'STANDARD_MONTHLY', 'STANDARD_YEARLY', 'STANDARD_ONETIME', 'STANDARD_ONE_TIME',
     'PRO_MONTHLY', 'PRO_YEARLY', 'PRO_ONETIME', 'PRO_ONE_TIME',
   ];
-  const stripePrices: Record<string, string | undefined> = {};
+  const paddlePrices: Record<string, string | undefined> = {};
   for (const key of priceKeys) {
-    stripePrices[key] = getEnv(`STRIPE_PRICE_${key}`, [`NEXT_PUBLIC_STRIPE_PRICE_${key}`]);
+    paddlePrices[key] = getEnv(`PADDLE_PRICE_${key}`, [`NEXT_PUBLIC_PADDLE_PRICE_${key}`]);
   }
 
   return {
@@ -156,9 +158,10 @@ export function buildEnv(): Env {
     supabaseAnonKey,
     supabaseServiceRoleKey,
 
-    stripeSecretKey,
-    stripeWebhookSecret,
-    stripePrices,
+    paddleApiKey,
+    paddleWebhookSecret,
+    paddleEnvironment,
+    paddlePrices,
 
     githubClientId: getEnv('GITHUB_CLIENT_ID', ['NEXT_PUBLIC_GITHUB_APP_ID']) ?? '',
     githubClientSecret: getEnv('GITHUB_CLIENT_SECRET', ['NEXT_PUBLIC_GITHUB_APP_SECRET']) ?? '',

@@ -16,19 +16,19 @@ exports.BillingController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_guard_1 = require("../../common/guards/auth.guard");
 const user_decorator_1 = require("../../common/decorators/user.decorator");
-const stripe_service_1 = require("../../lib/stripe.service");
+const paddle_service_1 = require("../../lib/paddle.service");
 const entitlements_service_1 = require("./entitlements.service");
 const plans_1 = require("../../lib/plans");
 const env_1 = require("../../config/env");
 let BillingController = class BillingController {
-    constructor(stripe, entitlements) {
-        this.stripe = stripe;
+    constructor(paddle, entitlements) {
+        this.paddle = paddle;
         this.entitlements = entitlements;
     }
     async checkout(user, body) {
         if (!body.priceId)
             throw new common_1.HttpException({ success: false, error: 'priceId required' }, common_1.HttpStatus.BAD_REQUEST);
-        const url = await this.stripe.createCheckoutSession({
+        const url = await this.paddle.createCheckoutSession({
             userId: user.id,
             priceId: body.priceId,
             mode: body.billingMode === 'subscription' ? 'subscription' : 'payment',
@@ -38,30 +38,33 @@ let BillingController = class BillingController {
         return { url };
     }
     async portal(user, body) {
-        const url = await this.stripe.createPortalSession(user.id, body.returnUrl);
+        const url = await this.paddle.createCustomerPortalSession(user.id, body.returnUrl);
         return { url };
     }
     async syncCheckout(body) {
-        if (!body.sessionId)
-            throw new common_1.HttpException({ success: false, error: 'sessionId required' }, common_1.HttpStatus.BAD_REQUEST);
-        const ok = await this.stripe.syncCheckoutSession(body.sessionId);
+        const transactionId = body.transactionId ?? body.sessionId;
+        if (!transactionId)
+            throw new common_1.HttpException({ success: false, error: 'transactionId required' }, common_1.HttpStatus.BAD_REQUEST);
+        const ok = await this.paddle.syncCheckoutSession(transactionId);
         return { ok };
     }
     async getEntitlements(user) {
         return { ok: true, ...(await this.entitlements.getEntitlements(user.id)) };
     }
-    getBillingPlans() {
+    async getBillingPlans() {
         const e = (0, env_1.env)();
+        const catalogPrices = await this.paddle.getCatalogPrices();
         const plans = plans_1.PAID_PLAN_IDS.map((id) => {
             const def = plans_1.PLANS[id];
             const key = id.toUpperCase();
+            const catalog = catalogPrices[id];
             return {
                 id,
                 label: def.label,
-                priceMonthly: def.priceMonthly,
-                priceYearly: def.priceYearly,
-                priceIdMonthly: e.stripePrices[`${key}_MONTHLY`] ?? null,
-                priceIdYearly: e.stripePrices[`${key}_YEARLY`] ?? null,
+                priceMonthly: catalog?.monthly ?? def.priceMonthly,
+                priceYearly: catalog?.yearly ?? def.priceYearly,
+                priceIdMonthly: e.paddlePrices[`${key}_MONTHLY`] ?? null,
+                priceIdYearly: e.paddlePrices[`${key}_YEARLY`] ?? null,
                 features: def.features.map((f) => ({
                     id: f,
                     label: plans_1.FEATURE_LABELS[f],
@@ -85,11 +88,11 @@ let BillingController = class BillingController {
     }
     async webhook(req, signature, res) {
         if (!signature) {
-            return res.status(common_1.HttpStatus.BAD_REQUEST).json({ success: false, error: 'Missing stripe-signature' });
+            return res.status(common_1.HttpStatus.BAD_REQUEST).json({ success: false, error: 'Missing paddle-signature' });
         }
         try {
             const rawBody = req.rawBody ?? Buffer.from('');
-            const result = await this.stripe.handleWebhook(rawBody, signature);
+            const result = await this.paddle.handleWebhook(rawBody, signature);
             return res.json(result);
         }
         catch (err) {
@@ -136,12 +139,12 @@ __decorate([
     (0, common_1.Get)('billing/plans'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], BillingController.prototype, "getBillingPlans", null);
 __decorate([
-    (0, common_1.Post)('stripe/webhook'),
+    (0, common_1.Post)('paddle/webhook'),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Headers)('stripe-signature')),
+    __param(1, (0, common_1.Headers)('paddle-signature')),
     __param(2, (0, common_1.Res)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String, Object]),
@@ -149,7 +152,7 @@ __decorate([
 ], BillingController.prototype, "webhook", null);
 exports.BillingController = BillingController = __decorate([
     (0, common_1.Controller)('api'),
-    __metadata("design:paramtypes", [stripe_service_1.StripeService,
+    __metadata("design:paramtypes", [paddle_service_1.PaddleService,
         entitlements_service_1.EntitlementsService])
 ], BillingController);
 //# sourceMappingURL=billing.controller.js.map

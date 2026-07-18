@@ -69,7 +69,7 @@ Validate the current session and return the Supabase user object.
 
 ### `GET /api/profile`
 
-Get the user's profile row from Postgres plus their Stripe subscription info.
+Get the user's profile row from Postgres plus their Paddle subscription info.
 
 | Attribute | Value |
 |-----------|-------|
@@ -94,7 +94,7 @@ Get the user's profile row from Postgres plus their Stripe subscription info.
     "plan_label": "Pro",
     "billing_interval": "month",
     "status": "active",
-    "stripe_price_id": "price_xxx",
+    "price_id": "pri_xxx",
     "price_display": ""
   }
 }
@@ -1630,7 +1630,7 @@ Clone a public repo, zip it, and return the binary.
 
 ### `POST /api/checkout`
 
-Create a Stripe Checkout session.
+Create a Paddle Checkout transaction.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1640,7 +1640,7 @@ Create a Stripe Checkout session.
 **Request Body**
 ```json
 {
-  "priceId": "price_xxx",
+  "priceId": "pri_xxx",
   "billingMode": "subscription",
   "successUrl": "https://example.com/success",
   "cancelUrl": "https://example.com/cancel"
@@ -1650,7 +1650,7 @@ Create a Stripe Checkout session.
 **Response `200 OK`**
 ```json
 {
-  "url": "https://checkout.stripe.com/..."
+  "url": "https://checkout.paddle.com/..."
 }
 ```
 
@@ -1658,7 +1658,7 @@ Create a Stripe Checkout session.
 
 ### `POST /api/billing/portal`
 
-Create a Stripe Billing Portal session.
+Create a Paddle Customer Portal session.
 
 | Attribute | Value |
 |-----------|-------|
@@ -1675,7 +1675,7 @@ Create a Stripe Billing Portal session.
 **Response `200 OK`**
 ```json
 {
-  "url": "https://billing.stripe.com/..."
+  "url": "https://customer.paddle.com/..."
 }
 ```
 
@@ -1683,7 +1683,7 @@ Create a Stripe Billing Portal session.
 
 ### `POST /api/billing/sync-checkout-session`
 
-Client-side mirror of the Stripe webhook (forces sync of subscription state).
+Client-side mirror of the Paddle webhook (forces sync of subscription state).
 
 | Attribute | Value |
 |-----------|-------|
@@ -1693,7 +1693,8 @@ Client-side mirror of the Stripe webhook (forces sync of subscription state).
 **Request Body**
 ```json
 {
-  "sessionId": "cs_test_xxx"
+  "transactionId": "txn_xxx",
+  "sessionId": "txn_xxx"
 }
 ```
 
@@ -1706,14 +1707,14 @@ Client-side mirror of the Stripe webhook (forces sync of subscription state).
 
 ---
 
-### `POST /api/stripe/webhook`
+### `POST /api/paddle/webhook`
 
-Stripe webhook handler. Called by Stripe, not the frontend (documented for completeness).
+Paddle webhook handler. Called by Paddle, not the frontend (documented for completeness).
 
 | Attribute | Value |
 |-----------|-------|
-| **Auth** | Stripe signature verification |
-| **Headers** | `Stripe-Signature: ...` |
+| **Auth** | Paddle signature verification |
+| **Headers** | `Paddle-Signature: ...` |
 
 **Response `200 OK`**
 ```json

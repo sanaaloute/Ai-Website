@@ -18,10 +18,12 @@ const crypto_1 = require("crypto");
 const env_1 = require("../../config/env");
 const supabase_service_1 = require("../../lib/supabase.service");
 const storage_service_1 = require("../../lib/storage.service");
+const paddle_service_1 = require("../../lib/paddle.service");
 let AdminService = AdminService_1 = class AdminService {
-    constructor(supabase, storage) {
+    constructor(supabase, storage, paddle) {
         this.supabase = supabase;
         this.storage = storage;
+        this.paddle = paddle;
         this.logger = new common_1.Logger(AdminService_1.name);
     }
     signToken(payload) {
@@ -520,6 +522,14 @@ let AdminService = AdminService_1 = class AdminService {
         if (!existing) {
             throw new common_1.HttpException({ error: 'Subscription not found' }, common_1.HttpStatus.NOT_FOUND);
         }
+        if (existing.paddle_subscription_id && this.paddle.configured) {
+            try {
+                await this.paddle.cancelSubscription(existing.paddle_subscription_id);
+            }
+            catch (err) {
+                this.logger.error(`Failed to cancel Paddle subscription ${existing.paddle_subscription_id}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+        }
         const { error } = await this.supabase.admin
             .from('subscriptions')
             .update({
@@ -697,6 +707,7 @@ exports.AdminService = AdminService;
 exports.AdminService = AdminService = AdminService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [supabase_service_1.SupabaseService,
-        storage_service_1.StorageService])
+        storage_service_1.StorageService,
+        paddle_service_1.PaddleService])
 ], AdminService);
 //# sourceMappingURL=admin.service.js.map

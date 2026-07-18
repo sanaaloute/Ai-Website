@@ -74,7 +74,11 @@
     "mostPopular": "Most popular",
     "trustNoCard": "No credit card required for Trial",
     "trustCancel": "Cancel anytime",
-    "trustRefund": "14-day refund guarantee",
+    "trustRefund": "No refunds, cancel anytime",
+    "agreement": "By subscribing, you agree to our",
+    "agreementTerms": "Terms of Service",
+    "agreementAnd": "and",
+    "agreementRefund": "Refund Policy",
     "plans": {
       "trial": {
         "name": "Trial",
@@ -167,7 +171,26 @@
     "contact": "Contact",
     "home": "Home",
     "projects": "Projects",
-    "copyright": "© {year} AI-Website. All rights reserved."
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "refundPolicy": "Refund Policy",
+    "copyright": "© {year} AI-Website. All rights reserved.",
+    "contactEmail": "contact@barkosem.com"
+  },
+  "legal": {
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "refund": {
+      "title": "Refund Policy",
+      "lastUpdated": "Last updated: {date}"
+    },
+    "disclaimer": "This is a standard template and does not constitute legal advice. You should have these documents reviewed by a qualified attorney for your jurisdiction."
   },
   "loginSection": {
     "loginSubtitle": "Sign in to access your workspace",

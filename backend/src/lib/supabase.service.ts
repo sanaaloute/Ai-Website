@@ -63,26 +63,26 @@ export class SupabaseService {
     return true;
   }
 
-  async updateSubscriptionFromStripe(
+  async updateSubscriptionFromPaddle(
     customerId: string,
     subscription: Record<string, unknown> | null,
     status: string | null,
     plan: string | null,
   ): Promise<void> {
-    const { data: customer } = await this.admin.from('customers').select('user_id').eq('stripe_customer_id', customerId).single();
+    const { data: customer } = await this.admin.from('customers').select('user_id').eq('paddle_customer_id', customerId).single();
     if (!customer?.user_id) return;
 
     if (subscription) {
       const { error } = await this.admin.from('subscriptions').upsert(
         {
           user_id: customer.user_id,
-          stripe_subscription_id: subscription.id,
+          paddle_subscription_id: subscription.id,
           status: status ?? subscription.status,
           plan,
           metadata: subscription,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'stripe_subscription_id' },
+        { onConflict: 'paddle_subscription_id' },
       );
       if (error) this.logger.error(`subscriptions upsert error: ${error.message}`);
     }

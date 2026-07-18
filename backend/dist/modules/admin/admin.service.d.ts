@@ -2,11 +2,13 @@ import { SupabaseService } from "../../lib/supabase.service";
 import { StorageService } from "../../lib/storage.service";
 import { AdminForgotPasswordDto, AdminLoginDto, AdminRegisterDto, AdminResetPasswordDto, CancelSubscriptionDto, UpdateUserStatusDto, UserListQueryDto, SubscriptionListQueryDto, ActivityQueryDto } from './dto';
 import { AdminProfile, AdminUser } from './admin.types';
+import { PaddleService } from "../../lib/paddle.service";
 export declare class AdminService {
     private readonly supabase;
     private readonly storage;
+    private readonly paddle;
     private readonly logger;
-    constructor(supabase: SupabaseService, storage: StorageService);
+    constructor(supabase: SupabaseService, storage: StorageService, paddle: PaddleService);
     private signToken;
     private toProfile;
     logActivity(admin: AdminUser | null, action: string, target?: string, targetId?: string, details?: Record<string, unknown>): Promise<void>;

@@ -56,7 +56,7 @@ Frontend and admin requests must use `credentials: 'include'`. The backend still
 - Atomic project snapshots before every generation
 - E2B sandbox lifecycle management (create, attach, renew, kill)
 - OpenHost deployment integration
-- Stripe billing and subscriptions
+- Paddle billing and subscriptions
 - Admin observability: users, subscriptions, agent generation metrics, queue status, sandbox inventory
 
 ## Docs

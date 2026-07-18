@@ -691,7 +691,7 @@ export async function loadProfile() {
       plan_label: string;
       billing_interval: string;
       status: string;
-      stripe_price_id: string;
+      price_id: string;
       price_display: string;
     } | null;
   }>('/profile', 'loadProfile');
@@ -752,6 +752,7 @@ export async function getBillingPortal(body: { returnUrl: string }) {
 
 export async function syncCheckoutSession(body: {
   sessionId: string;
+  transactionId?: string;
 }) {
   return apiPost<{ ok: boolean }>('/billing/sync-checkout-session', body, 'syncCheckoutSession');
 }

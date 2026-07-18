@@ -30,7 +30,7 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
 NEXT_PUBLIC_AI_WEBSITE_API_KEY_SITE_URL=https://github.com
 ```
 
-> **Note:** All other configuration (Supabase, AI gateway, Stripe, E2B, GitLab OAuth, etc.) lives in the backend. The frontend only talks to the backend via `NEXT_PUBLIC_BACKEND_URL`.
+> **Note:** All other configuration (Supabase, AI gateway, Paddle, E2B, GitLab OAuth, etc.) lives in the backend. The frontend only talks to the backend via `NEXT_PUBLIC_BACKEND_URL`.
 
 ### 3) Run the app
 ```bash

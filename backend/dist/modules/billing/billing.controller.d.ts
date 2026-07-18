@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import { User } from "../../types";
-import { StripeService } from "../../lib/stripe.service";
+import { PaddleService } from "../../lib/paddle.service";
 import { EntitlementsService } from './entitlements.service';
 export declare class BillingController {
-    private readonly stripe;
+    private readonly paddle;
     private readonly entitlements;
-    constructor(stripe: StripeService, entitlements: EntitlementsService);
+    constructor(paddle: PaddleService, entitlements: EntitlementsService);
     checkout(user: User, body: {
         priceId: string;
         billingMode?: string;
@@ -20,7 +20,8 @@ export declare class BillingController {
         url: string | null;
     }>;
     syncCheckout(body: {
-        sessionId: string;
+        transactionId?: string;
+        sessionId?: string;
     }): Promise<{
         ok: boolean;
     }>;
@@ -32,7 +33,7 @@ export declare class BillingController {
         usage: import("./entitlements.service").EntitlementUsage;
         ok: boolean;
     }>;
-    getBillingPlans(): {
+    getBillingPlans(): Promise<{
         ok: boolean;
         trial: {
             id: string;
@@ -56,6 +57,6 @@ export declare class BillingController {
             }[];
             limits: import("@/lib/plans").PlanLimits;
         }[];
-    };
+    }>;
     webhook(req: Request, signature: string, res: Response): Promise<Response<any, Record<string, any>>>;
 }

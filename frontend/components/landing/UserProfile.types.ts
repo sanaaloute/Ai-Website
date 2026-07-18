@@ -27,7 +27,7 @@ export type SubscriptionPayload = {
   billing_interval: string;
   billing_label: string;
   status: string;
-  stripe_price_id: string;
+  price_id: string;
   price_display: string;
   current_period_start: string | null;
   current_period_end: string | null;
