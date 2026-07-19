@@ -5,6 +5,9 @@ import { EntitlementsService } from '@/modules/billing/entitlements.service';
 const CHECK_INTERVAL_MS = 30 * 1000;
 const RENEWAL_WINDOW_MS = 10 * 60 * 1000;
 const DEAD_THRESHOLD_MS = 10 * 60 * 1000;
+// A renewing flag older than this is considered stale (its renewal crashed
+// mid-flight) and no longer blocks auto-renewal.
+const RENEWING_STALE_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class SandboxLifecycleService implements OnModuleInit, OnModuleDestroy {
@@ -35,8 +38,12 @@ export class SandboxLifecycleService implements OnModuleInit, OnModuleDestroy {
     const now = Date.now();
     const entries = await this.e2b.getSandboxInfos();
 
-    for (const { sandboxId, endAt: endAtStr, renewing, userId } of entries) {
-      if (renewing) continue;
+    for (const { sandboxId, endAt: endAtStr, renewing, renewingSince, userId } of entries) {
+      // Skip sandboxes with an in-flight renewal — but treat a renewing flag
+      // older than RENEWING_STALE_MS as stale (left behind by a crashed
+      // renewal) and proceed; the Redis renewal lock still serializes the
+      // actual renewal.
+      if (renewing && renewingSince && now - renewingSince < RENEWING_STALE_MS) continue;
 
       const endAt = new Date(endAtStr).getTime();
       const expiresIn = endAt - now;

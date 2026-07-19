@@ -142,6 +142,27 @@ export class E2BProviderError extends Error {
   }
 }
 
+/**
+ * True when an error means the sandbox no longer exists on E2B (killed,
+ * expired, or crashed) rather than a transient failure. The E2B SDK reports
+ * RPCs against a dead sandbox's envd as "Sandbox is probably not running
+ * anymore", so match that phrasing too.
+ */
+export function isSandboxGoneError(err: unknown): boolean {
+  if (err instanceof SandboxNotFoundError || err instanceof SandboxGoneError) {
+    return true;
+  }
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes('sandbox_not_found') ||
+    msg.includes('sandbox_gone') ||
+    msg.includes('not found') ||
+    msg.includes('does not exist') ||
+    msg.includes('gone') ||
+    msg.includes('not running')
+  );
+}
+
 @Injectable()
 export class E2BService {
   private readonly logger = new Logger(E2BService.name);
@@ -306,7 +327,13 @@ export class E2BService {
       const lifetime = await this.getSandboxLifetime(currentId);
       const now = Date.now();
       const createdAt = lifetime?.createdAt ?? new Date(now).toISOString();
-      const endAt = lifetime?.endAt ?? new Date(now + SANDBOX_LIFETIME_MS).toISOString();
+      // Never fabricate a full-lifetime endAt: sandboxes are hard-killed 1h
+      // after creation (Hobby tier) no matter what, so an optimistic
+      // "now + 1h" would overstate the real TTL and make both the lifecycle
+      // scheduler and the frontend renew too late. When the real lifetime is
+      // unknown, report the sandbox as already due instead — the scheduler
+      // then migrates it immediately, which is lossless while it is alive.
+      const endAt = lifetime?.endAt ?? new Date(now).toISOString();
 
       // Preserve any existing metadata (owner, renewing flag) when refreshing
       // the lifecycle timestamps.
@@ -384,7 +411,7 @@ export class E2BService {
     }
   }
 
-  async getSandboxInfos(): Promise<Array<{ sandboxId: string; createdAt: string; endAt: string; renewing?: boolean; userId?: string }>> {
+  async getSandboxInfos(): Promise<Array<{ sandboxId: string; createdAt: string; endAt: string; renewing?: boolean; renewingSince?: number; userId?: string }>> {
     const entries = await this.state.listSandboxInfos();
     return entries.map(({ sandboxId, info }) => ({
       sandboxId,
@@ -396,7 +423,11 @@ export class E2BService {
     const currentId = await this.getCurrentSandboxId(sandboxId);
     const info = await this.state.getSandboxInfo(currentId);
     if (info) {
-      await this.state.setSandboxInfo(currentId, { ...info, renewing });
+      await this.state.setSandboxInfo(currentId, {
+        ...info,
+        renewing,
+        renewingSince: renewing ? Date.now() : undefined,
+      });
     }
   }
 
@@ -508,7 +539,7 @@ export class E2BService {
     this.sandboxes.delete(oldCurrent);
   }
 
-  async renewSandbox(oldSandboxId: string): Promise<SandboxData & { filesMigrated: number }> {
+  async renewSandbox(oldSandboxId: string): Promise<SandboxData & { filesMigrated: number; sourceGone?: boolean }> {
     const currentId = await this.getCurrentSandboxId(oldSandboxId);
 
     // Already renewed by another request or the background scheduler.
@@ -541,41 +572,6 @@ export class E2BService {
   }
 
   /**
-   * Fast-path renewal: extend the live sandbox's TTL in place. This avoids
-   * the whole file-migration + npm-install dance (and its failure modes —
-   * OOM aborts, orphaned sandboxes) whenever the sandbox is still alive.
-   * Returns true when the extension succeeded.
-   */
-  private async tryExtendSandbox(currentId: string): Promise<boolean> {
-    try {
-      const sandbox =
-        this.sandboxes.get(currentId) ??
-        (await Sandbox.connect(currentId, {
-          apiKey: env().e2bApiKey,
-          requestTimeoutMs: CONNECT_TIMEOUT_MS,
-        }));
-      this.sandboxes.set(currentId, sandbox);
-
-      await sandbox.setTimeout(SANDBOX_LIFETIME_MS);
-
-      const info = await this.state.getSandboxInfo(currentId);
-      if (info) {
-        await this.state.setSandboxInfo(currentId, {
-          ...info,
-          endAt: new Date(Date.now() + SANDBOX_LIFETIME_MS).toISOString(),
-        });
-      }
-      return true;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.warn(
-        `Could not extend sandbox ${currentId} TTL (${msg}); falling back to migration`,
-      );
-      return false;
-    }
-  }
-
-  /**
    * Kills a sandbox by its exact ID without following renewal chains and
    * without touching Redis state. Returns false when the kill RPC failed —
    * callers then decide whether to keep lifecycle tracking.
@@ -597,21 +593,32 @@ export class E2BService {
     }
   }
 
-  private async doRenewSandbox(currentId: string): Promise<SandboxData & { filesMigrated: number }> {
+  private async doRenewSandbox(currentId: string): Promise<SandboxData & { filesMigrated: number; sourceGone?: boolean }> {
     const start = Date.now();
 
-    // Fast path: the sandbox is still alive — just extend its TTL. No
-    // migration, no npm install, no downtime, no new sandbox.
-    if (await this.tryExtendSandbox(currentId)) {
-      const data = await this.attach(currentId);
-      this.logger.log(`Extended sandbox ${currentId} TTL (${Date.now() - start}ms)`);
-      return { ...data, filesMigrated: 0 };
+    // Renewal is ALWAYS a migration to a fresh sandbox: on the E2B Hobby
+    // tier every sandbox is hard-killed one hour after creation and
+    // setTimeout() cannot extend it, so there is no in-place fast path.
+    //
+    // 1. Snapshot the current sandbox. When it is already gone (tab hidden
+    // during the renewal window, early crash, backend restart), do NOT fail
+    // the renewal: continue with an empty snapshot so the caller receives a
+    // fresh, working sandbox (seeded with the generic template below) that
+    // is chained from the old id — instead of a 500 that strands the user
+    // on a dead sandbox id forever.
+    let files: Awaited<ReturnType<E2BService['readFiles']>>;
+    let sourceGone = false;
+    try {
+      files = await this.readFiles(currentId, { maxFiles: 1000 });
+    } catch (err) {
+      if (!isSandboxGoneError(err)) throw err;
+      this.logger.warn(
+        `Source sandbox ${currentId} is already gone; renewing into an empty sandbox (no files to migrate)`,
+      );
+      this.sandboxes.delete(currentId);
+      sourceGone = true;
+      files = { files: {}, structure: '', fileCount: 0, manifest: {} };
     }
-
-    // Slow path: migrate to a fresh sandbox.
-    // 1. Snapshot the current sandbox (throws when it is already gone — the
-    // lifecycle scheduler treats that as a dead sandbox and purges it).
-    const files = await this.readFiles(currentId, { maxFiles: 1000 });
 
     // 2. Create a fresh 1-hour sandbox, keeping the same owner for metering.
     const oldInfo = await this.state.getSandboxInfo(currentId);
@@ -673,12 +680,13 @@ export class E2BService {
 
       const filesMigrated = Object.keys(files.files).length;
       this.logger.log(
-        `Renewed sandbox ${currentId} -> ${newSandbox.sandboxId} (${filesMigrated} files, ${Date.now() - start}ms)`,
+        `Renewed sandbox ${currentId} -> ${newSandbox.sandboxId} (${filesMigrated} files${sourceGone ? ', source was already gone' : ''}, ${Date.now() - start}ms)`,
       );
 
       return {
         ...newSandbox,
         filesMigrated,
+        sourceGone,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -857,7 +865,7 @@ export class E2BService {
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('not found') || msg.includes('does not exist') || msg.includes('gone')) {
+      if (isSandboxGoneError(err)) {
         const currentId = await this.getCurrentSandboxId(sandboxId);
         this.sandboxes.delete(currentId);
         throw new SandboxGoneError();

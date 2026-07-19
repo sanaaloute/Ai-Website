@@ -5,6 +5,9 @@ export interface SandboxInfo {
   createdAt: string;
   endAt: string;
   renewing?: boolean;
+  /** Epoch ms when the renewing flag was set; used to detect stale flags
+   * left behind by a crashed renewal so the scheduler can retry. */
+  renewingSince?: number;
   /** Owner of the sandbox (authenticated creator); used for usage metering. */
   userId?: string;
   /** SHA-256 hash of the last installed package.json, used to skip redundant npm installs. */

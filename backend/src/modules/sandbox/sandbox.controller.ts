@@ -103,6 +103,7 @@ export class SandboxController {
         createdAt: data.createdAt,
         endAt: data.endAt,
         filesMigrated: data.filesMigrated,
+        sourceGone: data.sourceGone ?? false,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

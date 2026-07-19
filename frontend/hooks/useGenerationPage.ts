@@ -39,6 +39,10 @@ import {
   pendingVisualChangesAtom,
 } from '@/lib/visual-editing/visualEditingAtoms';
 
+// How many times a failing sandbox renewal is retried (one attempt per 30s
+// scheduler tick) before giving up and falling back to cloud recovery.
+const MAX_RENEW_ATTEMPTS = 3;
+
 export function useGenerationPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -303,9 +307,12 @@ export function useGenerationPage() {
   const requestAutoRestorePreferredProjectRef = useRef<(preferredProjectId?: string | null) => string | null>(() => null);
   const applyGeneratedCodeRef = useRef<(code: string, isEdit?: boolean, overrideSandboxData?: SandboxData) => Promise<void>>(async () => {});
   const onSandboxDeadRef = useRef<(() => void) | undefined>(undefined);
-  const onSandboxRenewRef = useRef<(() => void) | undefined>(undefined);
+  const onSandboxRenewRef = useRef<(() => Promise<boolean>) | undefined>(undefined);
   const recoveredSandboxIdRef = useRef<string | null>(null);
   const renewedSandboxIdRef = useRef<string | null>(null);
+  // Consecutive renewal failures for the current sandbox; drives retry-then-
+  // give-up behavior so one transient failure no longer disables renewal.
+  const renewFailCountRef = useRef<number>(0);
   const lastSandboxCreatedAtRef = useRef<number>(0);
 
   // ── Sandbox Actions ──
@@ -490,18 +497,19 @@ export function useGenerationPage() {
 
   // Preemptive renewal before sandbox expires — migrates ALL files to a new sandbox
   useEffect(() => {
-    onSandboxRenewRef.current = async () => {
+    onSandboxRenewRef.current = async (): Promise<boolean> => {
       const oldId = sandboxDataForRef?.sandboxId;
-      if (!oldId) return;
-      if (renewedSandboxIdRef.current === oldId) return;
-      if (recoveredSandboxIdRef.current === oldId) return;
-      if (cloud.projectOpeningBusy) return;
-      if (sandboxIsLandingBoot) return;
+      if (!oldId) return true;
+      if (renewedSandboxIdRef.current === oldId) return true;
+      if (recoveredSandboxIdRef.current === oldId) return true;
+      // Transient states: report failure so the scheduler retries next tick.
+      if (cloud.projectOpeningBusy) return false;
+      if (sandboxIsLandingBoot) return false;
 
       // Don't renew within 60s of sandbox creation
       const secondsSinceCreation = Math.round((Date.now() - lastSandboxCreatedAtRef.current) / 1000);
       if (secondsSinceCreation < 60) {
-        return;
+        return false;
       }
 
       renewedSandboxIdRef.current = oldId;
@@ -548,29 +556,55 @@ export function useGenerationPage() {
         }, 1500);
 
         const migrated = data.filesMigrated ?? 0;
+        renewFailCountRef.current = 0;
         chatAddChatMessage(
           migrated > 0
             ? `✅ Sandbox renewed! ${migrated} files migrated to a fresh workspace. You can keep working without interruption.`
-            : '✅ Workspace extended! You can keep working without interruption.',
+            : data.sourceGone
+              ? '⚠️ Your previous workspace had already expired, so a fresh sandbox was created — your latest unsaved files could not be carried over. Save your work to the cloud to keep it safe.'
+              : '✅ Workspace renewed! You can keep working without interruption.',
           'system'
         );
         updateStatus('Sandbox active', true);
+        return true;
 
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Renewal failed';
         console.error('[onSandboxRenewRef] Renewal failed:', error);
-        chatAddChatMessage(
-          `⚠️ Sandbox renewal failed: ${msg}. Your current workspace will expire soon — please save your work to the cloud.`,
-          'system'
-        );
-        // Fall back to old behavior: try to open saved project or create blank sandbox
-        const projectId = uiActiveProjectId || uiCurrentSessionProjectId;
-        if (projectId) {
-          void cloudActionsOpenCloudProject(projectId).catch((e) => {
-            const fallbackMsg = e instanceof Error ? e.message : 'Unknown error';
-            chatAddChatMessage(`Auto-recovery also failed: ${fallbackMsg}. Please refresh the page.`, 'system');
-          });
+
+        // Another worker (e.g. the backend lifecycle scheduler) is already
+        // migrating this sandbox — a migration with npm install can take
+        // several minutes. Not a failure: retry on the next tick until the
+        // handover to the new sandbox becomes visible.
+        if (/already in progress/i.test(msg)) {
+          renewedSandboxIdRef.current = null;
+          return false;
         }
+
+        renewFailCountRef.current += 1;
+
+        if (renewFailCountRef.current < MAX_RENEW_ATTEMPTS) {
+          // Transient failure: re-arm renewal so the 30s interval and the
+          // visibility handler retry instead of giving up after one attempt.
+          renewedSandboxIdRef.current = null;
+          if (renewFailCountRef.current === 1) {
+            chatAddChatMessage(`⚠️ Sandbox renewal failed: ${msg}. Retrying automatically…`, 'system');
+          }
+        } else {
+          chatAddChatMessage(
+            `⚠️ Sandbox renewal failed: ${msg}. Your current workspace will expire soon — please save your work to the cloud.`,
+            'system'
+          );
+          // Last resort: try to open saved project or create blank sandbox
+          const projectId = uiActiveProjectId || uiCurrentSessionProjectId;
+          if (projectId) {
+            void cloudActionsOpenCloudProject(projectId).catch((e) => {
+              const fallbackMsg = e instanceof Error ? e.message : 'Unknown error';
+              chatAddChatMessage(`Auto-recovery also failed: ${fallbackMsg}. Please refresh the page.`, 'system');
+            });
+          }
+        }
+        return false;
       } finally {
         uiSetLoading(false);
         uiSetShowLoadingBackground(false);
@@ -922,10 +956,13 @@ export function useGenerationPage() {
 
       hasRenewed = true;
 
-      // Renewal is transparent to running work: the backend extends the
-      // sandbox TTL in place whenever possible, so an active generation no
-      // longer needs to be aborted for a migration.
-      await onSandboxRenewRef.current?.();
+      // Renewal is transparent to running work: the backend migrates all
+      // files to a fresh sandbox and hands over the identity, so an active
+      // generation does not need to be aborted for a migration.
+      const ok = await onSandboxRenewRef.current?.();
+      // On failure the handler re-arms renewedSandboxIdRef while attempts
+      // remain; let the next tick retry instead of giving up permanently.
+      if (ok === false) hasRenewed = false;
     }, CHECK_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
