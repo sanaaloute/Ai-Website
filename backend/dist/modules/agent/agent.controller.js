@@ -84,6 +84,13 @@ let AgentController = AgentController_1 = class AgentController {
         }
         return { success: true, session };
     }
+    async getActiveAgentJob(user, sandboxId) {
+        if (!sandboxId) {
+            throw new common_1.HttpException({ success: false, error: 'sandboxId query param required' }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        const job = await this.agentJobService.findActiveJob(user.id, sandboxId);
+        return { success: true, job };
+    }
     async agentStream(user, body) {
         if (!body.sandboxId || typeof body.sandboxId !== 'string') {
             throw new common_1.HttpException({ success: false, error: 'sandboxId required' }, common_1.HttpStatus.BAD_REQUEST);
@@ -484,6 +491,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], AgentController.prototype, "getAgentSession", null);
+__decorate([
+    (0, common_1.Get)('agent-jobs/active'),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)('sandboxId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], AgentController.prototype, "getActiveAgentJob", null);
 __decorate([
     (0, common_1.Post)('agent-stream'),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard, api_key_guard_1.ApiKeyGuard, rate_limit_guard_1.AgentStreamRateLimitGuard),

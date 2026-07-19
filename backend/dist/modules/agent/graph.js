@@ -49,6 +49,9 @@ function wrapNode(name, fn) {
             try {
                 const result = await fn(state, nodeDeps);
                 if (result && typeof result.error === 'string' && result.error) {
+                    if (signal?.aborted) {
+                        throw new cancellation_1.CancelledError();
+                    }
                     failedResult = result;
                     lastError = new Error(result.error);
                     if (attempt < maxAttempts) {
@@ -69,6 +72,8 @@ function wrapNode(name, fn) {
             catch (e) {
                 if ((0, cancellation_1.isCancellation)(e))
                     throw e;
+                if (signal?.aborted)
+                    throw new cancellation_1.CancelledError();
                 lastError = e;
                 if (attempt < maxAttempts) {
                     const message = e instanceof Error ? e.message : String(e);

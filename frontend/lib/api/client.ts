@@ -386,6 +386,13 @@ export async function cancelAgentJob(jobId: string) {
   );
 }
 
+export async function getActiveAgentJob(sandboxId: string) {
+  return apiGet<{ success: boolean; job: { id: string; state: string } | null }>(
+    `/agent-jobs/active?sandboxId=${encodeURIComponent(sandboxId)}`,
+    'getActiveAgentJob'
+  );
+}
+
 export async function chatStream(body: {
   provider: string;
   prompt: string;

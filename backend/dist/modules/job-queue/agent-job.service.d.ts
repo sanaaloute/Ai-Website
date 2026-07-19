@@ -43,6 +43,10 @@ export declare class AgentJobService {
     deleteSession(sessionId: string): Promise<void>;
     enqueue(data: AgentJobData, idempotencyKey?: string): Promise<Job<AgentJobData>>;
     getJob(jobId: string): Promise<Job<AgentJobData> | undefined>;
+    findActiveJob(userId: string, sandboxId: string): Promise<{
+        id: string;
+        state: string;
+    } | null>;
     cancel(jobId: string): Promise<boolean>;
     isCancelled(jobId: string): Promise<boolean>;
     clearCancellation(jobId: string): Promise<void>;

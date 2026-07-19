@@ -16,6 +16,24 @@ export class CancelledError extends Error {
   }
 }
 
+/**
+ * Tag used as the AbortController.abort(reason) when the processor's job
+ * watchdog fires. Without a tagged reason, a timeout abort is
+ * indistinguishable from a user cancel downstream (isCancellation matches
+ * AbortError) — which is how "Cancelled by user" ended up on timed-out jobs.
+ */
+export class JobTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'JobTimeoutError';
+  }
+}
+
+export function isJobTimeoutError(err: unknown): boolean {
+  if (!err) return false;
+  return (err as { name?: string }).name === 'JobTimeoutError';
+}
+
 export function isCancellation(err: unknown): boolean {
   if (!err) return false;
   if (err instanceof CancelledError) return true;

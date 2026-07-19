@@ -210,20 +210,26 @@ let AgentService = AgentService_1 = class AgentService {
             }
         }
         catch (e) {
-            const cancelled = (0, cancellation_1.isCancellation)(e) || options.signal?.aborted;
-            const message = cancelled ? 'Cancelled by user' : e instanceof Error ? e.message : String(e);
-            if (!cancelled) {
-                this.logger.error(`Graph execution error: ${message}`);
+            const reason = options.signal?.reason;
+            const timedOut = (0, cancellation_1.isJobTimeoutError)(reason);
+            const cancelled = !timedOut && ((0, cancellation_1.isCancellation)(e) || options.signal?.aborted);
+            const message = timedOut
+                ? reason.message
+                : cancelled
+                    ? 'Cancelled by user'
+                    : e instanceof Error ? e.message : String(e);
+            if (cancelled) {
+                this.logger.log('Graph execution cancelled by user');
+                const errorEvent = { type: 'error', data: { message } };
+                await emit(errorEvent);
+                yield errorEvent;
+                const doneEvent = { type: 'done', data: { finalResponse, snapshotId } };
+                await emit(doneEvent);
+                yield doneEvent;
             }
             else {
-                this.logger.log('Graph execution cancelled by user');
+                this.logger.error(`Graph execution error: ${message}`);
             }
-            const errorEvent = { type: 'error', data: { message } };
-            await emit(errorEvent);
-            yield errorEvent;
-            const doneEvent = { type: 'done', data: { finalResponse, snapshotId } };
-            await emit(doneEvent);
-            yield doneEvent;
             if (generationId) {
                 await this.persistence.finishGeneration({
                     generationId,
@@ -232,6 +238,9 @@ let AgentService = AgentService_1 = class AgentService {
                     error: message,
                     state: runningState,
                 });
+            }
+            if (!cancelled) {
+                throw timedOut && reason instanceof Error ? reason : e;
             }
         }
     }

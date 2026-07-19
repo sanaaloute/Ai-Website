@@ -63,6 +63,16 @@ let AgentJobService = AgentJobService_1 = class AgentJobService {
     async getJob(jobId) {
         return this.agentQueue.getJob(jobId);
     }
+    async findActiveJob(userId, sandboxId) {
+        for (const state of ['active', 'delayed', 'waiting', 'prioritized']) {
+            const jobs = await this.agentQueue.getJobs([state], 0, 99, false);
+            const match = jobs.find((j) => j.data.userId === userId && j.data.sandboxId === sandboxId);
+            if (match?.id) {
+                return { id: match.id, state: await match.getState() };
+            }
+        }
+        return null;
+    }
     async cancel(jobId) {
         const client = this.redis.getClient();
         await client.setex((0, exports.AGENT_JOB_CANCEL_KEY)(jobId), 3600, '1');

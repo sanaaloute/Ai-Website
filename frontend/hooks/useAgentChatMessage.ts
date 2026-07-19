@@ -1,5 +1,6 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAgentStream } from './useAgentStream';
+import type { AgentStreamState } from './useAgentStream';
 import { restoreLocalProject } from '@/lib/api/client';
 import type { SandboxData } from './useWorkspaceSandbox';
 import type { ChatMessage, ConversationContext } from './useWorkspaceChat';
@@ -108,7 +109,7 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
     setIsLandingBoot,
   } = deps;
 
-  const { send, abort } = useAgentStream({});
+  const { send, abort, resume } = useAgentStream({});
 
   // Guard to prevent duplicate final chat messages
   const finalMessageAddedRef = useRef(false);
@@ -119,6 +120,169 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
       iframeRef.current.src = url;
     }
   }, [iframeRef, sandboxDataRef]);
+
+  // Maps an agent-stream state update onto generation progress / chat. Shared
+  // by sendChatMessage (new jobs) and the refresh re-attach effect below.
+  const handleAgentStateChange = useCallback(
+    (state: AgentStreamState) => {
+      // Map agent state to generation progress
+      const todoMap: Record<string, string> = {
+        analyzing: 'Analyzing',
+        planning: 'Planning',
+        executing: 'Writing code',
+        reviewing: 'Reviewing',
+        debugging: 'Fixing issues',
+        finalizing: 'Building preview',
+        done: 'Building preview',
+        error: 'Error',
+      };
+
+      const activeTodo = todoMap[state.status] || 'Analyzing';
+
+      setGenerationProgress((prev) => {
+        // Use streamed todos from the agent if available, otherwise fall back to stage-based labels.
+        // When the workflow is complete, force every todo to done so the UI never shows stale progress.
+        const isDone = state.status === 'done';
+        const todoList = state.todos && state.todos.length > 0
+          ? state.todos.map((t) => ({
+              label: t.content,
+              done: isDone || t.status === 'completed',
+              status: isDone ? 'completed' : t.status,
+            }))
+          : (() => {
+              const todoLabels = ['Analyzing', 'Planning', 'Writing code', 'Reviewing', 'Building preview'];
+              const activeIndex = todoLabels.indexOf(activeTodo);
+              return state.status === 'error'
+                ? prev.todoList
+                : todoLabels.map((label, i) => ({
+                    label,
+                    done: i < activeIndex || (state.status === 'done' && i < todoLabels.length),
+                  }));
+            })();
+
+        // Calculate estimated percent based on real progress when possible.
+        // If the backend streamed a todo list, derive the percent from the
+        // ratio of completed / in-progress todos. Otherwise fall back to the
+        // coarse stage mapping.
+        const stagePercent: Record<string, number> = {
+          analyzing: 10,
+          planning: 20,
+          installing: 30,
+          executing: 50,
+          reviewing: 75,
+          debugging: 80,
+          finalizing: 90,
+          done: 100,
+          error: 0,
+        };
+
+        const computeEstimatedPercent = (): number => {
+          if (state.status === 'done') return 100;
+          if (state.status === 'error') return 0;
+
+          if (state.todos && state.todos.length > 0) {
+            const completed = state.todos.filter((t) => t.status === 'completed').length;
+            const inProgress = state.todos.filter((t) => t.status === 'in_progress').length;
+            const progress = completed + inProgress * 0.5;
+            return Math.min(99, Math.round((progress / state.todos.length) * 100));
+          }
+
+          return stagePercent[state.status] ?? prev.estimatedPercent;
+        };
+
+        // Merge agent-streamed files with existing sandbox files.
+        // Agent files take precedence (updates override existing content).
+        const agentFileMap = new Map(state.files.map((f) => [f.path, f]));
+        const mergedFiles = prev.files.map((f) => {
+          const agentFile = agentFileMap.get(f.path);
+          if (agentFile) {
+            agentFileMap.delete(f.path); // Mark as handled
+            return {
+              path: f.path,
+              content: agentFile.content,
+              type: agentFile.type as 'javascript' | 'css' | 'json' | 'html' | 'text',
+              completed: true,
+              edited: true,
+            };
+          }
+          return f;
+        });
+        // Append any new files the agent created that weren't in the existing set
+        for (const [, agentFile] of agentFileMap) {
+          mergedFiles.push({
+            path: agentFile.path,
+            content: agentFile.content,
+            type: agentFile.type as 'javascript' | 'css' | 'json' | 'html' | 'text',
+            completed: true,
+            edited: agentFile.edited || false,
+          });
+        }
+        if (mergedFiles.length !== prev.files.length) {
+          // Files changed — no-op, state update handles UI
+        }
+
+        // Build currentFile for streaming display
+        const currentFile = state.currentFile
+          ? {
+              path: state.currentFile.path,
+              content: state.currentFile.content,
+              type: state.currentFile.type as 'javascript' | 'css' | 'json' | 'html' | 'text',
+            }
+          : prev.currentFile;
+
+        return {
+          ...prev,
+          status: state.statusLabel,
+          isGenerating: state.isRunning,
+          // "Streaming" now means we are actively writing a file. This keeps
+          // planning/analyzer output out of the code streaming panel and binds
+          // the stream to a specific file.
+          isStreaming: state.isRunning && Boolean(state.currentFile),
+          streamedCode: state.currentFile?.content || state.streamedText,
+          files: mergedFiles,
+          currentFile,
+          estimatedPercent: computeEstimatedPercent(),
+          todoList,
+          questionnaire: state.questionnaire,
+          plan: state.plan,
+          exitPlan: state.exitPlan,
+          agentSteps: state.agentSteps.map((step) => ({
+            ...step,
+            label: getAgentStepLabel(step),
+          })),
+          reviewMaxReached: state.reviewMaxReached || prev.reviewMaxReached,
+          reviewMaxIssues: state.reviewMaxIssues?.length ? state.reviewMaxIssues : prev.reviewMaxIssues,
+          reviewMaxTodos: state.reviewMaxTodos?.length ? state.reviewMaxTodos : prev.reviewMaxTodos,
+        };
+      });
+
+      // Add AI response text when done (guard against duplicates from multiple state updates)
+      if (!state.isRunning && state.status === 'done' && !finalMessageAddedRef.current) {
+        finalMessageAddedRef.current = true;
+        // Prefer the concise finalResponse from finalize over the executor's long streamedText
+        const text = (state.finalResponse || state.streamedText).trim();
+        if (text) {
+          addChatMessage(text, 'ai', {
+            suggestions: state.suggestions && state.suggestions.length > 0 ? state.suggestions : undefined,
+          });
+        }
+      }
+
+      // Update sandboxData with preview URL when available
+      if (state.previewUrl && sandboxDataRef.current && sandboxDataRef.current.url !== state.previewUrl) {
+        const updated = { ...sandboxDataRef.current, url: state.previewUrl } as SandboxData;
+        (sandboxDataRef as React.MutableRefObject<SandboxData | null>).current = updated;
+        setSandboxData(updated);
+      }
+
+      // Switch to preview when preview URL is available
+      // Don't auto-switch if review max reached — user needs to decide first
+      if (state.previewUrl && state.status === 'done' && !state.reviewMaxReached) {
+        setActiveTab('preview');
+      }
+    },
+    [addChatMessage, setActiveTab, setGenerationProgress, setSandboxData, sandboxDataRef]
+  );
 
   const sendChatMessage = useCallback(
     async (input?: SendChatMessageInput) => {
@@ -227,163 +391,7 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
         const finalState = await send(
           actualMessage,
           sandboxDataRef.current?.sandboxId || '',
-          (state) => {
-          // Map agent state to generation progress
-          const todoMap: Record<string, string> = {
-            analyzing: 'Analyzing',
-            planning: 'Planning',
-            executing: 'Writing code',
-            reviewing: 'Reviewing',
-            debugging: 'Fixing issues',
-            finalizing: 'Building preview',
-            done: 'Building preview',
-            error: 'Error',
-          };
-
-          const activeTodo = todoMap[state.status] || 'Analyzing';
-
-          setGenerationProgress((prev) => {
-            // Use streamed todos from the agent if available, otherwise fall back to stage-based labels.
-            // When the workflow is complete, force every todo to done so the UI never shows stale progress.
-            const isDone = state.status === 'done';
-            const todoList = state.todos && state.todos.length > 0
-              ? state.todos.map((t) => ({
-                  label: t.content,
-                  done: isDone || t.status === 'completed',
-                  status: isDone ? 'completed' : t.status,
-                }))
-              : (() => {
-                  const todoLabels = ['Analyzing', 'Planning', 'Writing code', 'Reviewing', 'Building preview'];
-                  const activeIndex = todoLabels.indexOf(activeTodo);
-                  return state.status === 'error'
-                    ? prev.todoList
-                    : todoLabels.map((label, i) => ({
-                        label,
-                        done: i < activeIndex || (state.status === 'done' && i < todoLabels.length),
-                      }));
-                })();
-
-            // Calculate estimated percent based on real progress when possible.
-            // If the backend streamed a todo list, derive the percent from the
-            // ratio of completed / in-progress todos. Otherwise fall back to the
-            // coarse stage mapping.
-            const stagePercent: Record<string, number> = {
-              analyzing: 10,
-              planning: 20,
-              installing: 30,
-              executing: 50,
-              reviewing: 75,
-              debugging: 80,
-              finalizing: 90,
-              done: 100,
-              error: 0,
-            };
-
-            const computeEstimatedPercent = (): number => {
-              if (state.status === 'done') return 100;
-              if (state.status === 'error') return 0;
-
-              if (state.todos && state.todos.length > 0) {
-                const completed = state.todos.filter((t) => t.status === 'completed').length;
-                const inProgress = state.todos.filter((t) => t.status === 'in_progress').length;
-                const progress = completed + inProgress * 0.5;
-                return Math.min(99, Math.round((progress / state.todos.length) * 100));
-              }
-
-              return stagePercent[state.status] ?? prev.estimatedPercent;
-            };
-
-            // Merge agent-streamed files with existing sandbox files.
-            // Agent files take precedence (updates override existing content).
-            const agentFileMap = new Map(state.files.map((f) => [f.path, f]));
-            const mergedFiles = prev.files.map((f) => {
-              const agentFile = agentFileMap.get(f.path);
-              if (agentFile) {
-                agentFileMap.delete(f.path); // Mark as handled
-                return {
-                  path: f.path,
-                  content: agentFile.content,
-                  type: agentFile.type as 'javascript' | 'css' | 'json' | 'html' | 'text',
-                  completed: true,
-                  edited: true,
-                };
-              }
-              return f;
-            });
-            // Append any new files the agent created that weren't in the existing set
-            for (const [, agentFile] of agentFileMap) {
-              mergedFiles.push({
-                path: agentFile.path,
-                content: agentFile.content,
-                type: agentFile.type as 'javascript' | 'css' | 'json' | 'html' | 'text',
-                completed: true,
-                edited: agentFile.edited || false,
-              });
-            }
-            if (mergedFiles.length !== prev.files.length) {
-              // Files changed — no-op, state update handles UI
-            }
-
-            // Build currentFile for streaming display
-            const currentFile = state.currentFile
-              ? {
-                  path: state.currentFile.path,
-                  content: state.currentFile.content,
-                  type: state.currentFile.type as 'javascript' | 'css' | 'json' | 'html' | 'text',
-                }
-              : prev.currentFile;
-
-            return {
-              ...prev,
-              status: state.statusLabel,
-              isGenerating: state.isRunning,
-              // "Streaming" now means we are actively writing a file. This keeps
-              // planning/analyzer output out of the code streaming panel and binds
-              // the stream to a specific file.
-              isStreaming: state.isRunning && Boolean(state.currentFile),
-              streamedCode: state.currentFile?.content || state.streamedText,
-              files: mergedFiles,
-              currentFile,
-              estimatedPercent: computeEstimatedPercent(),
-              todoList,
-              questionnaire: state.questionnaire,
-              plan: state.plan,
-              exitPlan: state.exitPlan,
-              agentSteps: state.agentSteps.map((step) => ({
-                ...step,
-                label: getAgentStepLabel(step),
-              })),
-              reviewMaxReached: state.reviewMaxReached || prev.reviewMaxReached,
-              reviewMaxIssues: state.reviewMaxIssues?.length ? state.reviewMaxIssues : prev.reviewMaxIssues,
-              reviewMaxTodos: state.reviewMaxTodos?.length ? state.reviewMaxTodos : prev.reviewMaxTodos,
-            };
-          });
-
-          // Add AI response text when done (guard against duplicates from multiple state updates)
-          if (!state.isRunning && state.status === 'done' && !finalMessageAddedRef.current) {
-            finalMessageAddedRef.current = true;
-            // Prefer the concise finalResponse from finalize over the executor's long streamedText
-            const text = (state.finalResponse || state.streamedText).trim();
-            if (text) {
-              addChatMessage(text, 'ai', {
-                suggestions: state.suggestions && state.suggestions.length > 0 ? state.suggestions : undefined,
-              });
-            }
-          }
-
-          // Update sandboxData with preview URL when available
-          if (state.previewUrl && sandboxDataRef.current && sandboxDataRef.current.url !== state.previewUrl) {
-            const updated = { ...sandboxDataRef.current, url: state.previewUrl } as SandboxData;
-            (sandboxDataRef as React.MutableRefObject<SandboxData | null>).current = updated;
-            setSandboxData(updated);
-          }
-
-          // Switch to preview when preview URL is available
-          // Don't auto-switch if review max reached — user needs to decide first
-          if (state.previewUrl && state.status === 'done' && !state.reviewMaxReached) {
-            setActiveTab('preview');
-          }
-        },
+          handleAgentStateChange,
           chatHistory,
           deps.projectId,
           intent,
@@ -447,7 +455,6 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
       aiEnabled,
       ensureAiWebsiteApiKey,
       aiWebsiteKeySite,
-      setSandboxData,
       sandboxDataRef,
       createSandbox,
       aiChatInput,
@@ -466,8 +473,28 @@ export function useAgentChatMessage(deps: AgentChatMessageDeps) {
       maybeSetIframeSrc,
       setIsLandingBoot,
       send,
+      handleAgentStateChange,
     ]
   );
+
+  // Re-attach to an in-flight generation job after a page refresh. The sandbox
+  // attach flow restores the files; this restores the live stream. Re-attaching
+  // to a finished job is harmless — the backend replays the terminal event and
+  // the stream closes immediately.
+  useEffect(() => {
+    const sandboxId = deps.sandboxData?.sandboxId;
+    if (!sandboxId) return;
+    void resume(sandboxId, handleAgentStateChange).then((finalState) => {
+      if (!finalState) return;
+      if ((finalState.status === 'done' || finalState.status === 'error') && !finalState.reviewMaxReached) {
+        maybeSetIframeSrc();
+      }
+      if (finalState.status === 'error') {
+        const errorText = finalState.error || 'An error occurred during code generation.';
+        addChatMessage(`Error: ${errorText}`, 'error');
+      }
+    });
+  }, [deps.sandboxData?.sandboxId, resume, handleAgentStateChange, maybeSetIframeSrc, addChatMessage]);
 
   const abortChatMessage = useCallback(() => {
     abort();

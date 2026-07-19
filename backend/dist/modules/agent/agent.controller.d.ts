@@ -30,6 +30,13 @@ export declare class AgentController {
         success: boolean;
         session: AgentSessionData;
     }>;
+    getActiveAgentJob(user: User, sandboxId?: string): Promise<{
+        success: boolean;
+        job: {
+            id: string;
+            state: string;
+        } | null;
+    }>;
     agentStream(user: User, body: Record<string, unknown>): Promise<{
         success: boolean;
         jobId: string | undefined;

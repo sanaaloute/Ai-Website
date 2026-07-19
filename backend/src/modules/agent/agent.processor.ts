@@ -6,6 +6,7 @@ import { AgentJobService, AGENT_JOB_QUEUE, AgentJobData } from '@/modules/job-qu
 import { RateLimitService } from '@/common/guards/rate-limit.service';
 import { AgentEvent } from './state';
 import { env } from '@/config/env';
+import { JobTimeoutError } from '@/lib/cancellation';
 
 
 // Concurrency is read straight from process.env (not env()) because decorator
@@ -84,7 +85,9 @@ export class AgentProcessor extends WorkerHost {
         this.logger.error(
           `Agent job ${job.id} exceeded AGENT_JOB_TIMEOUT_MS (${env().agentJobTimeoutMs}ms) — aborting`,
         );
-        abortController.abort();
+        // Tagged reason so downstream layers can tell a job-timeout abort
+        // apart from a user cancel (an untagged abort() looks identical).
+        abortController.abort(new JobTimeoutError(`Agent job timed out after ${env().agentJobTimeoutMs}ms`));
       }, env().agentJobTimeoutMs);
 
       options.signal = abortController.signal;
@@ -106,17 +109,6 @@ export class AgentProcessor extends WorkerHost {
       if (cancellationPoller) clearInterval(cancellationPoller);
       if (jobTimeout) clearTimeout(jobTimeout);
 
-      // A job-timeout abort is swallowed by agent.service.stream() (it emits
-      // error+done events and returns normally), so detect it here — otherwise
-      // a 30-minute timeout would fall through and be reported as 'completed',
-      // and BullMQ would never retry the wedged job.
-      if (jobTimedOut) {
-        const message = `Agent job timed out after ${env().agentJobTimeoutMs}ms`;
-        await publisher({ type: 'error', data: { message } });
-        await this.rateLimitService.releaseConcurrentGeneration(userId, job.id!);
-        throw new Error(message);
-      }
-
       if (wasCancelled) {
         const cancelEvent: AgentEvent = { type: 'error', data: { message: 'Cancelled by user' } };
         const doneEvent: AgentEvent = { type: 'done', data: {} };
@@ -127,6 +119,13 @@ export class AgentProcessor extends WorkerHost {
         return { status: 'cancelled' };
       }
 
+      // Safety net: agent.service rethrows timeout/graph errors, so a stream
+      // that still returned normally after a job-timeout abort would be a bug —
+      // fail the job here rather than report it as 'completed'.
+      if (jobTimedOut) {
+        await this.failJob(job, userId, `Agent job timed out after ${env().agentJobTimeoutMs}ms`, publisher);
+      }
+
       await job.updateProgress({ status: 'completed', previewUrl: finalPreviewUrl, finalResponse });
       await this.rateLimitService.releaseConcurrentGeneration(userId, job.id!);
 
@@ -134,22 +133,54 @@ export class AgentProcessor extends WorkerHost {
     } catch (e) {
       if (cancellationPoller) clearInterval(cancellationPoller);
       if (jobTimeout) clearTimeout(jobTimeout);
-      const message = e instanceof Error ? e.message : String(e);
+      const message = jobTimedOut
+        ? `Agent job timed out after ${env().agentJobTimeoutMs}ms`
+        : e instanceof Error ? e.message : String(e);
       this.logger.error(`Agent job ${job.id} failed: ${message}`);
-      await this.rateLimitService.releaseConcurrentGeneration(userId, job.id!);
-      // A job-timeout abort surfaces as a CancelledError from the stream —
-      // rethrow an honest error so retries/DLQ logs aren't mislabeled.
-      if (jobTimedOut) {
-        throw new Error(`Agent job timed out after ${env().agentJobTimeoutMs}ms`);
-      }
-      throw e;
+      return await this.failJob(job, userId, message, publisher);
     }
+  }
+
+  /**
+   * Shared failure path: releases the concurrency slot, then tells the USER
+   * the truth in the right shape — a `status` "resuming" event when BullMQ
+   * will retry (an `error` event would close the SSE connection and strand
+   * the frontend while the next attempt runs), or a final `error` event when
+   * attempts are exhausted. Always throws so the job is marked failed.
+   */
+  private async failJob(
+    job: Job<AgentJobData>,
+    userId: string,
+    message: string,
+    publisher: (event: AgentEvent) => Promise<void>,
+  ): Promise<never> {
+    await this.rateLimitService.releaseConcurrentGeneration(userId, job.id!);
+    const maxAttempts = job.opts.attempts ?? 1;
+    if (job.attemptsMade < maxAttempts) {
+      await publisher({
+        type: 'status',
+        data: {
+          status: 'retrying',
+          message: `${message} — resuming from checkpoint (attempt ${job.attemptsMade + 1}/${maxAttempts})...`,
+        },
+      });
+    } else {
+      await publisher({ type: 'error', data: { message } });
+    }
+    throw new Error(message);
   }
 
   @OnWorkerEvent('failed')
   onFailed(job: Job<AgentJobData> | undefined, error: Error) {
-    this.logger.error(`Agent job ${job?.id} failed permanently: ${error.message}`);
-    if (job) {
+    if (!job) {
+      this.logger.error(`Agent job failed: ${error.message}`);
+      return;
+    }
+    // BullMQ fires 'failed' on EVERY failed attempt, not just the last one —
+    // only treat it as dead-lettered when attempts are actually exhausted.
+    const maxAttempts = job.opts.attempts ?? 1;
+    if (job.attemptsMade >= maxAttempts) {
+      this.logger.error(`Agent job ${job.id} failed permanently: ${error.message}`);
       // Structured DLQ-style marker: jobs that exhausted all attempts land
       // here. Ops alerting can hook on this exact log line until a real DLQ
       // queue is introduced.
@@ -157,8 +188,12 @@ export class AgentProcessor extends WorkerHost {
         `[dlq] agent job ${job.id} dead-lettered after ${job.attemptsMade} attempt(s) ` +
           `(user ${job.data.userId}, sandbox ${job.data.sandboxId}): ${error.message}`,
       );
-      void this.rateLimitService.releaseConcurrentGeneration(job.data.userId, job.id!);
+    } else {
+      this.logger.warn(
+        `Agent job ${job.id} failed on attempt ${job.attemptsMade}/${maxAttempts} — will retry: ${error.message}`,
+      );
     }
+    void this.rateLimitService.releaseConcurrentGeneration(job.data.userId, job.id!);
   }
 
   @OnWorkerEvent('stalled')

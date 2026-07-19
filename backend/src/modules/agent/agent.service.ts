@@ -14,7 +14,7 @@ import { TemplateService } from './services/template.service';
 import { AgentPersistenceService } from './services/agent-persistence.service';
 import { DatabaseSeederService } from './services/database-seeder.service';
 import { AgentMcpToolService } from './services/agent-mcp-tool.service';
-import { isCancellation } from '@/lib/cancellation';
+import { isCancellation, isJobTimeoutError } from '@/lib/cancellation';
 
 export interface StreamOptions {
   userId: string;
@@ -272,19 +272,34 @@ export class AgentService {
         });
       }
     } catch (e) {
-      const cancelled = isCancellation(e) || options.signal?.aborted;
-      const message = cancelled ? 'Cancelled by user' : e instanceof Error ? e.message : String(e);
-      if (!cancelled) {
-        this.logger.error(`Graph execution error: ${message}`);
-      } else {
+      // A job-timeout abort carries a tagged reason (JobTimeoutError); a user
+      // cancel does not. Without the tag, timeouts were mislabeled
+      // "Cancelled by user" — check the timeout FIRST.
+      const reason = options.signal?.reason;
+      const timedOut = isJobTimeoutError(reason);
+      const cancelled = !timedOut && (isCancellation(e) || options.signal?.aborted);
+      const message = timedOut
+        ? (reason as Error).message
+        : cancelled
+          ? 'Cancelled by user'
+          : e instanceof Error ? e.message : String(e);
+
+      if (cancelled) {
         this.logger.log('Graph execution cancelled by user');
+        const errorEvent: AgentEvent = { type: 'error', data: { message } };
+        await emit(errorEvent);
+        yield errorEvent;
+        const doneEvent: AgentEvent = { type: 'done', data: { finalResponse, snapshotId } };
+        await emit(doneEvent);
+        yield doneEvent;
+      } else {
+        // Retriable failure (job timeout or unhandled graph error): do NOT
+        // emit error/done — the SSE controller closes the connection on those
+        // events, which would strand the frontend while BullMQ retries. The
+        // processor publishes the honest verdict (status "resuming" when a
+        // retry follows, a final error when attempts are exhausted).
+        this.logger.error(`Graph execution error: ${message}`);
       }
-      const errorEvent: AgentEvent = { type: 'error', data: { message } };
-      await emit(errorEvent);
-      yield errorEvent;
-      const doneEvent: AgentEvent = { type: 'done', data: { finalResponse, snapshotId } };
-      await emit(doneEvent);
-      yield doneEvent;
 
       if (generationId) {
         await this.persistence.finishGeneration({
@@ -294,6 +309,12 @@ export class AgentService {
           error: message,
           state: runningState,
         });
+      }
+
+      if (!cancelled) {
+        // Let the processor see the failure immediately instead of letting
+        // this generator drift on as a zombie alongside the retried attempt.
+        throw timedOut && reason instanceof Error ? reason : e;
       }
     }
   }

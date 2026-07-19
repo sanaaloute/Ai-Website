@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import type { AgentStreamEvent, Todo, QuestionnaireQuestion, PlanData } from '@/lib/agent/types';
-import { agentStream, extractPlanLimitError, subscribeAgentStream, getSandboxFile, restoreSandboxSnapshot, cancelAgentJob } from '@/lib/api/client';
+import { agentStream, extractPlanLimitError, subscribeAgentStream, getSandboxFile, restoreSandboxSnapshot, cancelAgentJob, getActiveAgentJob } from '@/lib/api/client';
 import { useEntitlementsStore } from '@/stores/entitlementsStore';
 
 export interface AgentStreamState {
@@ -61,11 +61,134 @@ export interface UseAgentStreamOptions {
   onEvent?: (event: AgentStreamEvent) => void;
 }
 
+const AGENT_JOB_ID_KEY_PREFIX = 'ai-website:agentJobId:';
+
+function readPersistedAgentJobId(sandboxId: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage.getItem(AGENT_JOB_ID_KEY_PREFIX + sandboxId);
+  } catch {
+    return null;
+  }
+}
+
+function persistAgentJobId(sandboxId: string, jobId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(AGENT_JOB_ID_KEY_PREFIX + sandboxId, jobId);
+  } catch {
+    // ignore (private mode / quota)
+  }
+}
+
+function clearPersistedAgentJobId(sandboxId: string | null): void {
+  if (!sandboxId || typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(AGENT_JOB_ID_KEY_PREFIX + sandboxId);
+  } catch {
+    // ignore
+  }
+}
+
+function createInitialAgentStreamState(statusLabel = 'Analyzing your request...'): AgentStreamState {
+  return {
+    status: 'analyzing',
+    statusLabel,
+    isRunning: true,
+    files: [],
+    currentFile: null,
+    todos: [],
+    review: null,
+    reviewMaxReached: false,
+    reviewMaxIssues: [],
+    reviewMaxTodos: [],
+    previewUrl: null,
+    error: null,
+    streamedText: '',
+    commandLog: [],
+    toolProgress: null,
+    questionnaire: null,
+    plan: null,
+    exitPlan: false,
+    finalResponse: null,
+    suggestions: [],
+    agentSteps: [],
+  };
+}
+
 export function useAgentStream(options: UseAgentStreamOptions) {
   const abortRef = useRef<AbortController | null>(null);
   const sandboxIdRef = useRef<string | null>(null);
   const lastSnapshotIdRef = useRef<string | null>(null);
   const currentJobIdRef = useRef<string | null>(null);
+  // One refresh re-attach attempt per sandbox per page load. send() also marks
+  // its sandbox so a deliberate new job never races a resume.
+  const resumeAttemptedForRef = useRef<string | null>(null);
+
+  // Open an SSE subscription to the job and follow it to a terminal state. If
+  // the stream stalls or the connection drops while the job is still running,
+  // re-subscribe to the SAME job instead of failing — resubscribing is free (no
+  // plan quota) and the worker keeps running in the background.
+  const streamJobToCompletion = useCallback(
+    async (
+      jobId: string,
+      state: AgentStreamState,
+      onStateChange: (state: AgentStreamState) => void
+    ): Promise<AgentStreamState> => {
+      const MAX_RESUBSCRIBES = 5;
+      let lastStreamError: unknown;
+      for (let attempt = 0; attempt <= MAX_RESUBSCRIBES; attempt++) {
+        if (attempt > 0) {
+          state.isRunning = true;
+          state.statusLabel = 'Reconnecting to generation...';
+          onStateChange({ ...state });
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, 2000);
+            abortRef.current?.signal.addEventListener(
+              'abort',
+              () => {
+                clearTimeout(timer);
+                reject(new DOMException('Aborted', 'AbortError'));
+              },
+              { once: true },
+            );
+          });
+        }
+
+        try {
+          const response = await subscribeAgentStream(jobId, abortRef.current?.signal);
+
+          if (!response.ok) {
+            const data = (await response.json().catch(() => ({}))) as {
+              error?: string;
+            };
+            throw new Error(data.error || `SSE error! status: ${response.status}`);
+          }
+
+          const finalState = await readAgentStream(response, state, onStateChange, options.onEvent, sandboxIdRef, lastSnapshotIdRef);
+
+          // The stream only closes cleanly on a terminal event (done/error).
+          // Anything else means the connection dropped mid-run — resubscribe.
+          if (finalState.status === 'done' || finalState.status === 'error') {
+            return finalState;
+          }
+          lastStreamError = new Error('Connection to generation lost');
+          continue;
+        } catch (streamErr) {
+          if ((streamErr as Error).name === 'AbortError') {
+            throw streamErr;
+          }
+          lastStreamError = streamErr;
+          continue;
+        }
+      }
+
+      throw lastStreamError instanceof Error
+        ? lastStreamError
+        : new Error('Generation stream stalled. Please retry or refresh.');
+    },
+    [options.onEvent]
+  );
 
   const send = useCallback(
     async (
@@ -82,27 +205,11 @@ export function useAgentStream(options: UseAgentStreamOptions) {
     ): Promise<AgentStreamState> => {
       if (!sandboxId) {
         const errorState: AgentStreamState = {
+          ...createInitialAgentStreamState(),
           status: 'error',
           statusLabel: 'No sandbox available',
           isRunning: false,
-          files: [],
-          currentFile: null,
-          todos: [],
-          review: null,
-          reviewMaxReached: false,
-          reviewMaxIssues: [],
-          reviewMaxTodos: [],
-          previewUrl: null,
           error: 'No sandbox available. Please create one first.',
-          streamedText: '',
-          commandLog: [],
-          toolProgress: null,
-          questionnaire: null,
-          plan: null,
-          exitPlan: false,
-          finalResponse: null,
-          suggestions: [],
-          agentSteps: [],
         };
         onStateChange(errorState);
         return errorState;
@@ -111,30 +218,11 @@ export function useAgentStream(options: UseAgentStreamOptions) {
       abortRef.current = new AbortController();
       sandboxIdRef.current = sandboxId;
       currentJobIdRef.current = null;
+      // A brand-new job supersedes any persisted/resumable job for this sandbox.
+      resumeAttemptedForRef.current = sandboxId;
+      clearPersistedAgentJobId(sandboxId);
 
-      const state: AgentStreamState = {
-        status: 'analyzing',
-        statusLabel: 'Analyzing your request...',
-        isRunning: true,
-        files: [],
-        currentFile: null,
-        todos: [],
-        review: null,
-        reviewMaxReached: false,
-        reviewMaxIssues: [],
-        reviewMaxTodos: [],
-        previewUrl: null,
-        error: null,
-        streamedText: '',
-        commandLog: [],
-        toolProgress: null,
-        questionnaire: null,
-        plan: null,
-        exitPlan: false,
-        finalResponse: null,
-        suggestions: [],
-        agentSteps: [],
-      };
+      const state = createInitialAgentStreamState();
 
       onStateChange({ ...state });
 
@@ -162,62 +250,12 @@ export function useAgentStream(options: UseAgentStreamOptions) {
 
         const { jobId } = enqueueResult.data;
         currentJobIdRef.current = jobId;
+        // Persist so a page refresh mid-generation can re-attach (see resume()).
+        persistAgentJobId(sandboxId, jobId);
 
-        // Step 2: open an SSE subscription to the queued job. If the stream
-        // stalls or the connection drops while the job is still running,
-        // re-subscribe to the SAME job instead of failing — resubscribing is
-        // free (no plan quota) and the worker keeps running in the background.
-        const MAX_RESUBSCRIBES = 5;
-        let lastStreamError: unknown;
-        for (let attempt = 0; attempt <= MAX_RESUBSCRIBES; attempt++) {
-          if (attempt > 0) {
-            state.isRunning = true;
-            state.statusLabel = 'Reconnecting to generation...';
-            onStateChange({ ...state });
-            await new Promise<void>((resolve, reject) => {
-              const timer = setTimeout(resolve, 2000);
-              abortRef.current?.signal.addEventListener(
-                'abort',
-                () => {
-                  clearTimeout(timer);
-                  reject(new DOMException('Aborted', 'AbortError'));
-                },
-                { once: true },
-              );
-            });
-          }
-
-          try {
-            const response = await subscribeAgentStream(jobId, abortRef.current.signal);
-
-            if (!response.ok) {
-              const data = (await response.json().catch(() => ({}))) as {
-                error?: string;
-              };
-              throw new Error(data.error || `SSE error! status: ${response.status}`);
-            }
-
-            const finalState = await readAgentStream(response, state, onStateChange, options.onEvent, sandboxIdRef, lastSnapshotIdRef);
-
-            // The stream only closes cleanly on a terminal event (done/error).
-            // Anything else means the connection dropped mid-run — resubscribe.
-            if (finalState.status === 'done' || finalState.status === 'error') {
-              return finalState;
-            }
-            lastStreamError = new Error('Connection to generation lost');
-            continue;
-          } catch (streamErr) {
-            if ((streamErr as Error).name === 'AbortError') {
-              throw streamErr;
-            }
-            lastStreamError = streamErr;
-            continue;
-          }
-        }
-
-        throw lastStreamError instanceof Error
-          ? lastStreamError
-          : new Error('Generation stream stalled. Please retry or refresh.');
+        // Step 2: open an SSE subscription to the queued job and stream it to a
+        // terminal state.
+        return await streamJobToCompletion(jobId, state, onStateChange);
       } catch (error) {
         if ((error as Error).name === 'AbortError') {
           state.isRunning = false;
@@ -243,7 +281,7 @@ export function useAgentStream(options: UseAgentStreamOptions) {
         return state;
       }
     },
-    [options.onEvent]
+    [streamJobToCompletion]
   );
 
   const abort = useCallback(() => {
@@ -255,8 +293,79 @@ export function useAgentStream(options: UseAgentStreamOptions) {
         console.warn('[useAgentStream] Failed to cancel agent job:', err);
       });
     }
+    // The job is being abandoned — don't re-attach to it after a refresh.
+    clearPersistedAgentJobId(sandboxIdRef.current);
     abortRef.current?.abort();
   }, []);
+
+  // Re-attach to an in-flight job after a page refresh. Returns null when there
+  // is nothing to resume (or a resume/send already handled this sandbox).
+  const resume = useCallback(
+    async (
+      sandboxId: string,
+      onStateChange: (state: AgentStreamState) => void
+    ): Promise<AgentStreamState | null> => {
+      if (!sandboxId) return null;
+      if (resumeAttemptedForRef.current === sandboxId) return null;
+      resumeAttemptedForRef.current = sandboxId;
+
+      // Prefer the jobId persisted before the refresh; fall back to asking the
+      // backend for the active job on this sandbox (covers private browsing and
+      // backend-retry scenarios where the stream had already errored out).
+      let jobId = readPersistedAgentJobId(sandboxId);
+      if (!jobId) {
+        try {
+          const result = await getActiveAgentJob(sandboxId);
+          if (result.ok && result.data.success && result.data.job?.id) {
+            jobId = result.data.job.id;
+          }
+        } catch {
+          jobId = null;
+        }
+      }
+
+      // Nothing to resume, or send() started a new job while we were looking.
+      if (!jobId || currentJobIdRef.current) return null;
+
+      abortRef.current = new AbortController();
+      sandboxIdRef.current = sandboxId;
+      currentJobIdRef.current = jobId;
+
+      const state = createInitialAgentStreamState('Resuming generation...');
+      onStateChange({ ...state });
+
+      // Re-attaching to a finished job is harmless: the backend replays the
+      // terminal event (done/error) and closes, which the normal handlers treat
+      // like any other stream end (including clearing the persisted jobId).
+      try {
+        return await streamJobToCompletion(jobId, state, onStateChange);
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          state.isRunning = false;
+          state.status = 'done';
+          state.statusLabel = 'Cancelled';
+          state.agentSteps.forEach((s) => {
+            s.done = true;
+          });
+          onStateChange({ ...state });
+          return state;
+        }
+
+        const message =
+          error instanceof Error ? error.message : String(error);
+        state.error = message;
+        state.status = 'error';
+        state.statusLabel = 'Error';
+        state.isRunning = false;
+        state.agentSteps.forEach((s) => {
+          s.done = true;
+        });
+        onStateChange({ ...state });
+        return state;
+      }
+    },
+    [streamJobToCompletion]
+  );
 
   const rollback = useCallback(async (): Promise<boolean> => {
     const sandboxId = sandboxIdRef.current;
@@ -266,7 +375,7 @@ export function useAgentStream(options: UseAgentStreamOptions) {
     return result.ok && result.data.success;
   }, []);
 
-  return { send, abort, rollback, lastSnapshotIdRef, currentJobIdRef };
+  return { send, abort, resume, rollback, lastSnapshotIdRef, currentJobIdRef };
 }
 
 async function readAgentStream(
@@ -577,6 +686,9 @@ async function readAgentStream(
                   state.agentSteps.forEach((s) => {
                     s.done = true;
                   });
+                  // Terminal state: drop the persisted jobId so a future
+                  // refresh doesn't re-attach to a finished job.
+                  clearPersistedAgentJobId(sandboxIdRef.current);
                   break;
 
                 case 'suggestions':
@@ -591,6 +703,9 @@ async function readAgentStream(
                   state.agentSteps.forEach((s) => {
                     s.done = true;
                   });
+                  // Terminal state: drop the persisted jobId so a future
+                  // refresh doesn't re-attach to a finished job.
+                  clearPersistedAgentJobId(sandboxIdRef.current);
                   break;
 
                 case 'questionnaire':

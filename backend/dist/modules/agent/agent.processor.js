@@ -17,6 +17,7 @@ const agent_service_1 = require("./agent.service");
 const agent_job_service_1 = require("../job-queue/agent-job.service");
 const rate_limit_service_1 = require("../../common/guards/rate-limit.service");
 const env_1 = require("../../config/env");
+const cancellation_1 = require("../../lib/cancellation");
 const WORKER_CONCURRENCY = parseInt(process.env.AGENT_WORKER_CONCURRENCY ?? '4', 10);
 let AgentProcessor = AgentProcessor_1 = class AgentProcessor extends bullmq_1.WorkerHost {
     constructor(agentService, agentJobService, rateLimitService) {
@@ -59,7 +60,7 @@ let AgentProcessor = AgentProcessor_1 = class AgentProcessor extends bullmq_1.Wo
             jobTimeout = setTimeout(() => {
                 jobTimedOut = true;
                 this.logger.error(`Agent job ${job.id} exceeded AGENT_JOB_TIMEOUT_MS (${(0, env_1.env)().agentJobTimeoutMs}ms) — aborting`);
-                abortController.abort();
+                abortController.abort(new cancellation_1.JobTimeoutError(`Agent job timed out after ${(0, env_1.env)().agentJobTimeoutMs}ms`));
             }, (0, env_1.env)().agentJobTimeoutMs);
             options.signal = abortController.signal;
             for await (const event of this.agentService.stream(options, publisher)) {
@@ -78,12 +79,6 @@ let AgentProcessor = AgentProcessor_1 = class AgentProcessor extends bullmq_1.Wo
                 clearInterval(cancellationPoller);
             if (jobTimeout)
                 clearTimeout(jobTimeout);
-            if (jobTimedOut) {
-                const message = `Agent job timed out after ${(0, env_1.env)().agentJobTimeoutMs}ms`;
-                await publisher({ type: 'error', data: { message } });
-                await this.rateLimitService.releaseConcurrentGeneration(userId, job.id);
-                throw new Error(message);
-            }
             if (wasCancelled) {
                 const cancelEvent = { type: 'error', data: { message: 'Cancelled by user' } };
                 const doneEvent = { type: 'done', data: {} };
@@ -92,6 +87,9 @@ let AgentProcessor = AgentProcessor_1 = class AgentProcessor extends bullmq_1.Wo
                 await this.rateLimitService.releaseConcurrentGeneration(userId, job.id);
                 this.logger.log(`Agent job ${job.id} cancelled by user`);
                 return { status: 'cancelled' };
+            }
+            if (jobTimedOut) {
+                await this.failJob(job, userId, `Agent job timed out after ${(0, env_1.env)().agentJobTimeoutMs}ms`, publisher);
             }
             await job.updateProgress({ status: 'completed', previewUrl: finalPreviewUrl, finalResponse });
             await this.rateLimitService.releaseConcurrentGeneration(userId, job.id);
@@ -102,22 +100,45 @@ let AgentProcessor = AgentProcessor_1 = class AgentProcessor extends bullmq_1.Wo
                 clearInterval(cancellationPoller);
             if (jobTimeout)
                 clearTimeout(jobTimeout);
-            const message = e instanceof Error ? e.message : String(e);
+            const message = jobTimedOut
+                ? `Agent job timed out after ${(0, env_1.env)().agentJobTimeoutMs}ms`
+                : e instanceof Error ? e.message : String(e);
             this.logger.error(`Agent job ${job.id} failed: ${message}`);
-            await this.rateLimitService.releaseConcurrentGeneration(userId, job.id);
-            if (jobTimedOut) {
-                throw new Error(`Agent job timed out after ${(0, env_1.env)().agentJobTimeoutMs}ms`);
-            }
-            throw e;
+            return await this.failJob(job, userId, message, publisher);
         }
     }
+    async failJob(job, userId, message, publisher) {
+        await this.rateLimitService.releaseConcurrentGeneration(userId, job.id);
+        const maxAttempts = job.opts.attempts ?? 1;
+        if (job.attemptsMade < maxAttempts) {
+            await publisher({
+                type: 'status',
+                data: {
+                    status: 'retrying',
+                    message: `${message} — resuming from checkpoint (attempt ${job.attemptsMade + 1}/${maxAttempts})...`,
+                },
+            });
+        }
+        else {
+            await publisher({ type: 'error', data: { message } });
+        }
+        throw new Error(message);
+    }
     onFailed(job, error) {
-        this.logger.error(`Agent job ${job?.id} failed permanently: ${error.message}`);
-        if (job) {
+        if (!job) {
+            this.logger.error(`Agent job failed: ${error.message}`);
+            return;
+        }
+        const maxAttempts = job.opts.attempts ?? 1;
+        if (job.attemptsMade >= maxAttempts) {
+            this.logger.error(`Agent job ${job.id} failed permanently: ${error.message}`);
             this.logger.error(`[dlq] agent job ${job.id} dead-lettered after ${job.attemptsMade} attempt(s) ` +
                 `(user ${job.data.userId}, sandbox ${job.data.sandboxId}): ${error.message}`);
-            void this.rateLimitService.releaseConcurrentGeneration(job.data.userId, job.id);
         }
+        else {
+            this.logger.warn(`Agent job ${job.id} failed on attempt ${job.attemptsMade}/${maxAttempts} — will retry: ${error.message}`);
+        }
+        void this.rateLimitService.releaseConcurrentGeneration(job.data.userId, job.id);
     }
     onStalled(job) {
         if (job) {

@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Param,
+  Query,
   UseGuards,
   Res,
   Logger,
@@ -112,6 +113,23 @@ export class AgentController {
       throw new HttpException({ success: false, error: 'Session not found' }, HttpStatus.NOT_FOUND);
     }
     return { success: true, session };
+  }
+
+  /**
+   * Returns the non-terminal generation job for a user+sandbox (if any) so a
+   * refreshed frontend can re-attach to its in-flight generation stream.
+   */
+  @Get('agent-jobs/active')
+  @UseGuards(AuthGuard)
+  async getActiveAgentJob(
+    @CurrentUser() user: User,
+    @Query('sandboxId') sandboxId?: string,
+  ) {
+    if (!sandboxId) {
+      throw new HttpException({ success: false, error: 'sandboxId query param required' }, HttpStatus.BAD_REQUEST);
+    }
+    const job = await this.agentJobService.findActiveJob(user.id, sandboxId);
+    return { success: true, job };
   }
 
   @Post('agent-stream')

@@ -14,6 +14,7 @@ export declare class AgentProcessor extends WorkerHost {
         previewUrl?: string | null;
         error?: string;
     }>;
+    private failJob;
     onFailed(job: Job<AgentJobData> | undefined, error: Error): void;
     onStalled(job: Job<AgentJobData> | undefined): void;
 }

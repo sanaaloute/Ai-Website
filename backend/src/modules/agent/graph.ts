@@ -35,6 +35,7 @@ import { componentSelectorNode } from './nodes/component-selector.node';
 import { verificationNode } from './nodes/verification.node';
 import type { TemplateCopyResult } from './nodes/template-selector.node';
 import {
+  CancelledError,
   isCancellation,
   sleepWithSignal,
   throwIfCancelled,
@@ -117,6 +118,13 @@ function wrapNode(name: string, fn: NodeFunction) {
       try {
         const result = await fn(state, nodeDeps);
         if (result && typeof result.error === 'string' && result.error) {
+          // An aborted run (user cancel or job timeout) must stop NOW, not
+          // retry: the executor reports the abort as a returned `error` field
+          // ("This operation was aborted"), which would otherwise burn all
+          // node attempts as a zombie alongside the retried job attempt.
+          if (signal?.aborted) {
+            throw new CancelledError();
+          }
           failedResult = result;
           lastError = new Error(result.error);
           if (attempt < maxAttempts) {
@@ -137,6 +145,7 @@ function wrapNode(name: string, fn: NodeFunction) {
         return result;
       } catch (e) {
         if (isCancellation(e)) throw e;
+        if (signal?.aborted) throw new CancelledError();
         lastError = e;
         if (attempt < maxAttempts) {
           const message = e instanceof Error ? e.message : String(e);

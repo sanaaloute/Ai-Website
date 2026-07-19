@@ -52,7 +52,7 @@ export function useGenerationPage() {
   const sandbox = useWorkspaceSandbox();
   const ui = useWorkspaceUI({ initialLoading: true });
   const gen = useGenerationProgress();
-  const chat = useWorkspaceChat();
+  const chat = useWorkspaceChat(sandbox.sandboxData?.sandboxId);
   const preview = usePreviewHealth({
     latestSandboxDataRef: sandbox.latestSandboxDataRef,
     latestPreviewErrorRef: sandbox.latestPreviewErrorRef,

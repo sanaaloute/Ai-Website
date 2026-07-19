@@ -96,6 +96,22 @@ export class AgentJobService {
   }
 
   /**
+   * Finds a non-terminal job for a user+sandbox so a refreshed frontend can
+   * re-attach to its in-flight generation (the jobId was previously held only
+   * in a React ref, lost on refresh). Active jobs win over queued ones.
+   */
+  async findActiveJob(userId: string, sandboxId: string): Promise<{ id: string; state: string } | null> {
+    for (const state of ['active', 'delayed', 'waiting', 'prioritized'] as const) {
+      const jobs = await this.agentQueue.getJobs([state], 0, 99, false);
+      const match = jobs.find((j) => j.data.userId === userId && j.data.sandboxId === sandboxId);
+      if (match?.id) {
+        return { id: match.id, state: await match.getState() };
+      }
+    }
+    return null;
+  }
+
+  /**
    * Marks a job as cancelled and removes it from the queue if it is still
    * waiting. Active jobs will detect the cancellation flag on their next
    * event boundary and stop gracefully.
