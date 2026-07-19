@@ -143,7 +143,7 @@
     "heading": "保持联系",
     "subheading": "有问题、反馈或合作意向？我们很乐意听到你的声音。",
     "emailLabel": "发送邮件",
-    "emailValue": "contact@barkosem.com",
+    "emailValue": "elsone121617@outlook.com",
     "responseTime": "我们通常会在一个工作日内回复。",
     "phoneLabel": "致电我们",
     "phoneValue": "+86 131 4139 2484"
@@ -164,13 +164,16 @@
   },
   "footer": {
     "brandName": "AI-Website",
-    "brandTagline": "构建你所热爱的",
+    "legal": "法律",
     "contact": "联系我们",
     "copyright": "© {year} AI-Website。保留所有权利。",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
     "refundPolicy": "Refund Policy",
-    "contactEmail": "contact@barkosem.com"
+    "phoneLabel": "电话",
+    "emailLabel": "电子邮件",
+    "phoneValue": "+86 131 4139 2484",
+    "emailValue": "elsone121617@outlook.com"
   },
   "loginSection": {
     "loginSubtitle": "登录以访问你的工作区",

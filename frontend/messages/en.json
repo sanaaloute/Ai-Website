@@ -143,7 +143,7 @@
     "heading": "Get in touch",
     "subheading": "Have a question, feedback, or a partnership idea? We'd love to hear from you.",
     "emailLabel": "Email us",
-    "emailValue": "contact@barkosem.com",
+    "emailValue": "elsone121617@outlook.com",
     "responseTime": "We usually reply within one business day.",
     "phoneLabel": "Call us",
     "phoneValue": "+86 131 4139 2484"
@@ -164,13 +164,16 @@
   },
   "footer": {
     "brandName": "AI-Website",
-    "brandTagline": "Build what you love",
+    "legal": "Legal",
     "contact": "Contact",
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
     "refundPolicy": "Refund Policy",
-    "copyright": "© {year} AI-Website. All rights reserved.",
-    "contactEmail": "contact@barkosem.com"
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "phoneValue": "+86 131 4139 2484",
+    "emailValue": "elsone121617@outlook.com",
+    "copyright": "© {year} AI-Website. All rights reserved."
   },
   "legal": {
     "terms": {
