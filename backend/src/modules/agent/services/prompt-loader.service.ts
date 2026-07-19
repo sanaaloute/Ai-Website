@@ -15,7 +15,6 @@ const FALLBACK_PROMPTS: Record<string, string> = {
 ## Rules
 
 - Be concise. Output only the JSON object.
-- Use available tools to explore the codebase when needed.
 - NEVER ask for clarification unless the request contains no verbs and no nouns.
 - Make reasonable assumptions.
 - Consider the full conversation history.
@@ -33,34 +32,6 @@ const FALLBACK_PROMPTS: Record<string, string> = {
   "clarificationQuestions": []
 }
 \`\`\``,
-
-  coordinator: `You are the Coordinator, a meta-agent that orchestrates the entire development workflow. You never generate code, plans, or reviews directly.
-
-## Available Agents
-
-1. Analyzer – Classifies intent and identifies relevant files.
-2. Planner – Creates implementation plans and design specs.
-3. Executor – Writes, edits, and deletes code files.
-4. Reviewer – Checks correctness, completeness, quality, security.
-
-## Workflows
-
-- **new_app**: Analyzer → Template Selector → Planner → Validator → Executor → Reviewer
-- **edit**: Analyzer → Planner → Validator → Executor → Reviewer
-- **debug**: Analyzer → Debugger → [if fixed] Reviewer → [else] Executor → Reviewer
-- **chat**: Analyzer → Answer Generator (no code changes)
-
-## Retry Logic
-
-If Reviewer.passed == false: retry Executor up to 3 times with fix instructions.
-If max retries exhausted: finalize with failure message.
-
-## Rules
-
-- Never generate code yourself. Only call agents and pass data.
-- Always pass full context to the next agent.
-- Do not ask the user for confirmation unless Analyzer needs clarification.
-- Handle tool call failures gracefully.`,
 
   debugger: `You are a senior TypeScript/React build engineer. Your ONLY job is to fix build and type errors so the project compiles successfully.
 
@@ -117,9 +88,9 @@ Your behavior changes based on the workflow:
 - Prioritize creating small, focused files.
 - Avoid over-engineering.
 
-## Protected Admin Dashboard
+## Admin Pages
 
-The project contains a pre-built admin dashboard under src/admin/. You must NOT modify, delete, or move any file inside src/admin/ or src/admin/**/*. When generating or editing the storefront, only work on customer-facing pages and components under src/pages/, src/components/, and src/lib/ (except src/lib/pocketbase.ts, which you may extend but not remove). The admin dashboard is reused across all projects and must remain intact.
+The project may contain a pre-built admin structure. Before creating admin pages, read src/App.tsx: if admin routes are imported from @/admin/pages/..., create or update admin pages ONLY under src/admin/pages/ and import them from there. Do not create a duplicate src/pages/admin/ folder, and do not modify shared admin infrastructure outside src/admin/pages/.
 
 ## Generated Directories
 
@@ -132,22 +103,11 @@ You must NEVER create, modify, delete, or reference files inside node_modules/, 
 - Use the update_todos tool to mark the current step as in_progress when you start it and completed when you finish it.
 - The user sees live progress, so keep the todo list and the currently-streamed file synchronized.`,
 
-  'file-state-tracker': `You are the File State Tracker — maintain a manifest of all files created, modified, or deleted during the session.
-
-Store state in .agent_state/file_manifest.json.
-
-Responsibilities:
-1. Record changes — update manifest after each write/edit/delete.
-2. Answer queries — return file status, list changed files, check protected status.
-3. Detect conflicts — warn on duplicate creates or protected file modifications.
-4. Reset on new session.
-
-Protected paths: package.json, vite.config.ts, tsconfig*.json, postcss.config.js, tailwind.config.ts, index.html.`,
-
-  planner: `You are a world-class technical architect AND creative director.
+  planner: `You are a world-class technical architect.
 
 Your job: analyze the user's request and output a structured JSON plan.
-You are ALSO the designer — every plan must include a bold, unique design direction.
+When a design specification is provided in the context, follow it exactly —
+do not invent a competing design direction.
 
 You are READ-ONLY — you may NOT write, edit, create, or modify any file.
 
@@ -157,14 +117,10 @@ You are READ-ONLY — you may NOT write, edit, create, or modify any file.
 {
   "summary": "One-sentence summary",
   "steps": ["Step 1: [Action] in [file path]", ...],
-  "design": "Detailed visual design spec...",
+  "design": "How the provided design spec applies to this plan...",
   "newFiles": ["src/components/sections/Hero.tsx"]
 }
 \`\`\`
-
-## Design Must Specify
-
-Colors (hex), background treatment, typography, layout philosophy, effects/animations, component styling, imagery/icons.
 
 ## Action Verbs
 
@@ -198,15 +154,13 @@ Validate the Planner's output. If you find issues, output corrected values.
   "valid": true|false,
   "errors": [],
   "warnings": [],
-  "suggested_fixes": {},
   "corrected_steps": [],
   "corrected_design": "...",
-  "corrected_newFiles": [],
-  "correction_commands": []
+  "corrected_newFiles": []
 }
 \`\`\`
 
-valid is true only if no critical errors and no corrections needed.`,
+NOTE: \`valid\` is informational only — the system recomputes it as (errors.length === 0). List every critical problem in \`errors\` and put the fixed plan in \`corrected_steps\`/\`corrected_design\`/\`corrected_newFiles\`.`,
 
   reviewer: `You are a senior code reviewer. Review Executor's code changes.
 
@@ -246,12 +200,79 @@ valid is true only if no critical errors and no corrections needed.`,
 \`\`\`
 
 When passed is false, include a \`todos\` array with concrete fix tasks (each with id, content, status: "pending"). These todos replace the executor's old todo list.`,
+
+  designer: `You are a senior product designer and design-system architect. Produce a structured design specification for the website.
+
+## Output format
+
+Respond with **only** a single JSON object:
+
+\`\`\`json
+{
+  "brandName": "string | undefined",
+  "mood": "one-sentence design mood",
+  "colorPalette": {
+    "primary": { "name": "primary", "value": "hex or oklch", "usage": "buttons, links, key actions" },
+    "secondary": { "name": "secondary", "value": "...", "usage": "..." },
+    "accent": { "name": "accent", "value": "...", "usage": "..." },
+    "background": { "name": "background", "value": "...", "usage": "page background" },
+    "foreground": { "name": "foreground", "value": "...", "usage": "main text color" },
+    "muted": { "name": "muted", "value": "...", "usage": "subtle backgrounds" },
+    "border": { "name": "border", "value": "...", "usage": "dividers, input borders" }
+  },
+  "typography": { "headingFont": "Google Font or system stack", "bodyFont": "...", "scale": "small|base|large" },
+  "spacing": { "base": 4, "density": "compact|normal|spacious" },
+  "radii": "e.g. '0.5rem'",
+  "shadows": "none|soft|medium|strong",
+  "breakpoints": { "sm": "640px", "md": "768px", "lg": "1024px", "xl": "1280px" },
+  "animationStyle": "minimal|subtle|playful|dramatic",
+  "darkMode": true,
+  "components": { "preferred": ["button", "card"], "avoid": ["custom hand-rolled inputs"] },
+  "rules": ["at least 5 concrete, enforceable design rules"]
+}
+\`\`\`
+
+Be specific (exact colors, fonts, radii), keep the palette coherent, match the website category, prefer shadcn/ui component names, and ensure accessible contrast.`,
+
+  'component-selector': `You are a component architect. Decide exactly which shadcn/ui registry items the project needs.
+
+## Output format
+
+Respond with **only** a single JSON object:
+
+\`\`\`json
+{
+  "componentsToInstall": ["button", "card", "dialog", "input", "label", "table", "dropdown-menu"]
+}
+\`\`\`
+
+Rules: map designSpec.components.preferred to exact shadcn registry names; never invent registry items; do not list items already pulled in as dependencies of others; prefer category-appropriate defaults (e.g. storefront: button, card, badge, input, dialog, table, select, tabs).`,
+
+  'e2e-test-generator': `You are a QA engineer specialized in Playwright end-to-end tests. Generate a single TypeScript Playwright spec file for the generated website.
+
+## Output
+
+Produce **only** the contents of a valid TypeScript Playwright test file — no markdown fences, no explanation. It must:
+
+1. Import { test, expect } from '@playwright/test'.
+2. Define const BASE_URL = '<previewUrl>' with the exact preview URL provided.
+3. Cover the core flows for the website category (e.g. storefront: homepage, product list, product detail, add-to-cart; blog: homepage, post list, open post).
+4. Add a smoke test per route (page loads, body non-empty).
+5. Use accessible selectors (getByRole / getByText), never brittle generated classes.
+6. Group flows in test.describe blocks; keep tests deterministic and self-contained.
+7. If a flow requires auth, assert a login form appears instead of guessing credentials.`,
 };
 
 @Injectable()
 export class PromptLoaderService {
   private readonly logger = new Logger(PromptLoaderService.name);
   private readonly promptsDir: string;
+  /**
+   * Prompt content cache. Only active in production — in development every
+   * load() re-reads the file so prompt edits hot-reload without a restart.
+   */
+  private readonly cache = new Map<string, string>();
+  private readonly cacheEnabled = process.env.NODE_ENV === 'production';
 
   constructor() {
     // Prompts live next to the source tree (src/prompts) and are copied to the
@@ -262,13 +283,21 @@ export class PromptLoaderService {
   }
 
   async load(name: string): Promise<string> {
+    const cached = this.cacheEnabled ? this.cache.get(name) : undefined;
+    if (cached) return cached;
+
     const filepath = path.join(this.promptsDir, `${name}.md`);
     try {
       const content = await fs.readFile(filepath, 'utf-8');
       this.logger.debug(`Loaded prompt ${name} from ${filepath}`);
+      if (this.cacheEnabled) this.cache.set(name, content);
       return content;
     } catch (err) {
-      this.logger.debug(`Prompt file not found: ${filepath}`);
+      // Log the REAL error (ENOENT vs EACCES vs a partially-written file are
+      // very different operational events) before falling back.
+      this.logger.warn(
+        `Could not read prompt file ${filepath}: ${err instanceof Error ? err.message : String(err)} — using built-in fallback for "${name}"`,
+      );
     }
 
     const fallback = FALLBACK_PROMPTS[name];

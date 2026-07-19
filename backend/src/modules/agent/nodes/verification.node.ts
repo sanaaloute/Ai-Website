@@ -114,6 +114,8 @@ export async function verificationNode(
       e2eTestsWritten: e2eResult.e2eTestsWritten,
       securityIssues: securityResult.securityIssues,
       seoGenerated: seoResult.seoGenerated,
+      // Current-round SEO failures only — routing must not see last round's.
+      seoIssues: seoResult.verificationFailures ?? [],
       screenshots: visualResult.screenshots,
       verificationFailures,
       lastVerificationStage,
@@ -131,6 +133,7 @@ export async function verificationNode(
       e2eFailures: [`verification: ${message}`],
       securityIssues: [],
       seoGenerated: false,
+      seoIssues: [],
       verificationFailures: [...(state.verificationFailures ?? []), `verification: ${message}`].slice(-20),
       lastVerificationStage: 'verification',
       previewHealthy: false,

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgentTool } from "../types";
 import { upsertFile } from "@/lib/db/project-store";
 import { normalizeFilePath, ensureTypeScriptExtension } from "../file-manifest";
+import { DeterministicToolError } from "../errors";
 import { createFileUpdateEvent } from "../stream-writer";
 
 const editFileSchema = z.object({
@@ -62,7 +63,7 @@ function applyFileEdit(original: string, editContent: string): string {
     // Find beforeAnchor in result
     let beforeIndex = findInText(result, beforeAnchor, searchOffset);
     if (beforeIndex === -1) {
-      throw new Error(
+      throw new DeterministicToolError(
         `Could not find edit anchor in original file. Looking for: "${beforeAnchor.slice(
           0,
           80
@@ -78,7 +79,7 @@ function applyFileEdit(original: string, editContent: string): string {
         beforeIndex + beforeAnchor.length
       );
       if (afterIndex === -1) {
-        throw new Error(
+        throw new DeterministicToolError(
           `Could not find edit anchor in original file. Looking for: "${afterAnchor.slice(
             0,
             80
@@ -209,7 +210,7 @@ export class EditFileTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${error}` },
       });
-      throw new Error(error);
+      throw new DeterministicToolError(error);
     }
 
     let originalContent = "";
@@ -270,6 +271,12 @@ export class EditFileTool extends AgentTool {
       if (hasSyntaxError) {
         console.error(`[edit_file] Syntax error detected in ${normalizedPath}. Reverting to original.`);
         await this.agentContext.sandboxProvider.writeFile(normalizedPath, originalContent);
+        // The file_update with the new content already went out — send a
+        // corrective event so the frontend doesn't keep showing code that no
+        // longer exists in the sandbox.
+        this.agentContext.streamWriter.write(
+          createFileUpdateEvent(normalizedPath, originalContent, "modified"),
+        );
         // Also revert SQLite
         if (this.agentContext.supabaseProjectId) {
           try {
@@ -293,6 +300,8 @@ export class EditFileTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${message}` },
       });
+      // Keep the deterministic classification — anchor misses must not be retried.
+      if (error instanceof DeterministicToolError) throw error;
       throw new Error(`Failed to edit ${normalizedPath}: ${message}`);
     }
   }

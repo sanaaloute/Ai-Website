@@ -1,15 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { env } from '@/config/env';
 import { ProviderId, providerModels } from '@/lib/llm-providers';
 
 /**
  * Models approved for use in the AI-Website agent runtime (legacy TokenFree
- * gateway). Per-provider model allowlists live in `llm-providers.ts`.
+ * gateway) come from AI_ALLOWED_MODELS (comma-separated); defaults below.
+ * Per-provider model allowlists live in `llm-providers.ts`.
  */
-const ALLOWED_MODELS = new Set([
-  'qwen-max',
-  'kimi-k2.5',
-]);
+const DEFAULT_ALLOWED_MODELS = ['kimi-k2.5', 'qwen-max'];
 
 type ModelRole = 'reasoning' | 'code' | 'review' | 'fast';
 
@@ -45,6 +43,9 @@ const NODE_ROLE_MAP: Record<string, ModelRole> = {
 
 @Injectable()
 export class ModelResolverService {
+  private readonly logger = new Logger(ModelResolverService.name);
+  private readonly warned = new Set<string>();
+
   /**
    * Return the ordered list of models to try for a given node/agent role.
    * The first model is the role-specific preferred model; subsequent models are fallbacks.
@@ -63,29 +64,40 @@ export class ModelResolverService {
     }
 
     const e = env();
+    const allowed = e.aiAllowedModels.length ? e.aiAllowedModels : DEFAULT_ALLOWED_MODELS;
+    const allowedSet = new Set(allowed);
 
-    // Role-specific preferred primaries (restricted to the approved pair):
-    // - Reasoning / planning / analysis / chat -> kimi-k2.5, then qwen-max
-    // - Coding / debugging -> kimi-k2.5, then qwen-max
-    // - Review -> kimi-k2.5, then qwen-max
-    // - Fast / light generation -> qwen-max, then kimi-k2.5
-    const rolePrimaries: Record<ModelRole, string[]> = {
-      reasoning: ['kimi-k2.5', 'qwen-max'],
-      code: ['kimi-k2.5', 'qwen-max'],
-      review: ['kimi-k2.5', 'qwen-max'],
-      fast: ['qwen-max', 'kimi-k2.5'],
+    // Role primaries are env-configurable (AI_MODEL_REASONING / _CODE /
+    // _REVIEW / _FAST); each must also be in AI_ALLOWED_MODELS to take effect.
+    const rolePrimaries: Record<ModelRole, string> = {
+      reasoning: e.aiModelReasoning,
+      code: e.aiModelCode,
+      review: e.aiModelReview,
+      fast: e.aiModelFast,
     };
 
-    const approvedFallbacks = [
-      'kimi-k2.5',
-      'qwen-max',
-    ];
-
     const sequence = this.dedupe([
-      ...rolePrimaries[role],
+      rolePrimaries[role],
       e.aiDefaultModel,
-      ...approvedFallbacks,
-    ]).filter((model) => ALLOWED_MODELS.has(model));
+      ...allowed,
+    ]).filter((model) => {
+      const ok = allowedSet.has(model);
+      if (!ok) {
+        // Fail LOUDLY: a silently dropped AI_DEFAULT_MODEL/role primary is a
+        // config bug that used to be invisible.
+        this.warnOnce(
+          `Model "${model}" is configured but not in AI_ALLOWED_MODELS (${allowed.join(', ')}) — skipping it.`,
+        );
+      }
+      return ok;
+    });
+
+    if (sequence.length === 0) {
+      this.warnOnce(
+        `No usable models after filtering against AI_ALLOWED_MODELS (${allowed.join(', ')}); falling back to "${allowed[0]}".`,
+      );
+      return allowed.slice(0, 1);
+    }
 
     return sequence;
   }
@@ -98,11 +110,35 @@ export class ModelResolverService {
   }
 
   /**
+   * Generation parameters for a node: temperature by role (env-tunable via
+   * AI_TEMP_REASONING/_CODE/_REVIEW/_FAST), optional AI_MAX_TOKENS cap, and a
+   * label so [llm-usage] log lines can be attributed per node.
+   */
+  generationParams(nodeType: string): { temperature: number; maxTokens?: number; label: string } {
+    const role = NODE_ROLE_MAP[nodeType] ?? 'reasoning';
+    const e = env();
+    const temperature: Record<ModelRole, number> = {
+      reasoning: e.aiTempReasoning,
+      code: e.aiTempCode,
+      review: e.aiTempReview,
+      fast: e.aiTempFast,
+    };
+    return { temperature: temperature[role], maxTokens: e.aiMaxTokens, label: nodeType };
+  }
+
+  /**
    * Validate that a user-provided model is in the allowed set.
    * This is kept for defense-in-depth even though users cannot override models.
    */
   isAllowedModel(model?: string): boolean {
-    return !!model && ALLOWED_MODELS.has(model);
+    const allowed = env().aiAllowedModels;
+    return !!model && (allowed.length ? allowed : DEFAULT_ALLOWED_MODELS).includes(model);
+  }
+
+  private warnOnce(message: string): void {
+    if (this.warned.has(message)) return;
+    this.warned.add(message);
+    this.logger.warn(message);
   }
 
   private dedupe(models: string[]): string[] {

@@ -18,20 +18,16 @@ import { CopyFileTool } from "./implementations/copy_file";
 import { RenameFileTool } from "./implementations/rename_file";
 import { WebSearchTool } from "./implementations/web_search";
 import { WebCrawlTool } from "./implementations/web_crawl";
-import { SetChatSummaryTool } from "./implementations/set_chat_summary";
 import { CodeSearchTool } from "./implementations/code_search";
 import { EditFileTool } from "./implementations/edit_file";
 import { ReadLogsTool } from "./implementations/read_logs";
 import { FetchPreviewTool } from "./implementations/fetch_preview";
-import { WritePlanTool } from "./implementations/write_plan";
-import { ExitPlanTool } from "./implementations/exit_plan";
 import { AddIntegrationTool } from "./implementations/add_integration";
 import { ExecuteSqlTool } from "./implementations/execute_sql";
 import { GetSupabaseProjectInfoTool } from "./implementations/get_supabase_project_info";
 import { GetSupabaseTableSchemaTool } from "./implementations/get_supabase_table_schema";
 import { SaveProjectTool } from "./implementations/save_project";
 import { QueryManifestTool } from "./implementations/query_manifest";
-import { UpdateManifestTool } from "./implementations/update_manifest";
 import { SetupPocketBaseTool } from "./implementations/setup_pocketbase";
 import { RunCommandTool } from "./implementations/run_command";
 
@@ -74,15 +70,23 @@ export function buildToolSet(context: AgentContext, docsTools: StructuredTool[] 
     new GetSupabaseTableSchemaTool(context),
     new SaveProjectTool(context),
     new QueryManifestTool(context),
-    new UpdateManifestTool(context),
     new SetupPocketBaseTool(context),
     new RunCommandTool(context),
     ...docsTools,
   ];
 }
 
-/** Read-only tool set for the analyze node (exploration, no modifications) */
+/**
+ * Read-only tool set for the reviewer node (exploration + verification, no
+ * modifications). Includes run_type_checks so the reviewer can actually run
+ * the tsc audit its prompt requires, and strips the sandbox-mutating shadcn
+ * install/init MCP tools — the same guard the planning toolset applies.
+ */
 export function buildReadOnlyToolSet(context: AgentContext, docsTools: StructuredTool[] = []): StructuredTool[] {
+  const readOnlyDocsTools = docsTools.filter(
+    (tool) => tool.name !== 'shadcn_install' && tool.name !== 'shadcn_init',
+  );
+
   return [
     new ReadFileTool(context),
     new ListFilesTool(context),
@@ -92,7 +96,8 @@ export function buildReadOnlyToolSet(context: AgentContext, docsTools: Structure
     new WebCrawlTool(context),
     new ReadLogsTool(context),
     new QueryManifestTool(context),
-    ...docsTools,
+    new RunTypeChecksTool(context),
+    ...readOnlyDocsTools,
   ];
 }
 
@@ -129,33 +134,5 @@ export function buildPlanningToolSet(context: AgentContext, docsTools: Structure
  * dependencies, etc.) — not just build/type errors.
  */
 export function buildDebugToolSet(context: AgentContext, docsTools: StructuredTool[] = []): StructuredTool[] {
-  return [
-    new ReadFileTool(context),
-    new WriteFileTool(context),
-    new EditFileTool(context),
-    new ListFilesTool(context),
-    new DeleteFileTool(context),
-    new CopyFileTool(context),
-    new RenameFileTool(context),
-    new SearchReplaceTool(context),
-    new UpdateTodosTool(context),
-    new GrepTool(context),
-    new CodeSearchTool(context),
-    new WebSearchTool(context),
-    new WebCrawlTool(context),
-    new AddDependencyTool(context),
-    new RunTypeChecksTool(context),
-    new ReadLogsTool(context),
-    new FetchPreviewTool(context),
-    new AddIntegrationTool(context),
-    new ExecuteSqlTool(context),
-    new GetSupabaseProjectInfoTool(context),
-    new GetSupabaseTableSchemaTool(context),
-    new SaveProjectTool(context),
-    new QueryManifestTool(context),
-    new UpdateManifestTool(context),
-    new SetupPocketBaseTool(context),
-    new RunCommandTool(context),
-    ...docsTools,
-  ];
+  return buildToolSet(context, docsTools);
 }

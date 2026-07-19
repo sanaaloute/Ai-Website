@@ -4,8 +4,9 @@ import { E2BService } from '@/lib/e2b.service';
 import { AiGatewayService } from '@/lib/ai-gateway.service';
 import { ProviderKeysService } from '@/modules/profile/provider-keys.service';
 import { AiCredential } from '@/lib/llm-providers';
-import { AgentState, AgentEvent } from './state';
+import { AgentState, AgentEvent, MAX_REVIEW_RETRIES } from './state';
 import { PromptContent } from '@/types';
+import { env } from '@/config/env';
 import { buildAgentGraph, GraphDependencies } from './graph';
 import { PromptLoaderService } from './services/prompt-loader.service';
 import { ModelResolverService } from './services/model-resolver.service';
@@ -64,6 +65,7 @@ export class AgentService {
       chatHistory: options.chatHistory ?? [],
       aiCredentials,
       retryCount: 0,
+      reviewRetryCount: 0,
 
       // When the user chooses to continue after the review retry loop hits the
       // human-in-the-loop limit, skip analyzer/planner and jump straight into the
@@ -94,11 +96,30 @@ export class AgentService {
       logger: this.logger,
       emit,
       signal: options.signal,
+      // Shared mutable box for the designer→template-selector parallel copy
+      // handoff (see GraphDependencies.templateCopy).
+      templateCopy: {},
     };
 
     const threadId = options.threadId ?? `agent-${options.userId ?? 'anon'}-${randomUUID()}`;
     let finalResponse = '';
-    const runningState: Partial<AgentState> = options.resume
+
+    // Resume-from-checkpoint is only possible when a checkpoint actually
+    // exists for this thread (a job that died before its first checkpoint
+    // write would otherwise crash on a null-input stream). Fall back to a
+    // fresh run in that case.
+    let resume = options.resume ?? false;
+    if (resume) {
+      const existing = await this.persistence
+        .getTuple({ configurable: { thread_id: threadId } })
+        .catch(() => undefined);
+      if (!existing) {
+        this.logger.warn(`Resume requested for thread ${threadId} but no checkpoint exists — starting fresh`);
+        resume = false;
+      }
+    }
+
+    const runningState: Partial<AgentState> = resume
       ? {}
       : { ...initialState };
 
@@ -133,10 +154,10 @@ export class AgentService {
     try {
       // When resuming, pass null input so LangGraph loads the latest checkpoint
       // state for the thread and continues from where it left off.
-      const stream = await this.graph.stream(options.resume ? null : initialState, {
+      const stream = await this.graph.stream(resume ? null : initialState, {
         streamMode: 'updates',
         configurable: { deps, thread_id: threadId },
-        recursionLimit: 50,
+        recursionLimit: env().agentRecursionLimit,
         // Propagate the user-cancel signal into LangGraph so it also aborts
         // between super-steps, not just inside our own checks.
         signal: options.signal,
@@ -203,12 +224,13 @@ export class AgentService {
           await emit(ev);
           yield ev;
 
-          // After 3 failed review attempts, stop the loop and ask the user whether
-          // to keep trying. Emitting this event lets the UI show a human-in-the-loop
-          // card with the remaining issues and reviewer-created todos.
+          // After MAX_REVIEW_RETRIES failed review attempts, stop the loop and
+          // ask the user whether to keep trying. Emitting this event lets the
+          // UI show a human-in-the-loop card with the remaining issues and
+          // reviewer-created todos.
           if (
             update.reviewPassed === false &&
-            (runningState.retryCount ?? 0) >= 3
+            (runningState.reviewRetryCount ?? 0) >= MAX_REVIEW_RETRIES
           ) {
             const maxReachedEvent: AgentEvent = {
               type: 'review_max_reached',

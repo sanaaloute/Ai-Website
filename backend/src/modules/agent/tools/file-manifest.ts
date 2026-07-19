@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { FORBIDDEN_PATH_PREFIXES } from '@/lib/e2b.service';
+import { DeterministicToolError } from './errors';
 
 const PROTECTED_PATHS = new Set([
   'package.json',
@@ -69,13 +70,28 @@ export class FileManifest {
  * Normalize a file path relative to the app workspace root.
  * Strips the workspace prefix, leading slashes, and collapses ./ and ..
  * so that protected-path checks cannot be bypassed with relative tricks.
+ *
+ * Throws when the result would escape the workspace (leading `..` segments
+ * survive `path.posix.normalize`, e.g. `../../etc/passwd` or `../package.json`),
+ * so callers can never read/write/delete outside /home/user/app.
  */
 export function normalizeFilePath(filePath: string): string {
   const withoutWorkspacePrefix = filePath
     .replace(/^\/home\/user\/app\//, '')
     .replace(/^\//, '');
-  const normalized = path.posix.normalize(withoutWorkspacePrefix);
-  return normalized.replace(/^\.\//, '');
+  const normalized = path.posix
+    .normalize(withoutWorkspacePrefix)
+    .replace(/^\.\//, '');
+  if (
+    normalized === '..' ||
+    normalized.startsWith('../') ||
+    path.posix.isAbsolute(normalized)
+  ) {
+    throw new DeterministicToolError(
+      `Path escapes the workspace: "${filePath}". Paths must stay inside /home/user/app (no '..' segments).`,
+    );
+  }
+  return normalized;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentTool } from "../types";
+import { shellQuote } from "../shell";
 
 const grepSchema = z.object({
   query: z.string().describe("The regex pattern to search for"),
@@ -48,25 +49,30 @@ export class GrepTool extends AgentTool {
     });
 
     try {
-      const flags: string[] = [];
+      // NOTE: every model-controlled value is single-quoted via shellQuote —
+      // the sandbox runs commands through a shell, and unquoted interpolation
+      // is both an injection risk and breaks on spaces/globs. `--include *` is
+      // intentionally NOT used as a default: the shell would glob-expand the
+      // bare `*` and corrupt the argument list.
+      const cmdParts: string[] = ["grep"];
       if (!args.case_sensitive) {
-        flags.push("-i");
+        cmdParts.push("-i");
       }
-      flags.push("-r");
-      flags.push("-n");
-      flags.push("--include");
-      flags.push(args.include_pattern || "*");
+      cmdParts.push("-r", "-n", "-I"); // recursive, line numbers, skip binaries
+      for (const dir of ["node_modules", ".git", "dist", ".next", "build", ".agent_state"]) {
+        cmdParts.push(`--exclude-dir=${dir}`);
+      }
+      if (args.include_pattern) {
+        cmdParts.push("--include", shellQuote(args.include_pattern));
+      }
       if (args.exclude_pattern) {
-        flags.push("--exclude");
-        flags.push(args.exclude_pattern);
+        cmdParts.push("--exclude", shellQuote(args.exclude_pattern));
       }
-      flags.push("-I"); // Ignore binary files
 
       const limit = Math.min(args.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
 
-      // Build the grep command (no pipes - runCommand uses subprocess without shell)
-      const grepArgs = [...flags, "-e", args.query, "."];
-      const grepCmd = ["grep", ...grepArgs].join(" ");
+      cmdParts.push("-e", shellQuote(args.query), ".");
+      const grepCmd = cmdParts.join(" ");
 
       const result = await this.agentContext.sandboxProvider.runCommand(grepCmd);
 

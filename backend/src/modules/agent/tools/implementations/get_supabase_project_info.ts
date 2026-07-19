@@ -13,9 +13,9 @@ const getSupabaseProjectInfoSchema = z.object({
 export class GetSupabaseProjectInfoTool extends AgentTool {
   name = "get_supabase_project_info";
   description =
-    "Get Supabase project overview: project ID, publishable key, secret names, and table names. " +
-    "Use this to discover what tables exist before fetching detailed schemas. " +
-    "Requires a connected Supabase project.";
+    "Get basic identifiers of the connected Supabase project (project ID and organization slug only). " +
+    "NOTE: publishable keys, secret names, and table listings are NOT available — they require a Supabase Management API token that is not configured. " +
+    "Do not call this expecting table names; discover the schema from the codebase instead. Requires a connected Supabase project.";
   schema = getSupabaseProjectInfoSchema;
 
   async _call(

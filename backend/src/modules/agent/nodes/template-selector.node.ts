@@ -50,11 +50,15 @@ export function startTemplateCopy(
   sandboxId: string,
   category: string,
 ): void {
-  if (deps.templateCopy) return;
+  if (deps.templateCopy.current) return;
   deps.logger.log(`Starting template copy in parallel for category '${category}'`);
-  deps.templateCopy = {
+  const promise = runTemplateCopy(deps, sandboxId, category);
+  // Guard against unhandled rejection if the copy fails before the template
+  // selector awaits it (the consumer still observes the rejection normally).
+  promise.catch(() => {});
+  deps.templateCopy.current = {
     category,
-    promise: runTemplateCopy(deps, sandboxId, category),
+    promise,
   };
 }
 
@@ -130,8 +134,8 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
     let loadedCount = 0;
     const failedCount = 0;
 
-    const pendingCopy = deps.templateCopy;
-    deps.templateCopy = undefined;
+    const pendingCopy = deps.templateCopy.current;
+    deps.templateCopy.current = undefined;
     if (pendingCopy) {
       deps.logger.log(`Awaiting parallel template copy for category '${pendingCopy.category}'`);
     }

@@ -32,6 +32,6 @@ export class AddIntegrationTool extends AgentTool {
       },
     });
 
-    return `Integration prompt for ${args.provider} displayed. The user can set up the integration in the UI. Once connected, tools like execute_sql, get_supabase_project_info, and get_supabase_table_schema will be available.`;
+    return `Integration prompt for ${args.provider} displayed. The user can set up the integration in the UI. Once connected, execute_sql, get_supabase_project_info, and get_supabase_table_schema stop reporting "not connected" — note they currently return staged/placeholder data only (no live Management API access).`;
   }
 }

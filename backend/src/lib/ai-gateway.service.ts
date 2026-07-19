@@ -4,7 +4,7 @@ import { SearchPlan, FilePlanEntry, PromptContent, normalizePromptContent, promp
 import { ToolDefinition, ToolCall } from '@/modules/agent/tools/tool-definitions';
 import type { ToolExecutionResult } from '@/modules/agent/tools/tool-executor';
 import { AiCredential, AiKeyInput, ProviderId, getProvider } from '@/lib/llm-providers';
-import { CancelledError, combineAbortSignals, isCancellation, throwIfCancelled } from '@/lib/cancellation';
+import { CancelledError, isCancellation, throwIfCancelled } from '@/lib/cancellation';
 
 /** A concrete request target: one provider + key + the models to try on it. */
 interface AiCandidate {
@@ -13,6 +13,21 @@ interface AiCandidate {
   baseUrl: string;
   extraHeaders?: Record<string, string>;
   models: string[];
+}
+
+/** Optional per-call generation parameters (see ModelResolverService.generationParams). */
+export interface GenerationOptions {
+  temperature?: number;
+  maxTokens?: number;
+  /** Label attached to usage/cost log lines (usually the calling node type). */
+  label?: string;
+}
+
+/** Token accounting reported by the provider (stream_options.include_usage). */
+interface TokenUsage {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
 }
 
 interface ExtractedChunk {
@@ -97,6 +112,71 @@ export class AiGatewayService {
     return controller.signal;
   }
 
+  private logUsage(label: string | undefined, candidate: AiCandidate, model: string, usage?: TokenUsage): void {
+    if (!usage) return; // provider did not report usage for this call
+    this.logger.log(
+      `[llm-usage] ${label ?? 'llm'} ${candidate.provider}/${model} ` +
+        `prompt=${usage.prompt_tokens ?? '?'} completion=${usage.completion_tokens ?? '?'} total=${usage.total_tokens ?? '?'}`,
+    );
+  }
+
+  /**
+   * Watchdog for streaming LLM calls. Streaming requests previously had no
+   * timeout at all: a hung provider SSE connection would occupy a worker slot
+   * forever. Two guards, both env-configurable:
+   *  - idle: abort when no SSE chunk arrives for `aiStreamIdleTimeoutMs`
+   *    (reset on every chunk; suspended while a tool call runs inside the
+   *    stream, since no chunks arrive during that time).
+   *  - total: hard ceiling at `aiStreamTotalTimeoutMs` for the whole call.
+   * Caller cancellation is forwarded unchanged and stays distinguishable from
+   * a watchdog timeout via the `timedOut` flag (an AbortError alone is not
+   * enough — `isCancellation` matches AbortError, which would misclassify a
+   * timeout as a user cancel and skip failover to the next model).
+   */
+  private createStreamWatchdog(callerSignal?: AbortSignal) {
+    const controller = new AbortController();
+    const idleMs = env().aiStreamIdleTimeoutMs;
+    const totalMs = env().aiStreamTotalTimeoutMs;
+    let timedOut: 'idle' | 'total' | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const armIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        timedOut = 'idle';
+        controller.abort();
+      }, idleMs);
+    };
+    const totalTimer = setTimeout(() => {
+      timedOut = 'total';
+      controller.abort();
+    }, totalMs);
+    armIdle();
+
+    if (callerSignal) {
+      if (callerSignal.aborted) {
+        controller.abort();
+      } else {
+        callerSignal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
+    }
+
+    return {
+      signal: controller.signal,
+      /** Reset the idle timer — call on every received chunk. */
+      ping: armIdle,
+      /** Pause the idle timer while a tool call runs inside the stream. */
+      suspend: () => clearTimeout(idleTimer),
+      stop: () => {
+        clearTimeout(idleTimer);
+        clearTimeout(totalTimer);
+      },
+      get timedOut() {
+        return timedOut;
+      },
+    };
+  }
+
   /**
    * Normalize the (model, apiKey) pair into an ordered list of request
    * candidates. When the caller passes several credentials (the user's
@@ -152,10 +232,12 @@ export class AiGatewayService {
       };
 
       for (const [i, m] of candidate.models.entries()) {
+      const watchdog = this.createStreamWatchdog();
       try {
         const res = await fetch(url, {
           method: 'POST',
           headers,
+          signal: watchdog.signal,
           body: JSON.stringify({
             model: m,
             messages: [{ role: 'user', content: normalizePromptContent(prompt) }],
@@ -180,6 +262,7 @@ export class AiGatewayService {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          watchdog.ping();
           buffer += decoder.decode(value, { stream: true });
 
           const lines = buffer.split('\n');
@@ -208,7 +291,15 @@ export class AiGatewayService {
         // Stream completed successfully; do not try fallback models.
         return;
       } catch (err) {
-        errors.push(`${candidate.provider}/${m}: ${err instanceof Error ? err.message : String(err)}`);
+        if (watchdog.timedOut) {
+          const msg = `stream ${watchdog.timedOut} timeout`;
+          errors.push(`${candidate.provider}/${m}: ${msg}`);
+          this.logger.warn(`chat model ${candidate.provider}/${m} ${msg} — failing over`);
+        } else {
+          errors.push(`${candidate.provider}/${m}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      } finally {
+        watchdog.stop();
       }
       }
     }
@@ -277,6 +368,7 @@ export class AiGatewayService {
     apiKey?: AiKeyInput,
     onToken?: (token: string) => void | Promise<void>,
     signal?: AbortSignal,
+    opts?: GenerationOptions,
   ): Promise<string> {
     const candidates = this.normalizeCandidates(model, apiKey);
 
@@ -292,17 +384,20 @@ export class AiGatewayService {
       };
 
       for (const [i, m] of candidate.models.entries()) {
+      const watchdog = this.createStreamWatchdog(signal);
       try {
         throwIfCancelled(signal);
         const res = await fetch(url, {
           method: 'POST',
           headers,
-          signal: combineAbortSignals(signal),
+          signal: watchdog.signal,
           body: JSON.stringify({
             model: m,
             messages,
             stream: true,
-            temperature: 0.7,
+            stream_options: { include_usage: true },
+            temperature: opts?.temperature ?? 0.7,
+            ...(opts?.maxTokens ? { max_tokens: opts.maxTokens } : {}),
           }),
         });
 
@@ -320,11 +415,13 @@ export class AiGatewayService {
         const decoder = new TextDecoder();
         let buffer = '';
         let fullText = '';
+        let usage: TokenUsage | undefined;
 
         while (true) {
           throwIfCancelled(signal);
           const { done, value } = await reader.read();
           if (done) break;
+          watchdog.ping();
           buffer += decoder.decode(value, { stream: true });
 
           const lines = buffer.split('\n');
@@ -339,6 +436,7 @@ export class AiGatewayService {
 
             try {
               const parsed = JSON.parse(data);
+              if (parsed.usage) usage = parsed.usage as TokenUsage;
               const token = parsed.choices?.[0]?.delta?.content;
               if (typeof token === 'string') {
                 fullText += token;
@@ -356,14 +454,22 @@ export class AiGatewayService {
           }
         }
 
+        this.logUsage(opts?.label, candidate, m, usage);
         return fullText;
       } catch (err) {
-        if (isCancellation(err) || signal?.aborted) {
+        if (watchdog.timedOut) {
+          const msg = `stream ${watchdog.timedOut} timeout`;
+          errors.push(`${candidate.provider}/${m}: ${msg}`);
+          this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} ${msg} — failing over`);
+        } else if (isCancellation(err) || signal?.aborted) {
           throw isCancellation(err) ? err : new CancelledError();
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push(`${candidate.provider}/${m}: ${msg}`);
+          this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} error: ${msg}`);
         }
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${candidate.provider}/${m}: ${msg}`);
-        this.logger.warn(`chatCompletionsStream model ${candidate.provider}/${m} error: ${msg}`);
+      } finally {
+        watchdog.stop();
       }
       }
     }
@@ -381,6 +487,7 @@ export class AiGatewayService {
     onToolCall?: (toolCall: ToolCall) => Promise<ToolExecutionResult>,
     onFileStart?: (path: string) => void | Promise<void>,
     signal?: AbortSignal,
+    opts?: GenerationOptions,
   ): Promise<{ content: string | null; toolCalls: ToolCall[]; toolResults: ToolExecutionResult[] }> {
     const candidates = this.normalizeCandidates(model, apiKey);
 
@@ -396,19 +503,22 @@ export class AiGatewayService {
       };
 
       for (const [i, m] of candidate.models.entries()) {
+      const watchdog = this.createStreamWatchdog(signal);
       try {
         throwIfCancelled(signal);
         const res = await fetch(url, {
           method: 'POST',
           headers,
-          signal: combineAbortSignals(signal),
+          signal: watchdog.signal,
           body: JSON.stringify({
             model: m,
             messages,
             tools,
             tool_choice: 'auto',
             stream: true,
-            temperature: 0.3,
+            stream_options: { include_usage: true },
+            temperature: opts?.temperature ?? 0.3,
+            ...(opts?.maxTokens ? { max_tokens: opts.maxTokens } : {}),
           }),
         });
 
@@ -426,6 +536,7 @@ export class AiGatewayService {
         const decoder = new TextDecoder();
         let buffer = '';
         let content = '';
+        let usage: TokenUsage | undefined;
         const toolCallsAccum: Record<number, { id?: string; type?: string; name?: string; arguments?: string }> = {};
         const codeExtractors: Record<number, CodeContentExtractor> = {};
         let currentToolIndex = -1;
@@ -447,6 +558,10 @@ export class AiGatewayService {
             },
           };
           if (onToolCall) {
+            // A tool call can run for minutes (e.g. run_command) during which
+            // no SSE chunks arrive — suspend the idle watchdog or it would
+            // abort healthy streams mid-tool.
+            watchdog.suspend();
             try {
               const result = await onToolCall(toolCall);
               toolResults.push(result);
@@ -459,6 +574,8 @@ export class AiGatewayService {
                 content: `Error: ${msg}`,
                 success: false,
               });
+            } finally {
+              watchdog.ping();
             }
           }
         };
@@ -467,6 +584,7 @@ export class AiGatewayService {
           throwIfCancelled(signal);
           const { done, value } = await reader.read();
           if (done) break;
+          watchdog.ping();
           buffer += decoder.decode(value, { stream: true });
 
           const lines = buffer.split('\n');
@@ -481,6 +599,7 @@ export class AiGatewayService {
 
             try {
               const parsed = JSON.parse(data);
+              if (parsed.usage) usage = parsed.usage as TokenUsage;
               const delta = parsed.choices?.[0]?.delta;
 
               if (typeof delta?.content === 'string') {
@@ -584,14 +703,22 @@ export class AiGatewayService {
             },
           }));
 
+        this.logUsage(opts?.label, candidate, m, usage);
         return { content: content || null, toolCalls, toolResults };
       } catch (err) {
-        if (isCancellation(err) || signal?.aborted) {
+        if (watchdog.timedOut) {
+          const msg = `stream ${watchdog.timedOut} timeout`;
+          errors.push(`${candidate.provider}/${m}: ${msg}`);
+          this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} ${msg} — failing over`);
+        } else if (isCancellation(err) || signal?.aborted) {
           throw isCancellation(err) ? err : new CancelledError();
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push(`${candidate.provider}/${m}: ${msg}`);
+          this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} error: ${msg}`);
         }
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${candidate.provider}/${m}: ${msg}`);
-        this.logger.warn(`chatCompletionsWithToolsStream model ${candidate.provider}/${m} error: ${msg}`);
+      } finally {
+        watchdog.stop();
       }
       }
     }

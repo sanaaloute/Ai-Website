@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgentTool } from "../types";
 import { upsertFile } from "@/lib/db/project-store";
 import { normalizeFilePath, ensureTypeScriptExtension } from "../file-manifest";
+import { DeterministicToolError } from "../errors";
 import { createFileUpdateEvent } from "../stream-writer";
 
 const writeFileSchema = z.object({
@@ -41,10 +42,17 @@ export class WriteFileTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${error}` },
       });
-      throw new Error(error);
+      throw new DeterministicToolError(error);
     }
 
     try {
+      // Determine create-vs-modify BEFORE writing — after the write the file
+      // always exists, which used to make every write report "modified".
+      const exists = await this.agentContext.sandboxProvider
+        .readFile(normalizedPath)
+        .then(() => true)
+        .catch(() => false);
+
       this.updateTodosForPath(normalizedPath, 'in_progress');
 
       await this.agentContext.sandboxProvider.writeFile(
@@ -63,22 +71,13 @@ export class WriteFileTool extends AgentTool {
         }
       }
 
-      // Determine whether this is a create or a modify before emitting the
-      // lightweight file_update event.
-      let existing = false;
-      try {
-        existing = await this.agentContext.sandboxProvider.readFile(normalizedPath).then(() => true).catch(() => false);
-      } catch {
-        existing = false;
-      }
-
       this.agentContext.streamWriter.write(
-        createFileUpdateEvent(normalizedPath, args.content, existing ? "modified" : "created"),
+        createFileUpdateEvent(normalizedPath, args.content, exists ? "modified" : "created"),
       );
 
       // Update file state tracker manifest
       try {
-        await this.agentContext.fileManifest.updateFile(normalizedPath, existing ? "modified" : "created");
+        await this.agentContext.fileManifest.updateFile(normalizedPath, exists ? "modified" : "created");
       } catch (err) {
         console.warn(`[write_file] Manifest update failed for ${normalizedPath}:`, err);
       }

@@ -13,8 +13,9 @@ const getSupabaseTableSchemaSchema = z.object({
 export class GetSupabaseTableSchemaTool extends AgentTool {
   name = "get_supabase_table_schema";
   description =
-    "Get database table schema from Supabase. If tableName is provided, returns schema for that specific table (columns, policies, triggers). " +
-    "If omitted, returns schema for all tables. Requires a connected Supabase project.";
+    "Report which table a schema query WOULD target on the connected Supabase project. " +
+    "NOTE: actual schema retrieval (columns, policies, triggers) is NOT available — it requires a Supabase Management API token that is not configured. " +
+    "The response contains no column or policy data; infer the schema from migration files or code instead. Requires a connected Supabase project.";
   schema = getSupabaseTableSchemaSchema;
 
   async _call(

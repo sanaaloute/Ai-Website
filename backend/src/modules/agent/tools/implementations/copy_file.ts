@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AgentTool } from "../types";
 import { normalizeFilePath } from "../file-manifest";
+import { DeterministicToolError } from "../errors";
 import { createFileUpdateEvent } from "../stream-writer";
 
 const copyFileSchema = z.object({
@@ -34,7 +35,7 @@ export class CopyFileTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${error}` },
       });
-      throw new Error(error);
+      throw new DeterministicToolError(error);
     }
 
     try {

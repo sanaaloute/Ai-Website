@@ -33,10 +33,43 @@ export interface Env {
   aiBaseUrl: string;
   aiApiKey: string;
   aiDefaultModel: string;
+  /** Models the agent runtime may use (comma-separated in AI_ALLOWED_MODELS). */
+  aiAllowedModels: string[];
+  /** Primary model per agent role; must be in aiAllowedModels to take effect. */
+  aiModelReasoning: string;
+  aiModelCode: string;
+  aiModelReview: string;
+  aiModelFast: string;
+  /** Abort a streaming LLM call when no SSE chunk arrives for this long. */
+  aiStreamIdleTimeoutMs: number;
+  /** Hard ceiling for one streaming LLM call (including in-stream tool runs). */
+  aiStreamTotalTimeoutMs: number;
+  /** Hard ceiling for one agent generation job (enforced in the worker). */
+  agentJobTimeoutMs: number;
+
+  /** Retries per failed graph node before giving up (wrapNode). */
+  agentMaxNodeAttempts: number;
+  /** LangGraph recursion limit for one run. */
+  agentRecursionLimit: number;
+  /** BullMQ worker concurrency (also read directly from process.env at decorator time). */
+  agentWorkerConcurrency: number;
+  /** Per-user concurrent generation cap. */
+  agentMaxConcurrentGenerations: number;
+  /** Per-user enqueue cap per minute. */
+  agentMaxEnqueuesPerMinute: number;
+
+  /** Hard cap on characters of a single tool result fed back to the model. */
+  agentToolResultMaxChars: number;
+
+  /** Sampling temperature per agent role. */
+  aiTempReasoning: number;
+  aiTempCode: number;
+  aiTempReview: number;
+  aiTempFast: number;
+  /** Optional max_tokens for LLM responses (provider default when unset). */
+  aiMaxTokens?: number;
 
   e2bApiKey: string;
-  sandboxProvider: string;
-  projectsDbPath: string;
 
   supabaseUrl: string;
   supabaseAnonKey: string;
@@ -149,10 +182,32 @@ export function buildEnv(): Env {
     aiBaseUrl: getEnv('AI_BASE_URL') ?? 'https://www.tokenfree.com/v1',
     aiApiKey: getEnv('AI_API_KEY', ['NEW_API_KEY']) ?? '',
     aiDefaultModel: getEnv('AI_DEFAULT_MODEL') ?? 'qwen-max',
+    aiAllowedModels: (getEnv('AI_ALLOWED_MODELS') ?? 'kimi-k2.5,qwen-max')
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean),
+    aiModelReasoning: getEnv('AI_MODEL_REASONING') ?? 'kimi-k2.5',
+    aiModelCode: getEnv('AI_MODEL_CODE') ?? 'kimi-k2.5',
+    aiModelReview: getEnv('AI_MODEL_REVIEW') ?? 'kimi-k2.5',
+    aiModelFast: getEnv('AI_MODEL_FAST') ?? 'qwen-max',
+    aiStreamIdleTimeoutMs: parseInt(getEnv('AI_STREAM_IDLE_TIMEOUT_MS') ?? '120000', 10),
+    aiStreamTotalTimeoutMs: parseInt(getEnv('AI_STREAM_TOTAL_TIMEOUT_MS') ?? '1200000', 10),
+    agentJobTimeoutMs: parseInt(getEnv('AGENT_JOB_TIMEOUT_MS') ?? '1800000', 10),
+
+    agentMaxNodeAttempts: parseInt(getEnv('AGENT_MAX_NODE_ATTEMPTS') ?? '3', 10),
+    agentRecursionLimit: parseInt(getEnv('AGENT_RECURSION_LIMIT') ?? '50', 10),
+    agentWorkerConcurrency: parseInt(getEnv('AGENT_WORKER_CONCURRENCY') ?? '4', 10),
+    agentMaxConcurrentGenerations: parseInt(getEnv('AGENT_MAX_CONCURRENT_GENERATIONS') ?? '2', 10),
+    agentMaxEnqueuesPerMinute: parseInt(getEnv('AGENT_MAX_ENQUEUES_PER_MINUTE') ?? '10', 10),
+    agentToolResultMaxChars: parseInt(getEnv('AGENT_TOOL_RESULT_MAX_CHARS') ?? '20000', 10),
+
+    aiTempReasoning: parseFloat(getEnv('AI_TEMP_REASONING') ?? '0.3'),
+    aiTempCode: parseFloat(getEnv('AI_TEMP_CODE') ?? '0.3'),
+    aiTempReview: parseFloat(getEnv('AI_TEMP_REVIEW') ?? '0.2'),
+    aiTempFast: parseFloat(getEnv('AI_TEMP_FAST') ?? '0.7'),
+    aiMaxTokens: getEnv('AI_MAX_TOKENS') ? parseInt(getEnv('AI_MAX_TOKENS')!, 10) : undefined,
 
     e2bApiKey,
-    sandboxProvider: getEnv('SANDBOX_PROVIDER') ?? 'e2b',
-    projectsDbPath: getEnv('PROJECTS_DB_PATH') ?? './data/projects.db',
 
     supabaseUrl,
     supabaseAnonKey,

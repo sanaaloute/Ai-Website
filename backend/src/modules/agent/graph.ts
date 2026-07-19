@@ -9,7 +9,7 @@ import {
 import { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import { E2BService } from '@/lib/e2b.service';
 import { AiGatewayService } from '@/lib/ai-gateway.service';
-import { AgentState, AgentStateAnnotation, AgentEvent } from './state';
+import { AgentState, AgentStateAnnotation, AgentEvent, MAX_REVIEW_RETRIES, MAX_VERIFICATION_RETRIES } from './state';
 import { PromptLoaderService } from './services/prompt-loader.service';
 import { ModelResolverService } from './services/model-resolver.service';
 import { TemplateService } from './services/template.service';
@@ -39,9 +39,12 @@ import {
   sleepWithSignal,
   throwIfCancelled,
 } from '@/lib/cancellation';
+import { env } from '@/config/env';
 
-/** How many times a failed agent node is retried before giving up. */
-const MAX_NODE_ATTEMPTS = 3;
+/** How many times a failed agent node is retried before giving up (env: AGENT_MAX_NODE_ATTEMPTS). */
+function maxNodeAttempts(): number {
+  return env().agentMaxNodeAttempts;
+}
 
 export interface GraphDependencies {
   aiGateway: AiGatewayService;
@@ -59,10 +62,18 @@ export interface GraphDependencies {
   /**
    * Template copy started in parallel with the designer node. The template
    * selector awaits (and consumes) this instead of copying sequentially.
+   *
+   * This MUST be a mutable box shared by reference: wrapNode hands each node a
+   * shallow copy of deps ({...deps, emit}), so a node assigning
+   * `deps.templateCopy = …` would mutate a throwaway object and the consumer
+   * would never see it. Writing `deps.templateCopy.current = …` mutates the
+   * shared box, which every node's copy points to.
    */
-  templateCopy?: {
-    category: string;
-    promise: Promise<TemplateCopyResult>;
+  templateCopy: {
+    current?: {
+      category: string;
+      promise: Promise<TemplateCopyResult>;
+    };
   };
 }
 
@@ -95,28 +106,29 @@ function wrapNode(name: string, fn: NodeFunction) {
     };
 
     // Retry policy: if an agent node throws or reports a failed status
-    // (returns an `error` field), retry up to MAX_NODE_ATTEMPTS times with a
+    // (returns an `error` field), retry up to maxAttempts times with a
     // backoff before continuing to the next step. Cancellation is never
     // retried — it propagates immediately.
+    const maxAttempts = maxNodeAttempts();
     let lastError: unknown;
     let failedResult: Partial<AgentState> | null = null;
-    for (let attempt = 1; attempt <= MAX_NODE_ATTEMPTS; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       throwIfCancelled(signal);
       try {
         const result = await fn(state, nodeDeps);
         if (result && typeof result.error === 'string' && result.error) {
           failedResult = result;
           lastError = new Error(result.error);
-          if (attempt < MAX_NODE_ATTEMPTS) {
+          if (attempt < maxAttempts) {
             await nodeDeps.emit({
               type: 'status',
               data: {
                 status: 'retrying',
-                message: `${name} failed, retrying (${attempt + 1}/${MAX_NODE_ATTEMPTS})...`,
+                message: `${name} failed, retrying (${attempt + 1}/${maxAttempts})...`,
               },
             });
             deps.logger.warn(
-              `Node ${name} reported failure (attempt ${attempt}/${MAX_NODE_ATTEMPTS}): ${result.error}`,
+              `Node ${name} reported failure (attempt ${attempt}/${maxAttempts}): ${result.error}`,
             );
             await sleepWithSignal(1000 * attempt, signal);
             continue;
@@ -126,17 +138,17 @@ function wrapNode(name: string, fn: NodeFunction) {
       } catch (e) {
         if (isCancellation(e)) throw e;
         lastError = e;
-        if (attempt < MAX_NODE_ATTEMPTS) {
+        if (attempt < maxAttempts) {
           const message = e instanceof Error ? e.message : String(e);
           await nodeDeps.emit({
             type: 'status',
             data: {
               status: 'retrying',
-              message: `${name} failed, retrying (${attempt + 1}/${MAX_NODE_ATTEMPTS})...`,
+              message: `${name} failed, retrying (${attempt + 1}/${maxAttempts})...`,
             },
           });
           deps.logger.warn(
-            `Node ${name} threw (attempt ${attempt}/${MAX_NODE_ATTEMPTS}): ${message}`,
+            `Node ${name} threw (attempt ${attempt}/${maxAttempts}): ${message}`,
           );
           await sleepWithSignal(1000 * attempt, signal);
           continue;
@@ -194,22 +206,28 @@ function routeAfterDebugger(_state: AgentState): string {
 
 function routeAfterReviewer(state: AgentState): string {
   if (state.reviewPassed) return 'verification';
-  if ((state.retryCount ?? 0) < 3) return 'debugger';
+  // Review loop has its own budget (reviewRetryCount), separate from the
+  // verification loop's retryCount.
+  if ((state.reviewRetryCount ?? 0) < MAX_REVIEW_RETRIES) return 'debugger';
   // Review has failed repeatedly; stop burning retries and surface the result.
   return 'finalize';
 }
 
 function routeAfterVerification(state: AgentState): string {
+  // Only the CURRENT round's issue arrays may drive routing. The accumulated
+  // `verificationFailures` list is capped history for reporting — checking it
+  // here (as was done for seo_meta:) re-triggered retries on stale entries
+  // after the issue had already been fixed.
   const hasIssues =
     (state.visualIssues ?? []).length > 0 ||
     (state.functionalIssues ?? []).length > 0 ||
     (state.a11yIssues ?? []).length > 0 ||
     (state.e2eFailures ?? []).length > 0 ||
     (state.securityIssues ?? []).length > 0 ||
-    (state.verificationFailures ?? []).some((f) => f.startsWith('seo_meta:'));
+    (state.seoIssues ?? []).length > 0;
 
   if (!hasIssues) return 'finalize';
-  if ((state.retryCount ?? 0) < 3) return 'increment_retry';
+  if ((state.retryCount ?? 0) < MAX_VERIFICATION_RETRIES) return 'increment_retry';
   return 'finalize';
 }
 
@@ -264,13 +282,13 @@ export function buildAgentGraph(
     .addNode('designer', wrapNode('designer', designerNode))
     .addNode('component_selector', wrapNode('component_selector', componentSelectorNode))
     .addNode('verification', wrapNode('verification', verificationNode))
-    // Entry / linear segments
+    // Entry / linear segments. NOTE: never add a static edge from a node that
+    // also has conditional edges — LangGraph follows BOTH, which would run the
+    // two targets in parallel (this previously ran planner and executor
+    // concurrently on the edit-with-DB path).
     .addEdge(START, 'coordinator')
     .addEdge('coordinator', 'analyzer')
-    .addEdge('designer', 'component_selector')
-    .addEdge('component_selector', 'template_selector')
     .addEdge('template_selector', 'database_initializer')
-    .addEdge('database_initializer', 'planner')
     .addEdge('executor', 'file_state_tracker')
     .addEdge('answer_generator', 'finalize')
     .addEdge('finalize', END)

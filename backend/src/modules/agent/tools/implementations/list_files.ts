@@ -1,23 +1,23 @@
 import { z } from "zod";
 import { AgentTool } from "../types";
+import { normalizeFilePath } from "../file-manifest";
+import { DeterministicToolError } from "../errors";
 
 const WORKSPACE_ROOT = "/home/user/app";
 
-/** Resolve any user-provided path to an absolute path inside the workspace. */
+/**
+ * Resolve any user-provided path to an absolute path inside the workspace.
+ * normalizeFilePath throws on `..` traversal, so listings cannot escape it.
+ */
 function resolveWorkspacePath(dir: string | undefined): string {
   if (!dir || dir === "." || dir === "./") {
     return WORKSPACE_ROOT;
   }
-  // If already absolute under workspace, use as-is
-  if (dir.startsWith(WORKSPACE_ROOT)) {
-    return dir.replace(/\/$/, "");
-  }
-  // If absolute outside workspace, clamp to workspace root
-  if (dir.startsWith("/")) {
+  const relative = normalizeFilePath(dir);
+  if (!relative || relative === ".") {
     return WORKSPACE_ROOT;
   }
-  // Relative path — resolve under workspace
-  return `${WORKSPACE_ROOT}/${dir.replace(/^\.\//, "").replace(/\/$/, "")}`;
+  return `${WORKSPACE_ROOT}/${relative}`;
 }
 
 const listFilesSchema = z.object({
@@ -77,6 +77,7 @@ export class ListFilesTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${message}` },
       });
+      if (error instanceof DeterministicToolError) throw error;
       throw new Error(`Failed to list files: ${message}`);
     }
   }

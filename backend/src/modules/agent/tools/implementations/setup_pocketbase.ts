@@ -6,7 +6,7 @@ const setupPocketBaseSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Optional PocketBase template id to apply. One of: ecommerce, education, saas, portfolio, blog, restaurant, real_estate, health, travel, job_portal, fashion, automobile, personal, generic. If omitted, the domain is inferred from the project."
+      "Label only — echoed back in the status summary. Templates are applied automatically when the project template is selected; this parameter does NOT apply, create, or migrate anything."
     ),
 });
 
@@ -22,17 +22,7 @@ export class SetupPocketBaseTool extends AgentTool {
       data: { tool: this.name, args: { templateId: args.templateId } },
     });
 
-    const provider = this.agentContext.sandboxProvider as {
-      startPocketBase?: (options: { templateId?: string }) => Promise<{
-        url: string;
-        template: { id: string };
-        collectionsCreated: string[];
-        recordsSeeded: number;
-      }>;
-    };
-    if (typeof provider.startPocketBase !== "function") {
-      throw new Error("Sandbox provider does not support PocketBase");
-    }
+    const provider = this.agentContext.sandboxProvider;
 
     try {
       const result = await provider.startPocketBase({

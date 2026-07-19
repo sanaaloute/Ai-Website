@@ -2,6 +2,8 @@ import { z } from "zod";
 import { AgentTool } from "../types";
 import { deleteFile as deleteFileFromStore } from "@/lib/db/project-store";
 import { normalizeFilePath } from "../file-manifest";
+import { DeterministicToolError } from "../errors";
+import { shellQuote } from "../shell";
 
 const deleteFileSchema = z.object({
   path: z.string().describe("The file path to delete"),
@@ -31,12 +33,12 @@ export class DeleteFileTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${error}` },
       });
-      throw new Error(error);
+      throw new DeterministicToolError(error);
     }
 
     try {
       const result = await this.agentContext.sandboxProvider.runCommand(
-        `rm -rf ${normalizedPath}`
+        `rm -rf -- ${shellQuote(normalizedPath)}`
       );
 
       if (!result.success) {

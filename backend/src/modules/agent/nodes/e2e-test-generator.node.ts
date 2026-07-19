@@ -87,6 +87,7 @@ export async function runE2eTests(
       state.aiCredentials,
       undefined,
       deps.signal,
+      deps.modelResolver.generationParams('e2e_test_generator'),
     );
 
     const testCode = extractCode(rawCode);

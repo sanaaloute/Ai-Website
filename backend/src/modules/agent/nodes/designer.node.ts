@@ -53,6 +53,41 @@ function defaultDesignSpec(): DesignSpec {
   };
 }
 
+/**
+ * Validate the shape the downstream consumers (template selector, executor)
+ * rely on. The prompt asks for this schema, but the model is free to return
+ * partial JSON — a blind cast would crash renderDesignAgentsMd or feed a
+ * broken spec to the executor. Returns a list of problems (empty = valid).
+ */
+function validateDesignSpec(parsed: Record<string, unknown>): string[] {
+  const problems: string[] = [];
+  if (typeof parsed.mood !== 'string' || !parsed.mood) problems.push('mood missing');
+
+  const palette = parsed.colorPalette as Record<string, unknown> | undefined;
+  if (!palette || typeof palette !== 'object') {
+    problems.push('colorPalette missing');
+  } else {
+    for (const token of ['primary', 'secondary', 'accent', 'background', 'foreground', 'muted', 'border']) {
+      const t = palette[token] as { value?: unknown } | undefined;
+      if (!t || typeof t !== 'object' || typeof t.value !== 'string' || !t.value) {
+        problems.push(`colorPalette.${token}.value missing`);
+      }
+    }
+  }
+
+  const typography = parsed.typography as Record<string, unknown> | undefined;
+  if (!typography || typeof typography.headingFont !== 'string' || typeof typography.bodyFont !== 'string') {
+    problems.push('typography.headingFont/bodyFont missing');
+  }
+
+  const spacing = parsed.spacing as Record<string, unknown> | undefined;
+  if (!spacing || typeof spacing.base !== 'number') problems.push('spacing.base missing');
+
+  if (typeof parsed.radii !== 'string') problems.push('radii missing');
+  if (!Array.isArray(parsed.rules) || parsed.rules.length === 0) problems.push('rules missing');
+  return problems;
+}
+
 export async function designerNode(state: AgentState, deps: GraphDependencies): Promise<Partial<AgentState>> {
   const systemPrompt = await deps.promptLoader.load('designer');
 
@@ -96,6 +131,11 @@ export async function designerNode(state: AgentState, deps: GraphDependencies): 
     const parsed = extractJson(finalContent);
     if (!parsed) {
       throw new Error('Designer returned invalid JSON; falling back to default spec.');
+    }
+
+    const problems = validateDesignSpec(parsed);
+    if (problems.length) {
+      throw new Error(`Designer spec failed validation (${problems.join('; ')}); falling back to default spec.`);
     }
 
     const spec = parsed as unknown as DesignSpec;

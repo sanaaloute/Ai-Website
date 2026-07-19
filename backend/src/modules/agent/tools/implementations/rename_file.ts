@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { AgentTool } from "../types";
 import { normalizeFilePath } from "../file-manifest";
+import { DeterministicToolError } from "../errors";
+import { shellQuote } from "../shell";
 
 const renameFileSchema = z.object({
   from: z.string().describe("The current file path"),
@@ -32,7 +34,7 @@ export class RenameFileTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${error}` },
       });
-      throw new Error(error);
+      throw new DeterministicToolError(error);
     }
     if (this.agentContext.fileManifest.isProtected(normalizedTo)) {
       const error = `Cannot rename to protected path: ${normalizedTo}. This path is reserved for critical sandbox files.`;
@@ -40,7 +42,7 @@ export class RenameFileTool extends AgentTool {
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${error}` },
       });
-      throw new Error(error);
+      throw new DeterministicToolError(error);
     }
 
     try {
@@ -48,7 +50,7 @@ export class RenameFileTool extends AgentTool {
         normalizedFrom
       );
       await this.agentContext.sandboxProvider.writeFile(normalizedTo, content);
-      await this.agentContext.sandboxProvider.runCommand(`rm -f ${normalizedFrom}`);
+      await this.agentContext.sandboxProvider.runCommand(`rm -f -- ${shellQuote(normalizedFrom)}`);
 
       // Update file state tracker manifest
       try {

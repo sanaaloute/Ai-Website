@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { E2BService, isForbiddenPath } from '@/lib/e2b.service';
+import { shellQuote } from './shell';
 
 const WORKSPACE_ROOT = '/home/user/app';
 const DEFAULT_COMMAND_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -107,7 +108,7 @@ export class SandboxProvider {
     const dir = this.toAbsolutePath(directory);
     const res = await this.e2b.runCommand(
       this.sandboxId,
-      `find ${dir} -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/.next/*' -not -path '*/dist/*' -not -path '*/.agent_state/*' | sort`,
+      `find ${shellQuote(dir)} -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/.next/*' -not -path '*/dist/*' -not -path '*/.agent_state/*' | sort`,
       WORKSPACE_ROOT,
     );
     const paths = (res.output || '')
@@ -220,7 +221,7 @@ export class SandboxProvider {
   }
 
   async installPackage(packageName: string): Promise<CommandResult> {
-    return this.runCommand(`npm install ${packageName}`);
+    return this.runCommand(`npm install ${shellQuote(packageName)}`);
   }
 
   private toRelativePath(inputPath: string): string {

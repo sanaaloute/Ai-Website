@@ -40,12 +40,16 @@ After all fixes, output a single JSON object and nothing else:
 {
   "fixed": true,
   "affected_files": ["src/pages/Home.tsx", "src/components/layout/Header.tsx"],
+  "root_cause": "Missing @/ alias import in Header.tsx",
+  "fixes_applied": ["Added missing import to Header.tsx", "Renamed Card.jsx to Card.tsx"],
   "remaining_errors": []
 }
 ```
 
 - `fixed`: `true` if you resolved all reported issues, `false` if any remain.
 - `affected_files`: array of exact file paths you modified.
+- `root_cause`: one-sentence explanation of what actually caused the reported issues.
+- `fixes_applied`: short list of the concrete changes you made (one entry per change).
 - `remaining_errors`: array of strings describing any issues you could not resolve.
 
 If you cannot output valid JSON, include the word `fixed` in your final text only when all issues are resolved.

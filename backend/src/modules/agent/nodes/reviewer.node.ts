@@ -30,6 +30,7 @@ export async function reviewerNode(state: AgentState, deps: GraphDependencies): 
       reviewIssues: [],
       reviewSuggestions: [],
       reviewTodos: [],
+      reviewRetryCount: 0,
       messages: [{ role: 'assistant', content: 'No files to review' }],
     };
   }
@@ -106,6 +107,8 @@ export async function reviewerNode(state: AgentState, deps: GraphDependencies): 
       reviewSuggestions: suggestions,
       reviewTodos,
       todos: passed ? state.todos : reviewTodos,
+      // A pass closes the review loop — the next failure starts with a fresh budget.
+      reviewRetryCount: passed ? 0 : state.reviewRetryCount,
       lastVerificationStage: passed ? undefined : 'reviewer',
       verificationFailures: passed
         ? state.verificationFailures

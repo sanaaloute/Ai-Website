@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AgentTool } from "../types";
 import type { TodoItem } from "../../state";
+import { DeterministicToolError } from "../errors";
 
 const todoSchema = z.object({
   id: z.string().describe("Unique identifier for the todo item"),
@@ -199,7 +200,7 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
           this.agentContext.todos
         );
         if (!validation.valid) {
-          throw new Error(
+          throw new DeterministicToolError(
             `Sequential order violation: ${validation.message} Follow the todo list in order: start todo 1, complete it, then todo 2, and so on.`
           );
         }
@@ -232,7 +233,7 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
         }));
         const validation = this.validateFinalTodoOrder(replacement);
         if (!validation.valid) {
-          throw new Error(
+          throw new DeterministicToolError(
             `Invalid todo order: ${validation.message} Maintain sequential order with at most one in_progress todo, and it must be the first pending todo.`
           );
         }
@@ -268,6 +269,7 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${message}` },
       });
+      if (error instanceof DeterministicToolError) throw error;
       throw new Error(`Failed to update todos: ${message}`);
     }
   }

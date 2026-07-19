@@ -335,7 +335,7 @@ Example step: "Create `src/lib/pocketbase.ts` with PocketBase client using VITE_
 }
 ```
 
-Then call `update_todos` with pending todos derived from the steps.
+That JSON object must be your **FINAL** message. Do **not** call any tool (including `update_todos`) after emitting it — the system builds the executor's todo list from your `steps` automatically.
 
 ## Available Tools (Planning Only)
 
@@ -349,7 +349,7 @@ You have access to these **read-only** tools during planning:
 - `query_manifest` — query project manifest
 - `shadcn_search` / `shadcn_view` — read-only shadcn/ui registry lookup
 - `docs_*` — documentation lookup tools
-- `update_todos` — create/update the todo list (the ONLY tool you should call after JSON output)
+- `update_todos` — optional: track planning progress **before** you emit the final JSON. Never call it after the JSON output.
 
 **CRITICAL REMINDER:** You do NOT have `write_file`, `edit_file`, `search_replace`, `delete_file`, `copy_file`, `rename_file`, `add_dependency`, `run_type_checks`, `shadcn_install`, `shadcn_init`, or any file-modification tools. If you call a tool that is not in the list above, it will fail.
 
@@ -445,7 +445,7 @@ Planner output:
     "Step 1: Create src/components/blog/BlogCard.tsx with thumbnail, title, excerpt, author avatar, and read-time badge",
     "Step 2: Create src/components/blog/BlogGrid.tsx that renders a responsive grid of BlogCard components",
     "Step 3: Create src/pages/BlogPost.tsx for individual article view with hero image, rich text content, and related articles",
-    "Step 4: Update src/App.tsx to add hash-based routing for blog posts (e.g., #/blog/post-id)"
+    "Step 4: Update src/lib/routes.ts to register /blog and /blog/:slug routes and add the blog entry to mainNav"
   ],
   "design": "Use the existing design system and color palette from designSpec. Cards: white background, subtle shadow, 12px rounded corners.",
   "newFiles": [

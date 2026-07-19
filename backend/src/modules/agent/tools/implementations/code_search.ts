@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentTool } from "../types";
+import { shellQuote } from "../shell";
 
 const codeSearchSchema = z.object({
   query: z.string().describe("What you're looking for (e.g. 'auth hook', 'toast component')"),
@@ -11,7 +12,7 @@ const codeSearchSchema = z.object({
 
 export class CodeSearchTool extends AgentTool {
   name = "code_search";
-  description = `Search the codebase for code patterns, functions, components, or concepts. This is a semantic-aware search that looks for related code, not just exact text matches.
+  description = `Search the codebase for code patterns, functions, components, or concepts. This is a keyword-based search (grep over up to 3 extracted keywords, scored by relevance) — it does not understand semantics, so use precise identifiers and try synonyms when a search misses.
 
 Use this when:
 - You need to find how something is implemented
@@ -42,9 +43,11 @@ Use this when:
       }> = [];
 
       for (const keyword of keywords.slice(0, 3)) {
+        // shellQuote every interpolated value — the sandbox runs commands
+        // through a shell, so unquoted patterns are an injection risk.
         const cmd = args.file_pattern
-          ? `grep -r -n -i -e "${keyword}" --include="${args.file_pattern}" .`
-          : `grep -r -n -i -e "${keyword}" .`;
+          ? `grep -r -n -i -e ${shellQuote(keyword)} --include=${shellQuote(args.file_pattern)} --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist .`
+          : `grep -r -n -i -e ${shellQuote(keyword)} --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist .`;
 
         const grepResult = await this.agentContext.sandboxProvider.runCommand(
           cmd

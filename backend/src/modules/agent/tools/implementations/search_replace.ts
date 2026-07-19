@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AgentTool } from "../types";
 import { upsertFile } from "@/lib/db/project-store";
 import { normalizeFilePath, ensureTypeScriptExtension } from "../file-manifest";
+import { DeterministicToolError } from "../errors";
 import { createFileUpdateEvent } from "../stream-writer";
 
 const searchReplaceSchema = z.object({
@@ -60,12 +61,12 @@ CRITICAL REQUIREMENTS FOR USING THIS TOOL:
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${error}` },
       });
-      throw new Error(error);
+      throw new DeterministicToolError(error);
     }
 
     try {
       if (args.old_string === args.new_string) {
-        throw new Error("old_string and new_string must be different");
+        throw new DeterministicToolError("old_string and new_string must be different");
       }
 
       const content = await this.agentContext.sandboxProvider.readFile(
@@ -74,14 +75,14 @@ CRITICAL REQUIREMENTS FOR USING THIS TOOL:
 
       const index = content.indexOf(args.old_string);
       if (index === -1) {
-        throw new Error(
+        throw new DeterministicToolError(
           `old_string not found in ${normalizedPath}. Make sure the text matches exactly, including whitespace.`
         );
       }
 
       const secondIndex = content.indexOf(args.old_string, index + 1);
       if (secondIndex !== -1) {
-        throw new Error(
+        throw new DeterministicToolError(
           `old_string is not unique in ${normalizedPath}. Include more context to make it unique.`
         );
       }
@@ -146,6 +147,9 @@ CRITICAL REQUIREMENTS FOR USING THIS TOOL:
         type: "tool_end",
         data: { tool: this.name, result: `Error: ${message}` },
       });
+      // Keep the deterministic classification — wrapping it in a generic
+      // Error would make executeToolCall retry it pointlessly.
+      if (error instanceof DeterministicToolError) throw error;
       throw new Error(`Failed to edit ${normalizedPath}: ${message}`);
     }
   }

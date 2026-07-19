@@ -98,6 +98,7 @@ export async function runToolLoop(
         await deps.emit({ type: 'file_start', data: { path } });
       },
       deps.signal,
+      deps.modelResolver.generationParams(nodeType),
     );
 
     if (content) {

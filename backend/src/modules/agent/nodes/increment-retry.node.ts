@@ -1,4 +1,4 @@
-import { AgentState } from '../state';
+import { AgentState, MAX_VERIFICATION_RETRIES } from '../state';
 
 export function incrementRetryNode(state: AgentState): Partial<AgentState> {
   const nextRetry = (state.retryCount ?? 0) + 1;
@@ -8,7 +8,7 @@ export function incrementRetryNode(state: AgentState): Partial<AgentState> {
     messages: [
       {
         role: 'assistant',
-        content: `Retrying ${stage} fixes... (attempt ${nextRetry}/3)`,
+        content: `Retrying ${stage} fixes... (attempt ${nextRetry}/${MAX_VERIFICATION_RETRIES})`,
       },
     ],
   };

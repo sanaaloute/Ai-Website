@@ -1,20 +1,15 @@
 import { z } from "zod";
 import { AgentTool } from "../types";
+import { normalizeFilePath } from "../file-manifest";
 
 const WORKSPACE_ROOT = "/home/user/app";
 
-/** Resolve any user-provided path to an absolute path inside the workspace. */
+/**
+ * Resolve any user-provided path to an absolute path inside the workspace.
+ * normalizeFilePath throws on `..` traversal, so reads cannot escape it.
+ */
 function resolveWorkspacePath(inputPath: string): string {
-  // Already absolute under workspace
-  if (inputPath.startsWith(WORKSPACE_ROOT)) {
-    return inputPath;
-  }
-  // Absolute outside workspace — clamp
-  if (inputPath.startsWith("/")) {
-    return `${WORKSPACE_ROOT}${inputPath}`;
-  }
-  // Relative — resolve under workspace
-  return `${WORKSPACE_ROOT}/${inputPath.replace(/^\.\//, "")}`;
+  return `${WORKSPACE_ROOT}/${normalizeFilePath(inputPath)}`;
 }
 
 const readFileSchema = z.object({

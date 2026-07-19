@@ -8,7 +8,10 @@ const executeSqlSchema = z.object({
 
 export class ExecuteSqlTool extends AgentTool {
   name = "execute_sql";
-  description = "Execute SQL on the Supabase database. Requires a connected Supabase project.";
+  description =
+    "Validate and stage a SQL query for the connected Supabase project. " +
+    "IMPORTANT: this tool does NOT execute the query — live execution requires a Supabase Management API token that is not configured. " +
+    "It returns the query text for review only. Never assume rows were returned, inserted, or modified; do not fabricate query results.";
   schema = executeSqlSchema;
 
   async _call(args: z.infer<typeof executeSqlSchema>): Promise<string> {

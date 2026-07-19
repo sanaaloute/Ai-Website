@@ -50,6 +50,12 @@ function fieldToSchema(field: unknown): Record<string, unknown> {
   const f = field as ZodFieldLike;
   const typeName = getTypeName(f);
 
+  // Effects (.refine(), .transform(), .preprocess()) — unwrap the inner schema,
+  // otherwise refined fields degrade to a meaningless { type: 'string' }.
+  if (typeName === 'ZodEffects' && f._def?.schema) {
+    return fieldToSchema(f._def.schema as ZodFieldLike);
+  }
+
   // Optional / nullable wrappers
   if (typeName === 'ZodOptional' || typeName === 'ZodNullable') {
     const inner = f.unwrap ? f.unwrap() : (f._def?.innerType as ZodFieldLike);
@@ -65,10 +71,20 @@ function fieldToSchema(field: unknown): Record<string, unknown> {
     return { type: 'boolean', description: getDescription(f) };
   }
   if (typeName === 'ZodNumber') {
-    return { type: 'number', description: getDescription(f) };
+    const schema: Record<string, unknown> = { type: 'number', description: getDescription(f) };
+    for (const check of (f._def?.checks as Array<{ kind?: string; value?: number }> | undefined) ?? []) {
+      if (check.kind === 'min') schema.minimum = check.value;
+      if (check.kind === 'max') schema.maximum = check.value;
+    }
+    return schema;
   }
   if (typeName === 'ZodString') {
-    return { type: 'string', description: getDescription(f) };
+    const schema: Record<string, unknown> = { type: 'string', description: getDescription(f) };
+    for (const check of (f._def?.checks as Array<{ kind?: string; value?: number }> | undefined) ?? []) {
+      if (check.kind === 'min') schema.minLength = check.value;
+      if (check.kind === 'max') schema.maxLength = check.value;
+    }
+    return schema;
   }
 
   // Enum
@@ -76,6 +92,17 @@ function fieldToSchema(field: unknown): Record<string, unknown> {
     return { type: 'string', enum: f._def.values, description: getDescription(f) };
   }
   if (typeName === 'ZodNativeEnum') {
+    // Native enums carry a values object (with reverse mappings for numeric
+    // enums); prefer string members, fall back to numeric ones.
+    const values = Object.values((f._def?.values ?? {}) as Record<string, unknown>);
+    const stringValues = values.filter((v): v is string => typeof v === 'string');
+    const numericValues = values.filter((v): v is number => typeof v === 'number');
+    if (stringValues.length) {
+      return { type: 'string', enum: stringValues, description: getDescription(f) };
+    }
+    if (numericValues.length) {
+      return { type: 'number', enum: numericValues, description: getDescription(f) };
+    }
     return { type: 'string', description: getDescription(f) };
   }
 
@@ -127,7 +154,11 @@ function isOptionalField(field: unknown): boolean {
  * Convert a LangChain StructuredTool into an OpenAI-compatible ToolDefinition.
  */
 export function toolToDefinition(tool: StructuredTool): ToolDefinition {
-  const schema = (tool as unknown as { schema?: ZodFieldLike }).schema;
+  let schema = (tool as unknown as { schema?: ZodFieldLike }).schema;
+  // Unwrap .refine()/.transform() wrappers so the object shape is reachable.
+  if (schema && getTypeName(schema) === 'ZodEffects' && schema._def?.schema) {
+    schema = schema._def.schema as ZodFieldLike;
+  }
   const shape = schema?.shape || ((schema?._def?.shape as unknown as (() => Record<string, unknown>))?.());
 
   const properties: Record<string, unknown> = {};

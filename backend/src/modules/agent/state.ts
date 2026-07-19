@@ -92,6 +92,15 @@ export interface PackageFailure {
   error: string;
 }
 
+/**
+ * Retry budgets for the two corrective loops. Deliberately separate counters:
+ * the reviewer↔debugger loop (reviewRetryCount) and the verification→executor
+ * loop (retryCount) each get their own budget — a run that spends retries on
+ * review failures must not starve the verification loop (and vice versa).
+ */
+export const MAX_REVIEW_RETRIES = 3;
+export const MAX_VERIFICATION_RETRIES = 3;
+
 export const AgentStateAnnotation = Annotation.Root({
   // Input
   prompt: Annotation<PromptContent>,
@@ -121,6 +130,7 @@ export const AgentStateAnnotation = Annotation.Root({
 
   // Orchestration
   retryCount: Annotation<number>(),
+  reviewRetryCount: Annotation<number>(),
   executorLoopCount: Annotation<number>(),
   lastVerificationStage: Annotation<string | undefined>(),
   verificationFailures: Annotation<string[] | undefined>(),
@@ -172,6 +182,9 @@ export const AgentStateAnnotation = Annotation.Root({
   e2eTestsWritten: Annotation<string[] | undefined>(),
   securityIssues: Annotation<string[] | undefined>(),
   seoGenerated: Annotation<boolean | undefined>(),
+  // Fresh (current-round) SEO failures. Kept separate from the accumulated
+  // `verificationFailures` history so routing never reacts to stale entries.
+  seoIssues: Annotation<string[] | undefined>(),
   screenshots: Annotation<Array<{ path: string; route: string }> | undefined>(),
   reviewPassed: Annotation<boolean | undefined>,
   reviewIssues: Annotation<string[] | undefined>,
