@@ -118,6 +118,20 @@ async function templateSelectorNode(state, deps) {
         for (const [filePath, content] of Object.entries(templateFiles)) {
             await deps.emit((0, tools_1.createFileUpdateEvent)(filePath, content, 'created'));
         }
+        const componentsToInstall = state.componentsToInstall ?? [];
+        if (componentsToInstall.length) {
+            try {
+                await deps.emit({
+                    type: 'status',
+                    data: { status: 'executing', message: `Installing ${componentsToInstall.length} shadcn components...` },
+                });
+                const { installed } = await deps.agentMcpToolService.installShadcnItems(state.sandboxId, componentsToInstall);
+                deps.logger.log(`Pre-installed ${installed.length} shadcn components: ${installed.join(', ')}`);
+            }
+            catch (e) {
+                deps.logger.warn(`Batched shadcn install failed (${e instanceof Error ? e.message : String(e)}); continuing — executor will create components manually if needed`);
+            }
+        }
         const dbSchema = await deps.templateService.getDbSchema(category);
         if (state.designSpec) {
             try {

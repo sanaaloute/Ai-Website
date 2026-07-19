@@ -71,5 +71,9 @@ export declare class ShadcnMcpServerService {
         name: string;
     }): Promise<ShadcnRegistryItem>;
     installItem(sandboxId: string, name: string): Promise<string>;
+    installItems(sandboxId: string, names: string[]): Promise<{
+        installed: string[];
+        output: string;
+    }>;
     initShadcn(sandboxId: string, baseColor?: string): Promise<string>;
 }

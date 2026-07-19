@@ -23,6 +23,15 @@ export class AgentMcpToolService {
     private readonly shadcn: ShadcnMcpServerService,
   ) {}
 
+  /**
+   * Deterministic, batched shadcn install used by the template selector so the
+   * executor finds every selected component already present (and no longer
+   * needs the shadcn_install tool).
+   */
+  async installShadcnItems(sandboxId: string, items: string[]): Promise<{ installed: string[]; output: string }> {
+    return this.shadcn.installItems(sandboxId, items);
+  }
+
   getTools(context?: AgentContext): DynamicStructuredTool[] {
     const sandbox = context?.sandboxProvider;
 

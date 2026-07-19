@@ -165,9 +165,17 @@ async function analyzerNode(state, deps) {
         websiteType,
         needsIntegration: intent === 'new_app' ? 'pocketbase' : (result?.needsIntegration ?? null),
         messages: [{ role: 'assistant', content: `Intent: ${intent} | Category: ${category} | Scope: ${scope}` }],
-        todos: workflow === 'edit' || workflow === 'debug'
-            ? [{ id: '1', content: scope, status: 'pending' }]
-            : undefined,
+        todos: (() => {
+            if (workflow !== 'edit' && workflow !== 'debug')
+                return undefined;
+            const fromAnalyzer = Array.isArray(result?.todos)
+                ? result.todos
+                    .filter((t) => typeof t === 'string' && t.trim().length > 0)
+                    .slice(0, 6)
+                    .map((content, i) => ({ id: String(i + 1), content: content.trim(), status: 'pending' }))
+                : [];
+            return fromAnalyzer.length >= 2 ? fromAnalyzer : [{ id: '1', content: scope, status: 'pending' }];
+        })(),
     };
 }
 //# sourceMappingURL=analyzer.node.js.map

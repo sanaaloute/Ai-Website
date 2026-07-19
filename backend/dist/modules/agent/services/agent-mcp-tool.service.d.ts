@@ -6,5 +6,9 @@ export declare class AgentMcpToolService {
     private readonly docs;
     private readonly shadcn;
     constructor(docs: DocsMcpServerService, shadcn: ShadcnMcpServerService);
+    installShadcnItems(sandboxId: string, items: string[]): Promise<{
+        installed: string[];
+        output: string;
+    }>;
     getTools(context?: AgentContext): DynamicStructuredTool[];
 }

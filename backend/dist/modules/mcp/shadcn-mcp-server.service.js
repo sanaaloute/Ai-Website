@@ -88,6 +88,16 @@ let ShadcnMcpServerService = ShadcnMcpServerService_1 = class ShadcnMcpServerSer
         }
         return res.output;
     }
+    async installItems(sandboxId, names) {
+        const valid = names.filter((n) => /^[a-z0-9][a-z0-9-]*$/.test(n));
+        if (!valid.length)
+            return { installed: [], output: 'No valid component names' };
+        const res = await this.e2b.runCommand(sandboxId, `npx shadcn@latest add -y -o ${valid.join(' ')}`, '/home/user/app', { timeoutMs: 5 * 60 * 1000 });
+        if (res.exitCode !== 0) {
+            throw new Error(`shadcn add failed: ${res.error || res.output}`);
+        }
+        return { installed: valid, output: res.output };
+    }
     async initShadcn(sandboxId, baseColor = 'slate') {
         const res = await this.e2b.runCommand(sandboxId, `npx shadcn@latest init -y -d --base-color ${baseColor}`, '/home/user/app', { timeoutMs: 5 * 60 * 1000 });
         if (res.exitCode !== 0) {

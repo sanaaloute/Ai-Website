@@ -116,6 +116,27 @@ export class ShadcnMcpServerService {
     return res.output;
   }
 
+  /**
+   * Deterministic batch install: one CLI invocation for the whole list instead
+   * of N model-driven `shadcn_install` tool calls (which also risked
+   * interactive-prompt stalls). Component names are validated against the
+   * registry-name shape before being embedded in the command.
+   */
+  async installItems(sandboxId: string, names: string[]): Promise<{ installed: string[]; output: string }> {
+    const valid = names.filter((n) => /^[a-z0-9][a-z0-9-]*$/.test(n));
+    if (!valid.length) return { installed: [], output: 'No valid component names' };
+    const res = await this.e2b.runCommand(
+      sandboxId,
+      `npx shadcn@latest add -y -o ${valid.join(' ')}`,
+      '/home/user/app',
+      { timeoutMs: 5 * 60 * 1000 },
+    );
+    if (res.exitCode !== 0) {
+      throw new Error(`shadcn add failed: ${res.error || res.output}`);
+    }
+    return { installed: valid, output: res.output };
+  }
+
   async initShadcn(sandboxId: string, baseColor = 'slate'): Promise<string> {
     const res = await this.e2b.runCommand(
       sandboxId,

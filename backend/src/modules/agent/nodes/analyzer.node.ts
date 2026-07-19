@@ -197,11 +197,18 @@ export async function analyzerNode(state: AgentState, deps: GraphDependencies): 
     // NOTE: no `error` field on parse failure — the fallbacks above already
     // produce a safe workflow, and returning `error` would make wrapNode burn
     // 3 full LLM retries before continuing with the same degraded output.
-    // For surgical edit/debug paths that skip the planner, seed a single todo
-    // so the executor has a task list to report progress against.
-    todos:
-      workflow === 'edit' || workflow === 'debug'
-        ? [{ id: '1', content: scope, status: 'pending' }]
-        : undefined,
+    // For surgical edit/debug paths that skip the planner, seed the todo list
+    // so the executor has a task list to report progress against. Prefer the
+    // analyzer's own 2-6 task breakdown; fall back to one scope todo.
+    todos: (() => {
+      if (workflow !== 'edit' && workflow !== 'debug') return undefined;
+      const fromAnalyzer = Array.isArray(result?.todos)
+        ? (result.todos as unknown[])
+            .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+            .slice(0, 6)
+            .map((content, i) => ({ id: String(i + 1), content: content.trim(), status: 'pending' }))
+        : [];
+      return fromAnalyzer.length >= 2 ? fromAnalyzer : [{ id: '1', content: scope, status: 'pending' }];
+    })(),
   };
 }

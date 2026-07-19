@@ -164,6 +164,30 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
       await deps.emit(createFileUpdateEvent(filePath, content, 'created'));
     }
 
+    // Deterministically install the shadcn components the component selector
+    // chose — one batched CLI call here, BEFORE the executor runs. This
+    // replaces the old model-driven flow (the executor looping shadcn_install
+    // calls mid-generation, with interactive-prompt stalls). Failure is
+    // non-fatal: the executor can still write a missing component manually.
+    const componentsToInstall = state.componentsToInstall ?? [];
+    if (componentsToInstall.length) {
+      try {
+        await deps.emit({
+          type: 'status',
+          data: { status: 'executing', message: `Installing ${componentsToInstall.length} shadcn components...` },
+        });
+        const { installed } = await deps.agentMcpToolService.installShadcnItems(
+          state.sandboxId,
+          componentsToInstall,
+        );
+        deps.logger.log(`Pre-installed ${installed.length} shadcn components: ${installed.join(', ')}`);
+      } catch (e) {
+        deps.logger.warn(
+          `Batched shadcn install failed (${e instanceof Error ? e.message : String(e)}); continuing — executor will create components manually if needed`,
+        );
+      }
+    }
+
     const dbSchema = await deps.templateService.getDbSchema(category);
 
     // Persist the design spec as a machine-readable contract and a concise

@@ -67,11 +67,14 @@ Respond **only** with a valid JSON object. No preamble, no trailing commentary.
   "relevantFiles": ["path/to/file1", "path/to/file2"],
   "needsClarification": false,
   "clarificationQuestions": [],
-  "needsIntegration": null
+  "needsIntegration": null,
+  "todos": []
 }
 ```
 
 `needsIntegration` is the string `"pocketbase"` when the request needs database/auth features, otherwise JSON `null`.
+
+`todos`: for `edit` and `debug` intents ONLY, a breakdown of the work into **2–6 short, concrete tasks** (each a verb + target, e.g. "Update Header.tsx with new nav link", "Fix broken import in Cart.tsx"). These become the visible task list the code executor works through — make them specific, not generic. Omit (or use `[]`) for `new_app` (the planner creates the steps) and `question` intents.
 
 ## Example 1
 

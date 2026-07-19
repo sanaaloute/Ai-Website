@@ -46,6 +46,13 @@ export * from "./tool-loop";
 
 /** Full tool set for the execute node (code writing + all utilities) */
 export function buildToolSet(context: AgentContext, docsTools: StructuredTool[] = []): StructuredTool[] {
+  // shadcn components are pre-installed deterministically by the template
+  // selector (one batched CLI call) — the executor must not loop model-driven
+  // install calls mid-generation (interactive-prompt stalls, repeated work).
+  const filteredDocsTools = docsTools.filter(
+    (tool) => tool.name !== 'shadcn_install' && tool.name !== 'shadcn_init',
+  );
+
   return [
     new ReadFileTool(context),
     new WriteFileTool(context),
@@ -72,7 +79,7 @@ export function buildToolSet(context: AgentContext, docsTools: StructuredTool[] 
     new QueryManifestTool(context),
     new SetupPocketBaseTool(context),
     new RunCommandTool(context),
-    ...docsTools,
+    ...filteredDocsTools,
   ];
 }
 

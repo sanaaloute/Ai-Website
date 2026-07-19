@@ -51,6 +51,7 @@ __exportStar(require("./tool-definitions"), exports);
 __exportStar(require("./tool-executor"), exports);
 __exportStar(require("./tool-loop"), exports);
 function buildToolSet(context, docsTools = []) {
+    const filteredDocsTools = docsTools.filter((tool) => tool.name !== 'shadcn_install' && tool.name !== 'shadcn_init');
     return [
         new read_file_1.ReadFileTool(context),
         new write_file_1.WriteFileTool(context),
@@ -77,7 +78,7 @@ function buildToolSet(context, docsTools = []) {
         new query_manifest_1.QueryManifestTool(context),
         new setup_pocketbase_1.SetupPocketBaseTool(context),
         new run_command_1.RunCommandTool(context),
-        ...docsTools,
+        ...filteredDocsTools,
     ];
 }
 function buildReadOnlyToolSet(context, docsTools = []) {

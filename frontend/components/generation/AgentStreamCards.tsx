@@ -25,9 +25,15 @@ export function AgentStreamCards({
   const steps = allSteps.filter((s) => s.kind !== 'code');
   const allDone = allSteps.length > 0 && allSteps.every((s) => s.done);
 
+  // The agent's real task list (streamed via todos_update events). Streamed
+  // items carry a live status; the static stage-label fallback list does not,
+  // which is how we tell them apart.
+  const todos = generationProgress.todoList ?? [];
+  const hasStreamedTodos = todos.some((t) => t.status !== undefined);
+
   // Visible while generating (even before the first agent token arrives, so it
   // fully replaces the old static steps card) or when there are steps to show.
-  if (!generationProgress.isGenerating && steps.length === 0) return null;
+  if (!generationProgress.isGenerating && steps.length === 0 && !hasStreamedTodos) return null;
 
   const isSpinning = generationProgress.isGenerating && !allDone;
 
@@ -53,6 +59,47 @@ export function AgentStreamCards({
           </span>
         </div>
       </div>
+
+      {/* Real task checklist: once the agent streams its todo list it takes
+          the prominent spot under the header, replacing the static pipeline
+          stages as the primary progress indicator. The per-agent cards below
+          stay as the secondary live-reasoning feed. */}
+      {hasStreamedTodos && (
+        <div className="flex max-w-full flex-col gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 backdrop-blur-sm">
+          {todos.map((todo, i) => {
+            const isCompleted = todo.status === 'completed';
+            // Freeze the spinner once the run ends so an error doesn't leave a
+            // task looking like it's still actively being worked on.
+            const isActive = todo.status === 'in_progress' && generationProgress.isGenerating;
+            return (
+              <div key={i} className="flex items-center gap-2.5">
+                {isCompleted ? (
+                  <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                ) : isActive ? (
+                  <div className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-glow-cyan border-t-transparent animate-spin" />
+                ) : (
+                  <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-700" />
+                )}
+                <span
+                  className={`flex-1 text-xs ${
+                    isCompleted
+                      ? 'text-zinc-400'
+                      : isActive
+                        ? 'font-medium text-zinc-100'
+                        : 'text-zinc-500'
+                  }`}
+                >
+                  {todo.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Per-agent streaming cards */}
       {steps.map((step) => (
