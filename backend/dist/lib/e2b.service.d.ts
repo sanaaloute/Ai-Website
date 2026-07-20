@@ -37,6 +37,8 @@ export declare class E2BService {
     private getSandboxLifetime;
     attach(sandboxId: string): Promise<SandboxData>;
     private finalizeSegment;
+    getSandboxLastSeen(sandboxId: string): Promise<number | null>;
+    listUserSandboxes(userId: string): Promise<string[]>;
     kill(sandboxId: string): Promise<boolean>;
     getSandboxInfos(): Promise<Array<{
         sandboxId: string;

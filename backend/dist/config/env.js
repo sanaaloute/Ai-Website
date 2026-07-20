@@ -93,6 +93,7 @@ function buildEnv() {
         aiTempFast: parseFloat(getEnv('AI_TEMP_FAST') ?? '0.7'),
         aiMaxTokens: getEnv('AI_MAX_TOKENS') ? parseInt(getEnv('AI_MAX_TOKENS'), 10) : undefined,
         e2bApiKey,
+        sandboxLivenessGraceMs: parseInt(getEnv('SANDBOX_LIVENESS_GRACE_MS') ?? '900000', 10),
         supabaseUrl,
         supabaseAnonKey,
         supabaseServiceRoleKey,

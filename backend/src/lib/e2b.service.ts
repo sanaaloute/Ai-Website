@@ -260,6 +260,7 @@ export class E2BService {
     }
 
     await this.state.setSandboxInfo(sandbox.sandboxId, { createdAt, endAt, userId: opts?.userId });
+    await this.state.touchSandbox(sandbox.sandboxId);
 
     return {
       sandboxId: sandbox.sandboxId,
@@ -339,6 +340,10 @@ export class E2BService {
       // the lifecycle timestamps.
       const existing = await this.state.getSandboxInfo(currentId);
       await this.state.setSandboxInfo(currentId, { ...existing, createdAt, endAt });
+      // Liveness stamp: attach() is the single funnel for the frontend's 30s
+      // status poll AND the agent's ensureAlive, so stamping here covers all
+      // "session is alive" signals the renewal gate consults.
+      await this.state.touchSandbox(currentId);
 
       return {
         sandboxId: currentId,
@@ -385,10 +390,19 @@ export class E2BService {
     }
   }
 
+  /** Epoch ms of the last liveness stamp (attach/status poll), or null. */
+  async getSandboxLastSeen(sandboxId: string): Promise<number | null> {
+    return this.state.getSandboxLastSeen(sandboxId);
+  }
+
+  /** All tracked sandbox IDs owned by a user (for one-per-session enforcement). */
+  async listUserSandboxes(userId: string): Promise<string[]> {
+    return this.state.listUserSandboxes(userId);
+  }
+
   async kill(sandboxId: string): Promise<boolean> {
     if (!this.configured) {
-      throw new E2BNotConfiguredError();
-    }
+      throw new E2BNotConfiguredError();    }
 
     const currentId = await this.getCurrentSandboxId(sandboxId);
     await this.finalizeSegment(currentId);

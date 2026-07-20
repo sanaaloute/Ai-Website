@@ -5,12 +5,12 @@ declare const editFileSchema: z.ZodObject<{
     content: z.ZodString;
     instructions: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    content: string;
     path: string;
+    content: string;
     instructions?: string | undefined;
 }, {
-    content: string;
     path: string;
+    content: string;
     instructions?: string | undefined;
 }>;
 export declare class EditFileTool extends AgentTool {
@@ -21,12 +21,12 @@ export declare class EditFileTool extends AgentTool {
         content: z.ZodString;
         instructions: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        content: string;
         path: string;
+        content: string;
         instructions?: string | undefined;
     }, {
-        content: string;
         path: string;
+        content: string;
         instructions?: string | undefined;
     }>;
     _call(args: z.infer<typeof editFileSchema>): Promise<string>;

@@ -21,6 +21,11 @@ export declare class SandboxStateService {
     private setJson;
     private getJson;
     setSandboxInfo(sandboxId: string, info: SandboxInfo): Promise<void>;
+    touchSandbox(sandboxId: string): Promise<void>;
+    getSandboxLastSeen(sandboxId: string): Promise<number | null>;
+    addUserSandbox(userId: string, sandboxId: string): Promise<void>;
+    listUserSandboxes(userId: string): Promise<string[]>;
+    removeUserSandbox(userId: string, sandboxId: string): Promise<void>;
     getSandboxInfo(sandboxId: string): Promise<SandboxInfo | null>;
     deleteSandboxInfo(sandboxId: string): Promise<void>;
     setChain(oldId: string, newId: string): Promise<void>;

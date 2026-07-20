@@ -133,6 +133,26 @@ async function templateSelectorNode(state, deps) {
             }
         }
         const dbSchema = await deps.templateService.getDbSchema(category);
+        const templateDigest = {};
+        const DIGEST_FILES = [
+            'src/App.tsx',
+            'src/lib/routes.ts',
+            'src/pages/Home.tsx',
+            'src/components/layout/Header.tsx',
+            'src/components/layout/Footer.tsx',
+            'src/lib/pocketbase.ts',
+        ];
+        let digestSize = 0;
+        for (const digestPath of DIGEST_FILES) {
+            const content = templateFiles[digestPath];
+            if (!content)
+                continue;
+            const trimmed = content.length > 4000 ? content.slice(0, 4000) + '\n// … (truncated)' : content;
+            if (digestSize + trimmed.length > 16000)
+                break;
+            templateDigest[digestPath] = trimmed;
+            digestSize += trimmed.length;
+        }
         if (state.designSpec) {
             try {
                 const designJson = JSON.stringify(state.designSpec, null, 2);
@@ -159,6 +179,7 @@ async function templateSelectorNode(state, deps) {
             sandboxId: currentSandboxId,
             templateId: category,
             templateLoaded: true,
+            templateDigest,
             packagesToInstall: [],
             packagesInstalled: [],
             dbSchemaTemplate: dbSchema,

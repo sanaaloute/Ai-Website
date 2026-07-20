@@ -109,8 +109,8 @@ export declare const AgentStateAnnotation: import("@langchain/langgraph").Annota
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     workflow: {
-        (annotation: import("@langchain/langgraph").SingleReducer<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined, "chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined>): import("@langchain/langgraph").BaseChannel<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined, "chat" | "new_app" | "edit" | "debug" | "review_fix" | import("@langchain/langgraph").OverwriteValue<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined> | undefined, unknown>;
-        (): import("@langchain/langgraph").LastValue<"chat" | "new_app" | "edit" | "debug" | "review_fix" | undefined>;
+        (annotation: import("@langchain/langgraph").SingleReducer<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined, "new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined>): import("@langchain/langgraph").BaseChannel<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined, "new_app" | "edit" | "debug" | "chat" | "review_fix" | import("@langchain/langgraph").OverwriteValue<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined> | undefined, unknown>;
+        (): import("@langchain/langgraph").LastValue<"new_app" | "edit" | "debug" | "chat" | "review_fix" | undefined>;
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
     websiteCategory: {
@@ -148,6 +148,7 @@ export declare const AgentStateAnnotation: import("@langchain/langgraph").Annota
         (): import("@langchain/langgraph").LastValue<Record<string, unknown> | undefined>;
         Root: <S extends import("@langchain/langgraph").StateDefinition>(sd: S) => import("@langchain/langgraph").AnnotationRoot<S>;
     };
+    templateDigest: import("@langchain/langgraph").LastValue<Record<string, string> | undefined>;
     designSpec: import("@langchain/langgraph").LastValue<DesignSpec | undefined>;
     databaseStatus: {
         (annotation: import("@langchain/langgraph").SingleReducer<DatabaseStatus | undefined, DatabaseStatus | undefined>): import("@langchain/langgraph").BaseChannel<DatabaseStatus | undefined, DatabaseStatus | import("@langchain/langgraph").OverwriteValue<DatabaseStatus | undefined> | undefined, unknown>;

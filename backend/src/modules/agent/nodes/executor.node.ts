@@ -69,6 +69,18 @@ function buildExecutorContext(state: AgentState): string {
     baseContext.instruction = `${baseContext.instruction}\n\nRETRY #${retry}: Previous attempt failed review. Fix these issues:\n${issues.map((i) => `- ${i}`).join('\n')}`;
   }
 
+  // First pass only: the template's key files are provided inline so the model
+  // doesn't burn tool-loop iterations re-reading the scaffold (later passes
+  // get previousFilesWritten instead).
+  if (
+    (state.executorLoopCount ?? 0) === 0 &&
+    state.templateDigest &&
+    Object.keys(state.templateDigest).length > 0
+  ) {
+    baseContext.templateFiles = state.templateDigest;
+    baseContext.instruction = `${baseContext.instruction}\n\nThe template's key files are provided in "templateFiles" — do NOT re-read them with tools.`;
+  }
+
   const typeErrors = state.typeCheckErrors ?? [];
   if (typeErrors.length > 0) {
     baseContext.typeCheckErrors = typeErrors;

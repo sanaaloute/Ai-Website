@@ -55,6 +55,20 @@ let SandboxController = SandboxController_1 = class SandboxController {
         }
         return this.idempotency.process(body.idempotencyKey ?? '', async () => {
             const data = await this.e2b.createSandbox({ skipSetup: body.skipSetup, userId: user?.id });
+            if (user?.id) {
+                const siblings = await this.e2b.listUserSandboxes(user.id);
+                for (const siblingId of siblings) {
+                    if (siblingId === data.sandboxId)
+                        continue;
+                    this.logger.log(`Killing sibling sandbox ${siblingId} of user ${user.id} (new: ${data.sandboxId})`);
+                    try {
+                        await this.e2b.kill(siblingId);
+                    }
+                    catch (e) {
+                        this.logger.warn(`Failed to kill sibling sandbox ${siblingId}: ${e instanceof Error ? e.message : String(e)}`);
+                    }
+                }
+            }
             return { success: true, ...data };
         }, 3600);
     }

@@ -122,6 +122,13 @@ export const AgentStateAnnotation = Annotation.Root({
   userPocketbaseConnected: Annotation<boolean | undefined>,
   dbSchemaTemplate: Annotation<Record<string, unknown> | undefined>,
 
+  /**
+   * Contents of the template's key files (App, routes, Home, layout), captured
+   * at template-selection time and injected into the executor's first-pass
+   * context so the model doesn't burn tool-loop iterations re-reading them.
+   */
+  templateDigest: Annotation<Record<string, string> | undefined>(),
+
   // Design system
   designSpec: Annotation<DesignSpec | undefined>(),
   // Database readiness

@@ -30,6 +30,7 @@ export interface Env {
     aiTempFast: number;
     aiMaxTokens?: number;
     e2bApiKey: string;
+    sandboxLivenessGraceMs: number;
     supabaseUrl: string;
     supabaseAnonKey: string;
     supabaseServiceRoleKey: string;

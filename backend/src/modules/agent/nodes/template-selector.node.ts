@@ -190,6 +190,28 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
 
     const dbSchema = await deps.templateService.getDbSchema(category);
 
+    // Capture the template's key files for the executor's first-pass context.
+    // Without this, every executor pass starts a fresh conversation and burns
+    // several tool-loop iterations re-reading the scaffold before writing.
+    const templateDigest: Record<string, string> = {};
+    const DIGEST_FILES = [
+      'src/App.tsx',
+      'src/lib/routes.ts',
+      'src/pages/Home.tsx',
+      'src/components/layout/Header.tsx',
+      'src/components/layout/Footer.tsx',
+      'src/lib/pocketbase.ts',
+    ];
+    let digestSize = 0;
+    for (const digestPath of DIGEST_FILES) {
+      const content = templateFiles[digestPath];
+      if (!content) continue;
+      const trimmed = content.length > 4000 ? content.slice(0, 4000) + '\n// … (truncated)' : content;
+      if (digestSize + trimmed.length > 16000) break;
+      templateDigest[digestPath] = trimmed;
+      digestSize += trimmed.length;
+    }
+
     // Persist the design spec as a machine-readable contract and a concise
     // AGENTS.md summary so every downstream node (and future agents) reads
     // from the same source of truth.
@@ -226,6 +248,7 @@ export async function templateSelectorNode(state: AgentState, deps: GraphDepende
       sandboxId: currentSandboxId,
       templateId: category,
       templateLoaded: true,
+      templateDigest,
       packagesToInstall: [],
       packagesInstalled: [],
       dbSchemaTemplate: dbSchema,

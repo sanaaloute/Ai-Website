@@ -41,6 +41,26 @@ let SandboxStateService = SandboxStateService_1 = class SandboxStateService {
     }
     async setSandboxInfo(sandboxId, info) {
         await this.setJson(this.key(sandboxId, 'info'), info, 86400);
+        if (info.userId) {
+            await this.addUserSandbox(info.userId, sandboxId);
+        }
+    }
+    async touchSandbox(sandboxId) {
+        await this.redisClient.setex(this.key(sandboxId, 'lastSeen'), 86400, String(Date.now()));
+    }
+    async getSandboxLastSeen(sandboxId) {
+        const raw = await this.redisClient.get(this.key(sandboxId, 'lastSeen'));
+        return raw ? parseInt(raw, 10) : null;
+    }
+    async addUserSandbox(userId, sandboxId) {
+        await this.redisClient.sadd(this.key('user', userId, 'sandboxes'), sandboxId);
+        await this.redisClient.expire(this.key('user', userId, 'sandboxes'), 86400);
+    }
+    async listUserSandboxes(userId) {
+        return this.redisClient.smembers(this.key('user', userId, 'sandboxes'));
+    }
+    async removeUserSandbox(userId, sandboxId) {
+        await this.redisClient.srem(this.key('user', userId, 'sandboxes'), sandboxId);
     }
     async getSandboxInfo(sandboxId) {
         return this.getJson(this.key(sandboxId, 'info'));
@@ -112,6 +132,10 @@ let SandboxStateService = SandboxStateService_1 = class SandboxStateService {
         await this.redisClient.del(this.key(sandboxId, 'renewal_lock'));
     }
     async clearSandboxState(sandboxId) {
+        const info = await this.getSandboxInfo(sandboxId);
+        if (info?.userId) {
+            await this.removeUserSandbox(info.userId, sandboxId);
+        }
         const keys = await this.redisClient.keys(this.key(sandboxId, '*'));
         if (keys.length > 0) {
             await this.redisClient.del(...keys);

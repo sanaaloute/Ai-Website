@@ -241,6 +241,7 @@ let E2BService = E2BService_1 = class E2BService {
             this.logger.warn(`PocketBase setup failed for sandbox ${sandbox.sandboxId}: ${message}`);
         }
         await this.state.setSandboxInfo(sandbox.sandboxId, { createdAt, endAt, userId: opts?.userId });
+        await this.state.touchSandbox(sandbox.sandboxId);
         return {
             sandboxId: sandbox.sandboxId,
             url: this.previewUrl(sandbox),
@@ -296,6 +297,7 @@ let E2BService = E2BService_1 = class E2BService {
             const endAt = lifetime?.endAt ?? new Date(now).toISOString();
             const existing = await this.state.getSandboxInfo(currentId);
             await this.state.setSandboxInfo(currentId, { ...existing, createdAt, endAt });
+            await this.state.touchSandbox(currentId);
             return {
                 sandboxId: currentId,
                 url: this.previewUrl(sandbox),
@@ -334,6 +336,12 @@ let E2BService = E2BService_1 = class E2BService {
         catch (e) {
             this.logger.warn(`Could not finalize sandbox usage for ${sandboxId}: ${e instanceof Error ? e.message : String(e)}`);
         }
+    }
+    async getSandboxLastSeen(sandboxId) {
+        return this.state.getSandboxLastSeen(sandboxId);
+    }
+    async listUserSandboxes(userId) {
+        return this.state.listUserSandboxes(userId);
     }
     async kill(sandboxId) {
         if (!this.configured) {

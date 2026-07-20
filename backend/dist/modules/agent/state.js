@@ -19,6 +19,7 @@ exports.AgentStateAnnotation = langgraph_1.Annotation.Root({
     needsIntegration: (langgraph_1.Annotation),
     userPocketbaseConnected: (langgraph_1.Annotation),
     dbSchemaTemplate: (langgraph_1.Annotation),
+    templateDigest: (0, langgraph_1.Annotation)(),
     designSpec: (0, langgraph_1.Annotation)(),
     databaseStatus: (langgraph_1.Annotation),
     databaseReady: (langgraph_1.Annotation),

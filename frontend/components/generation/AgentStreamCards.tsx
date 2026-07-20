@@ -65,12 +65,117 @@ export function AgentStreamCards({
           stages as the primary progress indicator. The per-agent cards below
           stay as the secondary live-reasoning feed. */}
       {hasStreamedTodos && (
-        <div className="flex max-w-full flex-col gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 backdrop-blur-sm">
+        <TodoChecklist todos={todos} isGenerating={generationProgress.isGenerating} />
+      )}
+
+      {/* Per-agent streaming cards */}
+      {steps.map((step) => (
+        <AgentStepCard key={step.id} step={step} />
+      ))}
+
+      {/* Live activity: which agent is working right now. Keeps the main
+          stream visibly alive during non-code phases (analyzer → validator)
+          where no tokens stream, and points to the code panel while the
+          executor is writing code. */}
+      <AgentActivityIndicator generationProgress={generationProgress} />
+    </div>
+  );
+}
+
+const TODO_CHECKLIST_EXPANDED_KEY = 'ai-website:todoChecklistExpanded:v1';
+
+function readTodoChecklistExpanded(): boolean | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(TODO_CHECKLIST_EXPANDED_KEY);
+    return raw === null ? null : raw === '1';
+  } catch {
+    return null;
+  }
+}
+
+function persistTodoChecklistExpanded(expanded: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(TODO_CHECKLIST_EXPANDED_KEY, expanded ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * The agent's real task list as a collapsible dropdown. The header always
+ * shows the aggregate summary ("Tasks — X of N done" + the in-progress task);
+ * expanding reveals the full checklist. Defaults to expanded while a run is
+ * active, collapsed once it ends; the user's manual toggle is remembered in
+ * sessionStorage.
+ */
+function TodoChecklist({
+  todos,
+  isGenerating,
+}: {
+  todos: GenerationProgress['todoList'];
+  isGenerating: boolean;
+}) {
+  // null = "auto": expanded while the run is active, collapsed once it ends.
+  const [manualExpanded, setManualExpanded] = useState<boolean | null>(() =>
+    readTodoChecklistExpanded(),
+  );
+  const expanded = manualExpanded ?? isGenerating;
+
+  const completedCount = todos.filter((t) => t.status === 'completed').length;
+  const allDone = todos.length > 0 && completedCount === todos.length;
+  const currentTodo = isGenerating ? todos.find((t) => t.status === 'in_progress') : undefined;
+
+  const toggle = () => {
+    const next = !expanded;
+    setManualExpanded(next);
+    persistTodoChecklistExpanded(next);
+  };
+
+  return (
+    <div className="max-w-full rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center gap-2 p-3 text-left transition hover:bg-white/[0.03]"
+      >
+        {allDone ? (
+          <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+        ) : isGenerating ? (
+          <div className="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-glow-cyan border-t-transparent animate-spin" />
+        ) : (
+          <div className="h-3.5 w-3.5 shrink-0 rounded-full border border-zinc-700" />
+        )}
+        <span className="shrink-0 text-xs font-semibold text-zinc-100">Tasks</span>
+        <span className="shrink-0 text-[11px] text-zinc-500">
+          {completedCount} of {todos.length} done
+        </span>
+        {currentTodo ? (
+          <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-500">
+            {currentTodo.label}
+          </span>
+        ) : (
+          <span className="flex-1" />
+        )}
+        <ChevronRight
+          className={`h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${
+            expanded ? 'rotate-90' : ''
+          }`}
+        />
+      </button>
+
+      {expanded && (
+        <div className="mx-3 mb-3 flex flex-col gap-2">
           {todos.map((todo, i) => {
             const isCompleted = todo.status === 'completed';
             // Freeze the spinner once the run ends so an error doesn't leave a
             // task looking like it's still actively being worked on.
-            const isActive = todo.status === 'in_progress' && generationProgress.isGenerating;
+            const isActive = todo.status === 'in_progress' && isGenerating;
             return (
               <div key={i} className="flex items-center gap-2.5">
                 {isCompleted ? (
@@ -100,17 +205,6 @@ export function AgentStreamCards({
           })}
         </div>
       )}
-
-      {/* Per-agent streaming cards */}
-      {steps.map((step) => (
-        <AgentStepCard key={step.id} step={step} />
-      ))}
-
-      {/* Live activity: which agent is working right now. Keeps the main
-          stream visibly alive during non-code phases (analyzer → validator)
-          where no tokens stream, and points to the code panel while the
-          executor is writing code. */}
-      <AgentActivityIndicator generationProgress={generationProgress} />
     </div>
   );
 }

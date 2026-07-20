@@ -57,6 +57,41 @@ export class SandboxStateService {
 
   async setSandboxInfo(sandboxId: string, info: SandboxInfo): Promise<void> {
     await this.setJson(this.key(sandboxId, 'info'), info, 86400);
+    if (info.userId) {
+      await this.addUserSandbox(info.userId, sandboxId);
+    }
+  }
+
+  // ── Liveness tracking (session-tied renewal) ────────────────────────────
+
+  /**
+   * Stamp a sandbox as actively used. Called from E2BService.attach(), which
+   * both the frontend's 30s status poll and the agent's ensureAlive flow
+   * through — one point covers all liveness signals.
+   */
+  async touchSandbox(sandboxId: string): Promise<void> {
+    await this.redisClient.setex(this.key(sandboxId, 'lastSeen'), 86400, String(Date.now()));
+  }
+
+  /** Epoch ms of the last liveness stamp, or null when never stamped. */
+  async getSandboxLastSeen(sandboxId: string): Promise<number | null> {
+    const raw = await this.redisClient.get(this.key(sandboxId, 'lastSeen'));
+    return raw ? parseInt(raw, 10) : null;
+  }
+
+  // ── Per-user sandbox index (one live sandbox per session) ───────────────
+
+  async addUserSandbox(userId: string, sandboxId: string): Promise<void> {
+    await this.redisClient.sadd(this.key('user', userId, 'sandboxes'), sandboxId);
+    await this.redisClient.expire(this.key('user', userId, 'sandboxes'), 86400);
+  }
+
+  async listUserSandboxes(userId: string): Promise<string[]> {
+    return this.redisClient.smembers(this.key('user', userId, 'sandboxes'));
+  }
+
+  async removeUserSandbox(userId: string, sandboxId: string): Promise<void> {
+    await this.redisClient.srem(this.key('user', userId, 'sandboxes'), sandboxId);
   }
 
   async getSandboxInfo(sandboxId: string): Promise<SandboxInfo | null> {
@@ -144,6 +179,11 @@ export class SandboxStateService {
   }
 
   async clearSandboxState(sandboxId: string): Promise<void> {
+    // Remove the sandbox from its owner's index before wiping its keys.
+    const info = await this.getSandboxInfo(sandboxId);
+    if (info?.userId) {
+      await this.removeUserSandbox(info.userId, sandboxId);
+    }
     const keys = await this.redisClient.keys(this.key(sandboxId, '*'));
     if (keys.length > 0) {
       await this.redisClient.del(...keys);

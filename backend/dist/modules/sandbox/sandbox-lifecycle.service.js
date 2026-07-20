@@ -14,6 +14,7 @@ exports.SandboxLifecycleService = void 0;
 const common_1 = require("@nestjs/common");
 const e2b_service_1 = require("../../lib/e2b.service");
 const entitlements_service_1 = require("../billing/entitlements.service");
+const env_1 = require("../../config/env");
 const CHECK_INTERVAL_MS = 30 * 1000;
 const RENEWAL_WINDOW_MS = 10 * 60 * 1000;
 const DEAD_THRESHOLD_MS = 10 * 60 * 1000;
@@ -50,6 +51,17 @@ let SandboxLifecycleService = SandboxLifecycleService_1 = class SandboxLifecycle
                 if (expiresIn < -DEAD_THRESHOLD_MS) {
                     this.logger.warn(`Sandbox ${sandboxId} expired ${-expiresIn}ms ago; purging from tracking`);
                     await this.e2b.removeSandboxInfo(sandboxId);
+                    continue;
+                }
+                const lastSeen = await this.e2b.getSandboxLastSeen(sandboxId);
+                if (lastSeen === null || now - lastSeen > (0, env_1.env)().sandboxLivenessGraceMs) {
+                    this.logger.warn(`Sandbox ${sandboxId} not renewed: no live session within ${(0, env_1.env)().sandboxLivenessGraceMs}ms grace; killing it`);
+                    try {
+                        await this.e2b.kill(sandboxId);
+                    }
+                    catch (e) {
+                        this.logger.warn(`Failed to kill stale sandbox ${sandboxId}: ${e instanceof Error ? e.message : String(e)}`);
+                    }
                     continue;
                 }
                 if (userId) {

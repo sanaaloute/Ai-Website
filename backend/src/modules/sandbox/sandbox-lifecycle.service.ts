@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { E2BService, SandboxGoneError, SandboxNotFoundError } from '@/lib/e2b.service';
 import { EntitlementsService } from '@/modules/billing/entitlements.service';
+import { env } from '@/config/env';
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 const RENEWAL_WINDOW_MS = 10 * 60 * 1000;
@@ -56,6 +57,24 @@ export class SandboxLifecycleService implements OnModuleInit, OnModuleDestroy {
             `Sandbox ${sandboxId} expired ${-expiresIn}ms ago; purging from tracking`,
           );
           await this.e2b.removeSandboxInfo(sandboxId);
+          continue;
+        }
+
+        // Session-liveness gate: renew only sandboxes whose owner has a live
+        // session (frontend heartbeat poll or agent activity) within the grace
+        // window (SANDBOX_LIVENESS_GRACE_MS, default 15min). Stale sandboxes
+        // are KILLED instead of renewed — previously every tracked sandbox was
+        // renewed forever, even with all browsers closed.
+        const lastSeen = await this.e2b.getSandboxLastSeen(sandboxId);
+        if (lastSeen === null || now - lastSeen > env().sandboxLivenessGraceMs) {
+          this.logger.warn(
+            `Sandbox ${sandboxId} not renewed: no live session within ${env().sandboxLivenessGraceMs}ms grace; killing it`,
+          );
+          try {
+            await this.e2b.kill(sandboxId);
+          } catch (e) {
+            this.logger.warn(`Failed to kill stale sandbox ${sandboxId}: ${e instanceof Error ? e.message : String(e)}`);
+          }
           continue;
         }
 

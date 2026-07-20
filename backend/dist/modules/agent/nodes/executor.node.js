@@ -58,6 +58,12 @@ function buildExecutorContext(state) {
         baseContext.reviewFeedback = issues;
         baseContext.instruction = `${baseContext.instruction}\n\nRETRY #${retry}: Previous attempt failed review. Fix these issues:\n${issues.map((i) => `- ${i}`).join('\n')}`;
     }
+    if ((state.executorLoopCount ?? 0) === 0 &&
+        state.templateDigest &&
+        Object.keys(state.templateDigest).length > 0) {
+        baseContext.templateFiles = state.templateDigest;
+        baseContext.instruction = `${baseContext.instruction}\n\nThe template's key files are provided in "templateFiles" — do NOT re-read them with tools.`;
+    }
     const typeErrors = state.typeCheckErrors ?? [];
     if (typeErrors.length > 0) {
         baseContext.typeCheckErrors = typeErrors;

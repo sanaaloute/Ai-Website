@@ -34,6 +34,35 @@ async function reviewerNode(state, deps) {
             messages: [{ role: 'assistant', content: 'No files to review' }],
         };
     }
+    if (state.workflow === 'new_app') {
+        try {
+            const homeContent = await tools.readFile('src/pages/Home.tsx').catch(() => '');
+            const scaffoldMarkers = ['Your AI-Website app is ready', '>Welcome<'];
+            const leftover = scaffoldMarkers.filter((m) => homeContent.includes(m));
+            if (leftover.length) {
+                const issue = `Scaffold content still present: src/pages/Home.tsx still contains the template placeholder ("${leftover[0]}") instead of the real landing page.`;
+                const fixTodos = [
+                    {
+                        id: 'fix-1',
+                        content: 'Replace src/pages/Home.tsx with the fully designed landing page from the design spec',
+                        status: 'pending',
+                    },
+                ];
+                return {
+                    reviewPassed: false,
+                    reviewIssues: [issue],
+                    reviewSuggestions: [],
+                    reviewTodos: fixTodos,
+                    todos: fixTodos,
+                    lastVerificationStage: 'reviewer',
+                    verificationFailures: [...(state.verificationFailures ?? []), `reviewer: ${issue}`].slice(-20),
+                    messages: [{ role: 'assistant', content: 'Review failed: scaffold Home page was never replaced' }],
+                };
+            }
+        }
+        catch {
+        }
+    }
     const systemPrompt = await deps.promptLoader.load('reviewer');
     const context = JSON.stringify({
         userRequest: state.prompt,

@@ -71,6 +71,9 @@ export interface Env {
 
   e2bApiKey: string;
 
+  /** Grace window: renew only sandboxes seen alive within this many ms. */
+  sandboxLivenessGraceMs: number;
+
   supabaseUrl: string;
   supabaseAnonKey: string;
   supabaseServiceRoleKey: string;
@@ -208,6 +211,7 @@ export function buildEnv(): Env {
     aiMaxTokens: getEnv('AI_MAX_TOKENS') ? parseInt(getEnv('AI_MAX_TOKENS')!, 10) : undefined,
 
     e2bApiKey,
+    sandboxLivenessGraceMs: parseInt(getEnv('SANDBOX_LIVENESS_GRACE_MS') ?? '900000', 10),
 
     supabaseUrl,
     supabaseAnonKey,
