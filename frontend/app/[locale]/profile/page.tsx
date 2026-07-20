@@ -1,8 +1,14 @@
 import { use } from "react";
+import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import UserProfile from "@/components/landing/UserProfile";
+
+export const metadata: Metadata = {
+  title: "Profile",
+  robots: { index: false, follow: false }
+};
 
 export default function ProfilePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);

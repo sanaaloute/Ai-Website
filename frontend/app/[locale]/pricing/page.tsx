@@ -6,11 +6,21 @@ import Footer from "@/components/landing/Footer";
 import PricingSection from "@/components/landing/PricingSection";
 import TemplatesPageShell from "@/components/templates/TemplatesPageShell";
 
-export const metadata: Metadata = {
-  title: "Pricing · AI-Website",
-  description:
-    "Start free, upgrade when you are ready to ship. No hidden fees, cancel anytime.",
-};
+import { canonicalAlternates } from "@/lib/seo";
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: "Pricing",
+    description:
+      "Start free, upgrade when you are ready to ship. No hidden fees, cancel anytime.",
+    alternates: canonicalAlternates(locale, "/pricing")
+  };
+}
 
 export default function PricingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);

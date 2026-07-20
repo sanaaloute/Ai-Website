@@ -9,11 +9,21 @@ import TemplatesPageShell from "@/components/templates/TemplatesPageShell";
 import { listTemplateSectors } from "@/lib/templates/catalog";
 import { PRESET_ROWS } from "@/lib/templates/presets";
 
-export const metadata: Metadata = {
-  title: "Templates · AI-Website",
-  description:
-    "Browse AI-Website templates by industry — SaaS, e-commerce, fintech, and more. Clone or edit with AI in one click.",
-};
+import { canonicalAlternates } from "@/lib/seo";
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: "Templates",
+    description:
+      "Browse AI-Website templates by industry — SaaS, e-commerce, fintech, and more. Clone or edit with AI in one click.",
+    alternates: canonicalAlternates(locale, "/templates")
+  };
+}
 
 export default function TemplatesIndexPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);

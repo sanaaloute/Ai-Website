@@ -7,11 +7,21 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import TemplatesPageShell from "@/components/templates/TemplatesPageShell";
 
-export const metadata: Metadata = {
-  title: "Contact · AI-Website",
-  description:
-    "Get in touch with the AI-Website team — questions, feedback, or partnership ideas are all welcome.",
-};
+import { canonicalAlternates } from "@/lib/seo";
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: "Contact",
+    description:
+      "Get in touch with the AI-Website team — questions, feedback, or partnership ideas are all welcome.",
+    alternates: canonicalAlternates(locale, "/contact")
+  };
+}
 
 export default function ContactPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);

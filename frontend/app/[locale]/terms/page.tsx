@@ -1,12 +1,14 @@
 import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/legal/LegalPage";
+import { canonicalAlternates } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "legal" });
   return {
     title: t("terms.title"),
+    alternates: canonicalAlternates(locale, "/terms"),
   };
 }
 

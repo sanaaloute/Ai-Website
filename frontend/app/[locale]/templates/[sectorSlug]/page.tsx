@@ -11,6 +11,7 @@ import {
   listSectorSlugs,
   listTemplatePresetsBySectorId
 } from "@/lib/templates/catalog";
+import { canonicalAlternates } from "@/lib/seo";
 
 type PageProps = {
   params: Promise<{ locale: string; sectorSlug: string }>;
@@ -23,14 +24,15 @@ export function generateStaticParams(): { sectorSlug: string }[] {
 export async function generateMetadata({
   params
 }: PageProps): Promise<Metadata> {
-  const { sectorSlug } = await params;
+  const { locale, sectorSlug } = await params;
   const sector = getTemplateSectorBySlug(sectorSlug);
   if (!sector) {
-    return { title: "Templates · AI-Website" };
+    return { title: "Templates" };
   }
   return {
-    title: `${sector.name} templates · AI-Website`,
-    description: sector.description
+    title: `${sector.name} templates`,
+    description: sector.description,
+    alternates: canonicalAlternates(locale, `/templates/${sectorSlug}`)
   };
 }
 

@@ -6,11 +6,21 @@ import Footer from "@/components/landing/Footer";
 import HowItWorks from "@/components/landing/HowItWorks";
 import TemplatesPageShell from "@/components/templates/TemplatesPageShell";
 
-export const metadata: Metadata = {
-  title: "How it works · AI-Website",
-  description:
-    "From prompt to production in three steps — describe your idea, let AI build it, and ship your website.",
-};
+import { canonicalAlternates } from "@/lib/seo";
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: "How it works",
+    description:
+      "From prompt to production in three steps — describe your idea, let AI build it, and ship your website.",
+    alternates: canonicalAlternates(locale, "/how-it-works")
+  };
+}
 
 export default function HowItWorksPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params);
