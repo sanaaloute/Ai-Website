@@ -44,7 +44,6 @@ npm run dev
 | --- | --- |
 | All copy, pricing, testimonials, FAQ | `lib/content.ts` |
 | Colors / theme | `:root` CSS variables in `app/globals.css` |
-| Page title & meta description | `app/layout.tsx` |
-| Section layout & styling | `components/*.tsx` |
+| Section layout / styling | `components/*.tsx` |
 
 All templates share the same component structure, so anything you learn in one transfers to the others.

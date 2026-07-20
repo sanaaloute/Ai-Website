@@ -225,15 +225,13 @@ function routeAfterReviewer(state: AgentState): string {
 function routeAfterVerification(state: AgentState): string {
   // Only the CURRENT round's issue arrays may drive routing. The accumulated
   // `verificationFailures` list is capped history for reporting — checking it
-  // here (as was done for seo_meta:) re-triggered retries on stale entries
-  // after the issue had already been fixed.
+  // here re-triggered retries on stale entries after the issue had already been fixed.
   const hasIssues =
     (state.visualIssues ?? []).length > 0 ||
     (state.functionalIssues ?? []).length > 0 ||
     (state.a11yIssues ?? []).length > 0 ||
     (state.e2eFailures ?? []).length > 0 ||
-    (state.securityIssues ?? []).length > 0 ||
-    (state.seoIssues ?? []).length > 0;
+    (state.securityIssues ?? []).length > 0;
 
   if (!hasIssues) return 'finalize';
   if ((state.retryCount ?? 0) < MAX_VERIFICATION_RETRIES) return 'increment_retry';

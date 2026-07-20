@@ -292,8 +292,6 @@ export declare const AgentStateAnnotation: import("@langchain/langgraph").Annota
     e2eFailures: import("@langchain/langgraph").LastValue<string[] | undefined>;
     e2eTestsWritten: import("@langchain/langgraph").LastValue<string[] | undefined>;
     securityIssues: import("@langchain/langgraph").LastValue<string[] | undefined>;
-    seoGenerated: import("@langchain/langgraph").LastValue<boolean | undefined>;
-    seoIssues: import("@langchain/langgraph").LastValue<string[] | undefined>;
     screenshots: import("@langchain/langgraph").LastValue<{
         path: string;
         route: string;

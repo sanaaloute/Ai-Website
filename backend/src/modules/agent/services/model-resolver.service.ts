@@ -25,7 +25,6 @@ const NODE_ROLE_MAP: Record<string, ModelRole> = {
   a11y_reviewer: 'review',
   e2e_test_generator: 'code',
   security_reviewer: 'review',
-  seo_meta: 'fast',
   debugger: 'code',
   answer_generator: 'reasoning',
   database_initializer: 'code',

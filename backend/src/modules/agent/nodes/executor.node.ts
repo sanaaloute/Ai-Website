@@ -93,7 +93,6 @@ function buildExecutorContext(state: AgentState): string {
     ...(state.a11yIssues ?? []),
     ...(state.e2eFailures ?? []),
     ...(state.securityIssues ?? []),
-    ...(state.seoIssues ?? []),
   ];
   if (verificationIssues.length > 0) {
     baseContext.lastVerificationStage = state.lastVerificationStage;

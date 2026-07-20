@@ -59,8 +59,6 @@ exports.AgentStateAnnotation = langgraph_1.Annotation.Root({
     e2eFailures: (0, langgraph_1.Annotation)(),
     e2eTestsWritten: (0, langgraph_1.Annotation)(),
     securityIssues: (0, langgraph_1.Annotation)(),
-    seoGenerated: (0, langgraph_1.Annotation)(),
-    seoIssues: (0, langgraph_1.Annotation)(),
     screenshots: (0, langgraph_1.Annotation)(),
     reviewPassed: (langgraph_1.Annotation),
     reviewIssues: (langgraph_1.Annotation),

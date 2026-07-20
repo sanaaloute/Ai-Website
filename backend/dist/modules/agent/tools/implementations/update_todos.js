@@ -18,7 +18,7 @@ const todoSchema = zod_1.z.object({
 const updateTodosSchema = zod_1.z.object({
     merge: zod_1.z
         .boolean()
-        .describe("Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos will replace the existing todos."),
+        .describe("Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos replace the existing list — but the replacement MUST include every existing todo id (you may change content/status and append new items, never drop existing ones)."),
     todos: zod_1.z
         .array(todoSchema)
         .describe("Array of todo items. When merge is true, only include todos that need updates. When merge is false, this is the complete list."),
@@ -172,6 +172,12 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
                     content: t.content ?? "",
                     status: t.status ?? "pending",
                 }));
+                const existingIds = new Set(this.agentContext.todos.map((t) => t.id));
+                const replacementIds = new Set(replacement.map((t) => t.id));
+                const dropped = [...existingIds].filter((id) => !replacementIds.has(id));
+                if (dropped.length) {
+                    throw new errors_1.DeterministicToolError(`Cannot remove existing todos (dropped: ${dropped.join(", ")}). To update progress, call update_todos with merge=true and only the items to change. To extend the plan, include ALL existing items plus your new ones.`);
+                }
                 const validation = this.validateFinalTodoOrder(replacement);
                 if (!validation.valid) {
                     throw new errors_1.DeterministicToolError(`Invalid todo order: ${validation.message} Maintain sequential order with at most one in_progress todo, and it must be the first pending todo.`);

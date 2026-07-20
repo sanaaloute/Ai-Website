@@ -137,8 +137,7 @@ function routeAfterVerification(state) {
         (state.functionalIssues ?? []).length > 0 ||
         (state.a11yIssues ?? []).length > 0 ||
         (state.e2eFailures ?? []).length > 0 ||
-        (state.securityIssues ?? []).length > 0 ||
-        (state.seoIssues ?? []).length > 0;
+        (state.securityIssues ?? []).length > 0;
     if (!hasIssues)
         return 'finalize';
     if ((state.retryCount ?? 0) < state_1.MAX_VERIFICATION_RETRIES)

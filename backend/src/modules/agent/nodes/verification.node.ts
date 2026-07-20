@@ -6,14 +6,13 @@ import { runFunctionalQa } from './functional-qa.node';
 import { runA11yReview } from './a11y-reviewer.node';
 import { runE2eTests } from './e2e-test-generator.node';
 import { runSecurityReview } from './security-reviewer.node';
-import { runSeoMeta } from './seo-meta.node';
 
 /**
  * Combined verification node.
  *
  * Replaces the previous linear chain of QA nodes with a single parallel stage.
  * It ensures the preview is running once, reads the route source once, then runs
- * visual, functional, accessibility, E2E, security, and SEO checks concurrently.
+ * visual, functional, accessibility, E2E, and security checks concurrently.
  */
 export async function verificationNode(
   state: AgentState,
@@ -24,7 +23,7 @@ export async function verificationNode(
   try {
     await deps.emit({
       type: 'status',
-      data: { status: 'reviewing', message: 'Running verification suite (QA, security, SEO, E2E)...' },
+      data: { status: 'reviewing', message: 'Running verification suite (QA, security, E2E)...' },
     });
 
     // Ensure the dev server is running once for the whole verification stage.
@@ -45,22 +44,20 @@ export async function verificationNode(
     const routesSource = await readRoutes(deps.e2b, sandboxId);
 
     // Run all verification substages concurrently. Each substage is independent
-    // (SEO writes files, security writes temp pattern files, the rest are read-only),
-    // so parallel execution is safe.
+    // (security writes temp pattern files, the rest are read-only), so parallel
+    // execution is safe.
     const [
       visualResult,
       functionalResult,
       a11yResult,
       e2eResult,
       securityResult,
-      seoResult,
     ] = await Promise.all([
       runVisualQa(state, deps, previewUrl, routesSource),
       runFunctionalQa(state, deps, previewUrl, routesSource),
       runA11yReview(state, deps, previewUrl, routesSource),
       runE2eTests(state, deps, previewUrl, routesSource),
       runSecurityReview(state, deps),
-      runSeoMeta(state, deps, previewUrl, routesSource),
     ]);
 
     const allIssues = [
@@ -69,7 +66,6 @@ export async function verificationNode(
       ...a11yResult.a11yIssues.map((i) => `a11y_reviewer: ${i}`),
       ...e2eResult.e2eFailures.map((i) => `e2e_test_generator: ${i}`),
       ...securityResult.securityIssues.map((i) => `security_reviewer: ${i}`),
-      ...(seoResult.verificationFailures ?? []),
     ];
 
     const verificationFailures = allIssues.length
@@ -77,7 +73,7 @@ export async function verificationNode(
       : state.verificationFailures;
 
     // Preserve the most specific failing stage for the executor's retry context.
-    const stageOrder = ['visual_qa', 'functional_qa', 'a11y_reviewer', 'e2e_test_generator', 'security_reviewer', 'seo_meta'] as const;
+    const stageOrder = ['visual_qa', 'functional_qa', 'a11y_reviewer', 'e2e_test_generator', 'security_reviewer'] as const;
     let lastVerificationStage: string | undefined;
     for (const stage of stageOrder) {
       if (
@@ -85,8 +81,7 @@ export async function verificationNode(
         (stage === 'functional_qa' && functionalResult.functionalIssues.length) ||
         (stage === 'a11y_reviewer' && a11yResult.a11yIssues.length) ||
         (stage === 'e2e_test_generator' && e2eResult.e2eFailures.length) ||
-        (stage === 'security_reviewer' && securityResult.securityIssues.length) ||
-        (stage === 'seo_meta' && seoResult.verificationFailures?.length)
+        (stage === 'security_reviewer' && securityResult.securityIssues.length)
       ) {
         lastVerificationStage = stage;
         break;
@@ -99,7 +94,6 @@ export async function verificationNode(
       ...a11yResult.messages,
       ...e2eResult.messages,
       ...securityResult.messages,
-      ...seoResult.messages,
       {
         role: 'assistant',
         content: `Verification suite complete: ${allIssues.length} total issue(s)`,
@@ -113,9 +107,6 @@ export async function verificationNode(
       e2eFailures: e2eResult.e2eFailures,
       e2eTestsWritten: e2eResult.e2eTestsWritten,
       securityIssues: securityResult.securityIssues,
-      seoGenerated: seoResult.seoGenerated,
-      // Current-round SEO failures only — routing must not see last round's.
-      seoIssues: seoResult.verificationFailures ?? [],
       screenshots: visualResult.screenshots,
       verificationFailures,
       lastVerificationStage,
@@ -132,8 +123,6 @@ export async function verificationNode(
       a11yIssues: [],
       e2eFailures: [`verification: ${message}`],
       securityIssues: [],
-      seoGenerated: false,
-      seoIssues: [],
       verificationFailures: [...(state.verificationFailures ?? []), `verification: ${message}`].slice(-20),
       lastVerificationStage: 'verification',
       previewHealthy: false,

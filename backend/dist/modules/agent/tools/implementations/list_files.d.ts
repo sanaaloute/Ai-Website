@@ -4,11 +4,11 @@ declare const listFilesSchema: z.ZodObject<{
     directory: z.ZodOptional<z.ZodString>;
     recursive: z.ZodOptional<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
-    recursive?: boolean | undefined;
     directory?: string | undefined;
+    recursive?: boolean | undefined;
 }, {
-    recursive?: boolean | undefined;
     directory?: string | undefined;
+    recursive?: boolean | undefined;
 }>;
 export declare class ListFilesTool extends AgentTool {
     name: string;
@@ -17,11 +17,11 @@ export declare class ListFilesTool extends AgentTool {
         directory: z.ZodOptional<z.ZodString>;
         recursive: z.ZodOptional<z.ZodBoolean>;
     }, "strip", z.ZodTypeAny, {
-        recursive?: boolean | undefined;
         directory?: string | undefined;
+        recursive?: boolean | undefined;
     }, {
-        recursive?: boolean | undefined;
         directory?: string | undefined;
+        recursive?: boolean | undefined;
     }>;
     _call(args: z.infer<typeof listFilesSchema>): Promise<string>;
 }

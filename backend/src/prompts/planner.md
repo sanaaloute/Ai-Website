@@ -96,7 +96,7 @@ For every project, you must do **BOTH**: modify existing files as needed, AND cr
 - The plan must be **grounded in the actual codebase**. Do not propose steps that recreate existing files or components.
 - **ALWAYS check existing files first.** Use `list_files` to see what's in the project before planning.
 - **Check UI primitive APIs before designing with them.** If your plan uses `Button`, `Card`, `Input`, `Badge`, or other `src/components/ui/` primitives, read those files first. Only plan props, variants, and sizes that the primitive supports. If you need a variant that does not exist, plan to UPDATE the primitive first — do not plan to use a non-existent API.
-- **Maintain branding consistency.** Read `src/lib/constants.ts` (and `src/lib/site.ts` if it exists) before planning. Use the project's configured site name and metadata in every step. If the user's request implies a different brand, include an early step to UPDATE `src/lib/constants.ts` before any other branded components.
+- **Maintain branding consistency.** Read `src/lib/constants.ts` (and `src/lib/site.ts` if it exists) before planning. Use the project's configured site name in every step. If the user's request implies a different brand, include an early step to UPDATE `src/lib/constants.ts` before any other branded components.
   - If a file **already exists**, your step should say "Overwrite" or "Update", NOT "Create".
   - If a file **does NOT exist**, your step should say "Create".
 - For `intent: "new_app"`, a full working template is already installed. You MUST:

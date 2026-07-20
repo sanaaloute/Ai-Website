@@ -188,10 +188,6 @@ export const AgentStateAnnotation = Annotation.Root({
   e2eFailures: Annotation<string[] | undefined>(),
   e2eTestsWritten: Annotation<string[] | undefined>(),
   securityIssues: Annotation<string[] | undefined>(),
-  seoGenerated: Annotation<boolean | undefined>(),
-  // Fresh (current-round) SEO failures. Kept separate from the accumulated
-  // `verificationFailures` history so routing never reacts to stale entries.
-  seoIssues: Annotation<string[] | undefined>(),
   screenshots: Annotation<Array<{ path: string; route: string }> | undefined>(),
   reviewPassed: Annotation<boolean | undefined>,
   reviewIssues: Annotation<string[] | undefined>,

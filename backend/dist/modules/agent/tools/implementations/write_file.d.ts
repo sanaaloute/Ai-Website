@@ -5,12 +5,12 @@ declare const writeFileSchema: z.ZodObject<{
     content: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    path: string;
     content: string;
+    path: string;
     description?: string | undefined;
 }, {
-    path: string;
     content: string;
+    path: string;
     description?: string | undefined;
 }>;
 export declare class WriteFileTool extends AgentTool {
@@ -21,12 +21,12 @@ export declare class WriteFileTool extends AgentTool {
         content: z.ZodString;
         description: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        path: string;
         content: string;
+        path: string;
         description?: string | undefined;
     }, {
-        path: string;
         content: string;
+        path: string;
         description?: string | undefined;
     }>;
     _call(args: z.infer<typeof writeFileSchema>): Promise<string>;

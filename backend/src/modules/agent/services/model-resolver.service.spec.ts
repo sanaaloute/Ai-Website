@@ -34,7 +34,6 @@ describe('ModelResolverService', () => {
   it('defaults to the built-in allowlist with role-specific primaries', () => {
     const resolver = new ModelResolverService();
     expect(resolver.resolveSequence('executor')).toEqual(['kimi-k2.5', 'qwen-max']);
-    expect(resolver.resolveSequence('seo_meta')).toEqual(['qwen-max', 'kimi-k2.5']);
     expect(resolver.resolveSequence('planner')).toEqual(['kimi-k2.5', 'qwen-max']);
   });
 
@@ -44,8 +43,6 @@ describe('ModelResolverService', () => {
     resetEnvCache();
     const resolver = new ModelResolverService();
     expect(resolver.resolveSequence('executor')).toEqual(['c', 'a', 'b']);
-    // fast role primary (default qwen-max) is filtered out — not in allowlist
-    expect(resolver.resolveSequence('seo_meta')).toEqual(['a', 'b', 'c']);
   });
 
   it('drops AI_DEFAULT_MODEL outside the allowlist (loudly, not silently)', () => {

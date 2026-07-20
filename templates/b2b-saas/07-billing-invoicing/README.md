@@ -29,7 +29,6 @@ npm run start    # serve the production build
 | --- | --- |
 | All copy, pricing, testimonials, FAQ | `lib/content.ts` |
 | Colors / theme | `:root` CSS variables in `app/globals.css` |
-| Page metadata (title, description) | `app/layout.tsx` |
 | Section layout / styling | `components/*.tsx` |
 
 No images or external assets are required — everything is rendered with HTML/CSS so the template works offline and deploys anywhere (Vercel, Netlify, Docker, static export).
