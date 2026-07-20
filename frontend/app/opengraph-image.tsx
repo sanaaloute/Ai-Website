@@ -41,7 +41,7 @@ export default function OpenGraphImage() {
         >
           AI
         </div>
-        <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: "-2px" }}>
+        <div style={{ fontSize: 72, fontWeight: 800, letterSpacing: "-2px", maxWidth: 900, lineHeight: 1.1 }}>
           AI-Website
         </div>
         <div

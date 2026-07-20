@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "AI-Website",
+    "title": "AI-Website — AI 应用构建器",
     "description": "AI-Website 是一个 AI 应用构建器，可以在几秒钟内将想法转化为全栈 Web 应用程序。"
   },
   "navbar": {
@@ -748,14 +748,17 @@
   "legal": {
     "terms": {
       "title": "Terms of Service",
+      "description": "阅读 AI-Website 服务条款，了解可接受使用、付款、订阅和知识产权等相关规定。",
       "lastUpdated": "Last updated: {date}"
     },
     "privacy": {
       "title": "Privacy Policy",
+      "description": "阅读 AI-Website 隐私政策，了解我们如何收集、使用和保护您的个人信息。",
       "lastUpdated": "Last updated: {date}"
     },
     "refund": {
       "title": "Refund Policy",
+      "description": "阅读 AI-Website 退款政策，了解取消订阅、账单错误和不可退款购买的相关说明。",
       "lastUpdated": "Last updated: {date}"
     },
     "disclaimer": "This is a standard template and does not constitute legal advice. You should have these documents reviewed by a qualified attorney for your jurisdiction."

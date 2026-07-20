@@ -135,7 +135,7 @@ export default async function LocaleOpenGraphImage({
         >
           AI
         </div>
-        <div style={{ fontSize: 72, fontWeight: 700, letterSpacing: "-2px" }}>
+        <div style={{ fontSize: 72, fontWeight: 700, letterSpacing: "-2px", maxWidth: 900, lineHeight: 1.1 }}>
           {t("title")}
         </div>
         <div

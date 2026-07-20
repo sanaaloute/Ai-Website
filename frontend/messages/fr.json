@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "AI-Website",
+    "title": "AI-Website — Constructeur d'applications IA",
     "description": "AI-Website est un constructeur d'applications IA qui transforme les idées en applications web full-stack en quelques secondes."
   },
   "navbar": {
@@ -748,14 +748,17 @@
   "legal": {
     "terms": {
       "title": "Terms of Service",
+      "description": "Consultez les Conditions d'utilisation d'AI-Website, incluant l'utilisation acceptable, les paiements, les abonnements et la propriété intellectuelle.",
       "lastUpdated": "Last updated: {date}"
     },
     "privacy": {
       "title": "Privacy Policy",
+      "description": "Consultez la Politique de confidentialité d'AI-Website pour savoir comment nous collectons, utilisons et protégeons vos informations personnelles.",
       "lastUpdated": "Last updated: {date}"
     },
     "refund": {
       "title": "Refund Policy",
+      "description": "Consultez la Politique de remboursement d'AI-Website pour les détails sur les annulations, les erreurs de facturation et les achats non remboursables.",
       "lastUpdated": "Last updated: {date}"
     },
     "disclaimer": "This is a standard template and does not constitute legal advice. You should have these documents reviewed by a qualified attorney for your jurisdiction."

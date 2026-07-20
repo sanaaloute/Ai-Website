@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "AI-Website",
+    "title": "AI-Website — AI App Builder",
     "description": "AI-Website is an AI app builder that turns ideas into full-stack web applications in seconds."
   },
   "navbar": {
@@ -178,14 +178,17 @@
   "legal": {
     "terms": {
       "title": "Terms of Service",
+      "description": "Read the AI-Website Terms of Service, covering acceptable use, payments, subscriptions, and intellectual property.",
       "lastUpdated": "Last updated: {date}"
     },
     "privacy": {
       "title": "Privacy Policy",
+      "description": "Read the AI-Website Privacy Policy to learn how we collect, use, and protect your personal information.",
       "lastUpdated": "Last updated: {date}"
     },
     "refund": {
       "title": "Refund Policy",
+      "description": "Read the AI-Website Refund Policy for details on cancellations, billing errors, and non-refundable purchases.",
       "lastUpdated": "Last updated: {date}"
     },
     "disclaimer": "This is a standard template and does not constitute legal advice. You should have these documents reviewed by a qualified attorney for your jurisdiction."

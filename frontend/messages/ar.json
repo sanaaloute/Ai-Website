@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "AI-Website",
+    "title": "AI-Website — منشئ تطبيقات بالذكاء الاصطناعي",
     "description": "AI-Website هو منشئ تطبيقات بالذكاء الاصطناعي يحول الأفكار إلى تطبيقات ويب كاملة في ثوانٍ."
   },
   "navbar": {
@@ -748,14 +748,17 @@
   "legal": {
     "terms": {
       "title": "Terms of Service",
+      "description": "اقرأ شروط خدمة AI-Website، التي تتناول الاستخدام المقبول والمدفوعات والاشتراكات والملكية الفكرية.",
       "lastUpdated": "Last updated: {date}"
     },
     "privacy": {
       "title": "Privacy Policy",
+      "description": "اقرأ سياسة الخصوصية الخاصة بـ AI-Website لمعرفة كيفية جمع واستخدام وحماية معلوماتك الشخصية.",
       "lastUpdated": "Last updated: {date}"
     },
     "refund": {
       "title": "Refund Policy",
+      "description": "اقرأ سياسة الاسترداد الخاصة بـ AI-Website للحصول على تفاصيل حول الإلغاء وأخطاء الفوترة والمشتريات غير القابلة للاسترداد.",
       "lastUpdated": "Last updated: {date}"
     },
     "disclaimer": "This is a standard template and does not constitute legal advice. You should have these documents reviewed by a qualified attorney for your jurisdiction."

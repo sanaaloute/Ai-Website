@@ -7,6 +7,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: "legal" });
   return {
     title: t("refund.title"),
+    description: t("refund.description"),
     alternates: canonicalAlternates(locale, "/refund-policy"),
   };
 }
