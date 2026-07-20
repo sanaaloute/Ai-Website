@@ -21,7 +21,7 @@ const updateTodosSchema = z.object({
   merge: z
     .boolean()
     .describe(
-      "Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos will replace the existing todos."
+      "Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos replace the existing list — but the replacement MUST include every existing todo id (you may change content/status and append new items, never drop existing ones).",
     ),
   todos: z
     .array(todoSchema)
@@ -231,6 +231,20 @@ NEVER INCLUDE THESE IN TODOS: linting; testing; searching or examining the codeb
           content: t.content ?? "",
           status: t.status ?? "pending",
         }));
+
+        // No-shrink rule: a full replacement must preserve every existing
+        // todo id. Without this, the model can wipe a 30-step plan down to a
+        // few items of its own — which is what the user sees as "the todo
+        // list randomly shrank from 32 to 2".
+        const existingIds = new Set(this.agentContext.todos.map((t) => t.id));
+        const replacementIds = new Set(replacement.map((t) => t.id));
+        const dropped = [...existingIds].filter((id) => !replacementIds.has(id));
+        if (dropped.length) {
+          throw new DeterministicToolError(
+            `Cannot remove existing todos (dropped: ${dropped.join(", ")}). To update progress, call update_todos with merge=true and only the items to change. To extend the plan, include ALL existing items plus your new ones.`
+          );
+        }
+
         const validation = this.validateFinalTodoOrder(replacement);
         if (!validation.valid) {
           throw new DeterministicToolError(
