@@ -3,10 +3,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { getTranslations } from "next-intl/server";
 import { routing, type Locale } from "@/i18n/routing";
+import { SITE_NAME } from "@/lib/seo";
 
-// Per-locale social card — same design as the root `app/opengraph-image.tsx`,
-// with the product name and tagline (metadata.title / metadata.description)
-// localized from messages/<locale>.json. Unknown locales fall back to English.
+// Per-locale social card — same design as the root `app/opengraph-image.tsx`.
+// The brand title is always the Latin SITE_NAME to avoid Satori bidi crashes;
+// only the tagline (metadata.description) is localized from messages/<locale>.json.
+// Unknown locales fall back to English.
 export const alt = "AI-Website — AI app builder";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -136,7 +138,7 @@ export default async function LocaleOpenGraphImage({
           AI
         </div>
         <div style={{ fontSize: 72, fontWeight: 700, letterSpacing: "-2px", maxWidth: 900, lineHeight: 1.1 }}>
-          {t("title")}
+          {SITE_NAME}
         </div>
         <div
           style={{
